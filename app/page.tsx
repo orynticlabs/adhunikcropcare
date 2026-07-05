@@ -5,13 +5,13 @@ import {
   BookOpen, Recycle, ShieldCheck, Heart, Award,
   Star, Phone, Mail, MapPin, ChevronDown,
   ChevronLeft, ChevronRight,
+  Info,
 } from "lucide-react"
 import Header from "@/components/header"
 import AnnouncementBar from "@/components/announcement-bar"
 import KnowledgeTabs from "@/components/knowledge-tabs"
 import FAQAccordion from "@/components/faq-accordion"
 import SmartAgriSection from "@/components/smart-agri-section"
-import NewsletterForm from "@/components/newsletter-form"
 import AddToCartButton from "@/components/add-to-cart-button"
 import CartDrawer from "@/components/cart-drawer"
 
@@ -77,7 +77,7 @@ export default function Home() {
           {/* Background farm image */}
           <div className="absolute inset-0 -z-10">
             <Image
-              src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1920&q=80"
+              src="/hero-field-Dp98Y55X.jpg"
               alt="Lush organic farmland"
               fill
               className="object-cover scale-110"
@@ -98,7 +98,7 @@ export default function Home() {
               {/* Badge */}
               <div className="inline-flex items-center gap-1.5 mb-6 rounded-full bg-background/80 text-foreground border border-border/60 px-4 py-1.5 backdrop-blur text-xs font-semibold">
                 <Leaf className="h-3.5 w-3.5 text-[--leaf]" aria-hidden />
-                Certified Organic · ISO 9001 · Eco Mark
+                ISO Certified Company · ISO 9001
               </div>
 
               {/* Heading */}
@@ -110,28 +110,26 @@ export default function Home() {
               </h1>
 
               <p className="mx-auto mt-6 max-w-xl text-lg text-foreground/70">
-                Premium crop care from soil to harvest. Organic fertilizers, bio
-                products and smart agriculture solutions trusted by 250,000+
-                farmers across India.
+                Adhunik Crop Care delivers trusted pesticides, insecticides, fungicides, weedicides, and organic plant care solutions designed to improve crop health, increase productivity, and support sustainable farming across India.
               </p>
 
               {/* CTAs */}
               <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
                 <button className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-7 h-12 text-sm font-medium hover:bg-primary/90 transition shadow-luxe">
-                  Explore Marketplace <ArrowRight className="h-4 w-4" aria-hidden />
+                  Explore Products <ArrowRight className="h-4 w-4" aria-hidden />
                 </button>
                 <button className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/60 backdrop-blur px-7 h-12 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition">
-                  <Play className="h-4 w-4" aria-hidden /> Watch Story
+                  <Info className="h-4 w-4" aria-hidden /> Learn About ACCPL
                 </button>
               </div>
 
               {/* Stats */}
               <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-foreground/60">
                 {[
-                  { val: "250K+", label: "Farmers" },
-                  { val: "1,200+", label: "Products" },
-                  { val: "28", label: "States" },
-                  { val: "15 yrs", label: "Of trust" },
+                  { val: "180", label: "Projects Develop" },
+                  { val: "100", label: "Service Guarantee" },
+                  { val: "7500", label: "Satisfied Clients" },
+                  { val: "115", label: "Team Member" },
                 ].map((s) => (
                   <div key={s.label} className="text-center">
                     <div className="font-display text-2xl text-foreground">{s.val}</div>
@@ -455,113 +453,133 @@ export default function Home() {
       </main>
 
       {/* ══ Footer ══════════════════════════════════════════ */}
-      <footer className="relative mt-16 overflow-hidden bg-gradient-to-br from-[--moss] to-[--bark]/80 text-cream">
-        <div className="absolute inset-0 grain opacity-30 pointer-events-none" />
-        <div className="pointer-events-none absolute -top-20 -right-20 h-96 w-96 rounded-full bg-[--leaf]/20 blur-3xl" />
+        <footer className="relative overflow-hidden bg-[#043927] text-cream">
+          <div className="relative mx-auto max-w-[1440px] px-6 pb-12 pt-10 lg:px-12">
+            <div className="grid grid-cols-1 gap-12 py-12 md:grid-cols-2 lg:grid-cols-5">
+              
+              {/* Company Info */}
+              <div className="lg:col-span-2">
+                <div className="mb-6">
+                  <Image
+                    src="/adhunikwhite.png"
+                    alt="Adhunik Crop Care"
+                    width={100}
+                    height={70}
+                    className="h-16 w-auto object-contain"
+                    priority
+                  />
+                </div>
 
-        <div className="relative mx-auto max-w-7xl px-4 py-20">
-          <div className="grid gap-12 lg:grid-cols-5">
-            {/* Brand column */}
-            <div className="lg:col-span-2">
-              <div className="flex items-center gap-2">
-                <span className="grid h-10 w-10 place-items-center rounded-full bg-cream text-[--moss] font-display text-lg font-bold">
-                  A
+                <p className="mb-8 max-w-sm text-sm leading-relaxed text-cream/60">
+                  Adhunik Crop Care Pvt. Ltd. supports Indian agriculture with trusted
+                  crop protection solutions, organic plant care products, and practical
+                  farmer education to improve productivity and sustainable farming
+                  practices.
+                </p>
+              </div>
+
+              {/* Footer Columns */}
+              {[
+                {
+                  heading: "Solutions",
+                  links: [
+                    ["Crop Protection", "#crop-fertilizers"],
+                    ["Insecticides", "#pest-management"],
+                    ["Fungicides", "#pest-management"],
+                    ["Weedicides", "#pest-management"],
+                    ["Organic Plant Care", "#organic-range"],
+                  ],
+                },
+                {
+                  heading: "Company",
+                  links: [
+                    ["Our Story", "#our-story"],
+                    ["Certifications", "#certifications"],
+                    ["Sustainability", "#certifications"],
+                    ["Marketplace", "#marketplace"],
+                    ["Contact Us", "#contact-us"],
+                  ],
+                },
+                {
+                  heading: "Farmers",
+                  links: [
+                    ["Farmer Services", "#farmer-services"],
+                    ["Knowledge Center", "#knowledge-center"],
+                    ["Smart Agriculture", "#smart-agriculture"],
+                    ["Soil Care", "#soil-care"],
+                    ["Bulk Support", "#wholesale"],
+                  ],
+                },
+              ].map((column) => (
+                <div key={column.heading}>
+                  <h4 className="mb-6 text-[10px] font-medium uppercase tracking-[0.25em] text-[#D4AF37]">
+                    {column.heading}
+                  </h4>
+
+                  <ul className="space-y-3">
+                    {column.links.map(([label, href]) => (
+                      <li key={label}>
+                        <a
+                          href={href}
+                          className="text-sm text-cream/60 transition-colors duration-300 hover:text-[#2B8633]"
+                        >
+                          {label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            {/* Bottom Footer */}
+            <div className="flex flex-col items-center justify-between gap-6 border-t border-cream/10 pt-8 lg:flex-row">
+              
+              {/* Left Side */}
+              <div className="text-center text-[10px] uppercase tracking-widest text-cream/40 lg:text-left">
+                <span>
+                  © 2026 Adhunik Crop Care Pvt. Ltd. | Developed By{" "}
+                  <a
+                    href="https://orynticlabs.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-[#e84118] transition-opacity hover:opacity-80"
+                  >
+                    OrynticLabs Private Limited
+                  </a>
                 </span>
-                <span className="font-display text-2xl">Adhunik Crop Care</span>
               </div>
-              <p className="mt-5 max-w-sm text-cream/70">
-                Rooted in nature, engineered for tomorrow. India&apos;s premium
-                eco-agriculture house.
-              </p>
 
-              {/* Newsletter */}
-              <NewsletterForm />
+              {/* Right Side */}
+              <div className="flex items-center gap-4 text-[10px] uppercase tracking-widest text-cream/40">
+                <a
+                  href="/privacy-policy"
+                  className="transition-colors hover:text-white"
+                >
+                  Privacy
+                </a>
 
-              <div className="mt-8 space-y-2 text-sm text-cream/70">
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 shrink-0" aria-hidden /> 1800-200-CROP
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 shrink-0" aria-hidden /> hello@adhunikcrop.in
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 shrink-0" aria-hidden /> Pune, Maharashtra, India
-                </div>
+                <span className="h-1 w-1 rounded-full bg-cream/20" />
+
+                <a
+                  href="/terms-and-conditions"
+                  className="transition-colors hover:text-white"
+                >
+                  Terms
+                </a>
+
+                <span className="h-1 w-1 rounded-full bg-cream/20" />
+
+                <a
+                  href="/cookie-policy"
+                  className="transition-colors hover:text-white"
+                >
+                  Cookies
+                </a>
               </div>
             </div>
-
-            {/* Links */}
-            {[
-              {
-                heading: "Shop",
-                links: [
-                  ["Crop Fertilizers", "#crop-fertilizers"],
-                  ["Organic Range", "#organic-range"],
-                  ["Bio Products", "#bio-products"],
-                  ["Soil Care", "#soil-care"],
-                  ["Pest Management", "#pest-management"],
-                ],
-              },
-              {
-                heading: "Company",
-                links: [
-                  ["Our Story", "#our-story"],
-                  ["Sustainability", "#certifications"],
-                  ["Careers", "#careers"],
-                  ["Press", "#press"],
-                  ["Certifications", "#certifications"],
-                ],
-              },
-              {
-                heading: "Farmers",
-                links: [
-                  ["Farmer Services", "#farmer-services"],
-                  ["Knowledge Center", "#knowledge-center"],
-                  ["Blogs", "#blogs"],
-                  ["Smart Agriculture", "#smart-agriculture"],
-                  ["Weather Alerts", "#weather-alerts"],
-                ],
-              },
-              {
-                heading: "Business",
-                links: [
-                  ["Marketplace", "#marketplace"],
-                  ["Wholesale", "#wholesale"],
-                  ["Export", "#export"],
-                  ["Partnerships", "#partnerships"],
-                  ["Bulk Orders", "#bulk-orders"],
-                ],
-              },
-            ].map((col) => (
-              <div key={col.heading}>
-                <h4 className="font-display text-lg">{col.heading}</h4>
-                <ul className="mt-4 space-y-2.5">
-                  {col.links.map(([label, href]) => (
-                    <li key={label}>
-                      <a
-                        href={href}
-                        className="text-sm text-cream/70 hover:text-cream transition"
-                      >
-                        {label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
           </div>
-
-          {/* Bottom bar */}
-          <div className="mt-16 flex flex-wrap items-center justify-between gap-4 border-t border-cream/15 pt-8 text-sm text-cream/60">
-            <div>© 2026 Adhunik Crop Care Pvt. Ltd. All rights reserved.</div>
-            <div className="flex gap-6">
-              <a href="#" className="hover:text-cream transition">Privacy</a>
-              <a href="#" className="hover:text-cream transition">Terms</a>
-              <a href="#" className="hover:text-cream transition">Cookies</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+        </footer>
     </div>
   )
 }
