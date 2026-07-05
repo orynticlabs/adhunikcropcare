@@ -42,3 +42,4 @@ next-env.d.ts
 
 # payload generated types
 /payload-types.ts
+node_modules

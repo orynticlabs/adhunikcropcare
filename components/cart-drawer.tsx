@@ -63,7 +63,7 @@ export default function CartDrawer() {
         <div className="flex items-center justify-between border-b border-border px-5 py-4 sm:px-6">
           <div>
             <div className="flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-green-600 text-white">
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-[--leaf] text-white">
                 <ShoppingBag className="h-4 w-4" aria-hidden />
               </span>
               <div>
@@ -169,7 +169,7 @@ export default function CartDrawer() {
                 </div>
                 <div className="flex items-center justify-between text-muted-foreground">
                   <span>Shipping</span>
-                  <span className="font-medium text-green-700">Free</span>
+                  <span className="font-medium text-[--leaf]">Free</span>
                 </div>
                 <div className="flex items-center justify-between border-t border-border pt-3 font-display text-2xl">
                   <span>Total</span>
@@ -179,21 +179,21 @@ export default function CartDrawer() {
 
               <button
                 type="button"
-                className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-green-700 px-6 text-sm font-semibold text-white shadow-luxe transition hover:bg-green-800 active:scale-[0.99]"
+                className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[--leaf] px-6 text-sm font-semibold text-white shadow-luxe transition hover:bg-[--moss]/90 active:scale-[0.99]"
               >
                 <CreditCard className="h-4 w-4" aria-hidden />
                 Checkout
               </button>
 
               <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                <ShieldCheck className="h-3.5 w-3.5 text-green-700" aria-hidden />
+                <ShieldCheck className="h-3.5 w-3.5 text-[--leaf]" aria-hidden />
                 Secure checkout and farmer-friendly returns
               </div>
             </div>
           </>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-            <span className="grid h-16 w-16 place-items-center rounded-full bg-green-50 text-green-700">
+            <span className="grid h-16 w-16 place-items-center rounded-full bg-[--leaf]/10 text-[--leaf]">
               <ShoppingBag className="h-7 w-7" aria-hidden />
             </span>
             <h3 className="mt-5 font-display text-2xl">Your cart is empty</h3>

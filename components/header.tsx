@@ -37,7 +37,7 @@ export default function Header() {
     <header className="fixed inset-x-0 top-9 z-50">
       <div className="mx-auto max-w-7xl px-4 py-2">
         <div
-          className="flex items-center justify-between rounded-full border border-white/60 bg-white/95 px-3 py-2 shadow-soft backdrop-blur-md transition-colors duration-300 sm:px-5 sm:py-2.5"
+          className="navbar-glass flex items-center justify-between rounded-full border px-3 py-2 shadow-soft transition-colors duration-300 sm:px-5 sm:py-2.5"
         >
           {/* Logo */}
           <a href="#home" className="flex items-center pl-2">
@@ -57,7 +57,7 @@ export default function Header() {
               <a
                 key={l.href}
                 href={l.href}
-                className="rounded-full px-3 py-1.5 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-accent/60 transition"
+                className="rounded-full px-3 py-1.5 text-sm font-medium text-foreground/80 hover:text-foreground transition"
               >
                 {l.label}
               </a>
@@ -65,7 +65,7 @@ export default function Header() {
 
             {/* More dropdown */}
             <div className="relative group">
-              <button className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-foreground/80 hover:text-foreground hover:bg-accent/60 transition">
+              <button className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-foreground/80 hover:text-foreground transition">
                 More <ChevronDown className="h-3.5 w-3.5" aria-hidden />
               </button>
               <div className="invisible absolute right-0 top-full mt-3 w-56 rounded-2xl border border-border/60 bg-popover p-2 opacity-0 shadow-luxe transition-all group-hover:visible group-hover:opacity-100">
@@ -73,7 +73,7 @@ export default function Header() {
                   <a
                     key={l.href}
                     href={l.href}
-                    className="block rounded-xl px-3 py-2 text-sm text-foreground/80 hover:bg-accent/60 hover:text-foreground transition"
+                    className="block rounded-xl px-3 py-2 text-sm text-foreground/80 hover:text-foreground transition"
                   >
                     {l.label}
                   </a>
@@ -84,15 +84,17 @@ export default function Header() {
 
           {/* Actions */}
           <div className="flex items-center gap-1.5">
-            <button className="hidden sm:inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-accent hover:text-accent-foreground transition">
+            <button className="hidden sm:inline-flex items-center justify-center h-9 w-9 rounded-full transition hover:text-[var(--leaf)]">
               <Search className="h-4 w-4" aria-label="Search" />
             </button>
-            <button className="hidden sm:inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-accent hover:text-accent-foreground transition">
+
+            <button className="hidden sm:inline-flex items-center justify-center h-9 w-9 rounded-full transition hover:text-[var(--leaf)]">
               <User className="h-4 w-4" aria-label="Account" />
             </button>
+
             <button
               onClick={openCart}
-              className="relative inline-flex items-center justify-center h-9 w-9 rounded-full hover:bg-accent hover:text-accent-foreground transition"
+              className="relative inline-flex items-center justify-center h-9 w-9 rounded-full transition hover:text-[var(--leaf)]"
               aria-label="Cart"
             >
               <CartIcon />
@@ -100,27 +102,30 @@ export default function Header() {
 
             {/* Mobile menu toggle */}
             <button
-              className="inline-flex lg:hidden items-center justify-center h-9 w-9 rounded-full hover:bg-accent transition"
+              className="inline-flex lg:hidden items-center justify-center h-9 w-9 rounded-full transition hover:text-[var(--leaf)]"
               onClick={() => setMobileOpen((v) => !v)}
               aria-label="Menu"
             >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {mobileOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
             </button>
           </div>
-        </div>
 
         {/* Mobile menu */}
         {mobileOpen && (
           <div
             ref={mobileRef}
-            className="mt-2 rounded-2xl border border-border/60 bg-popover p-3 shadow-luxe glass lg:hidden"
+            className="navbar-glass mt-2 rounded-2xl border p-3 shadow-luxe lg:hidden"
           >
             {[...NAV_LINKS, ...MORE_LINKS].map((l) => (
               <a
                 key={l.href}
                 href={l.href}
                 onClick={() => setMobileOpen(false)}
-                className="block rounded-xl px-4 py-2.5 text-sm font-medium text-foreground/80 hover:bg-accent/60 hover:text-foreground transition"
+                className="block rounded-xl px-4 py-2.5 text-sm font-medium text-foreground/80 hover:text-foreground transition"
               >
                 {l.label}
               </a>
@@ -128,7 +133,7 @@ export default function Header() {
           </div>
         )}
       </div>
-
+    </div>
     </header>
   )
 }

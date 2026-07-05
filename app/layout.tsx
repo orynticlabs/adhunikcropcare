@@ -26,6 +26,13 @@ export const metadata: Metadata = {
   title: "Adhunik Crop Care — Premium Eco Agriculture Solutions",
   description:
     "Premium organic fertilizers, bio products, soil care, irrigation, smart agriculture and farmer services from Adhunik Crop Care.",
+
+  icons: {
+    icon: "/fevicon.png",
+    shortcut: "/fevicon.png",
+    apple: "/fevicon.png",
+  },
+
   openGraph: {
     title: "Adhunik Crop Care — Premium Eco Agriculture Solutions",
     description:

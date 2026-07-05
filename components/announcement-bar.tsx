@@ -92,17 +92,14 @@ export default function AnnouncementBar() {
 
   return (
     <div
-      className="fixed inset-x-0 top-0 z-[60] h-9 bg-[#0B3D2E] text-white flex items-center justify-center overflow-hidden select-none"
+      className="fixed inset-x-0 top-0 z-[60] h-9 bg-[#043927] text-white flex items-center justify-center overflow-hidden select-none"
       role="status"
       aria-live="polite"
     >
-      {/* Subtle gradient sheen */}
-      <div className="pointer-events-none absolute inset-0 bg-[#0B3D2E]" />
-
       {/* Prev arrow — desktop only */}
       <button
         onClick={() => { prev(); resetTimer() }}
-        className="absolute left-3 hidden sm:flex items-center justify-center h-5 w-5 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition"
+        className="absolute left-3 hidden sm:flex items-center justify-center h-5 w-5 rounded-full text-white/50 hover:text-[--leaf] hover:bg-white/10 transition"
         aria-label="Previous offer"
       >
         <ChevronLeft className="h-3.5 w-3.5" />
@@ -138,7 +135,7 @@ export default function AnnouncementBar() {
       {/* Next arrow — desktop only */}
       <button
         onClick={() => { next(); resetTimer() }}
-        className="absolute right-8 hidden sm:flex items-center justify-center h-5 w-5 rounded-full text-white/50 hover:text-white hover:bg-white/10 transition"
+        className="absolute right-8 hidden sm:flex items-center justify-center h-5 w-5 rounded-full text-white/50 hover:text-[--leaf] hover:bg-white/10 transition"
         aria-label="Next offer"
       >
         <ChevronRight className="h-3.5 w-3.5" />
@@ -154,7 +151,7 @@ export default function AnnouncementBar() {
             className={`rounded-full transition-all duration-300 ${
               i === index
                 ? "w-3.5 h-[3px] bg-white"
-                : "w-[3px] h-[3px] bg-white/35 hover:bg-white/60"
+                : "w-[3px] h-[3px] bg-white/35 hover:bg-[--leaf]"
             }`}
           />
         ))}
