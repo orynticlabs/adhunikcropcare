@@ -35,7 +35,7 @@ export default function SmartAgriSection() {
   const m = METRICS[crop]
 
   return (
-    <section id="smart-agriculture" className="relative py-24 sm:py-32">
+    <section id="smart-agriculture" className="relative py-12 sm:py-16">
       <div className="mx-auto max-w-6xl px-4">
         <div className="relative overflow-hidden rounded-[2.5rem] border border-border/40 bg-gradient-to-br from-[--moss] via-[--moss] to-[--bark]/80 p-10 sm:p-16 text-cream shadow-luxe">
           {/* Decorative blobs */}

@@ -1,9 +1,10 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { Search, User, Menu, X, ChevronDown } from "lucide-react"
+import { User, Menu, X, ChevronDown } from "lucide-react"
 import Image from "next/image"
 import CartIcon from "@/components/cart-icon"
+import SearchBox from "@/components/search-box"
 import { useCart } from "@/lib/cart-context"
 
 const NAV_LINKS = [
@@ -83,10 +84,8 @@ export default function Header() {
           </nav>
 
           {/* Actions */}
-          <div className="flex items-center gap-1.5">
-            <button className="hidden sm:inline-flex items-center justify-center h-9 w-9 rounded-full transition hover:text-[var(--leaf)]">
-              <Search className="h-4 w-4" aria-label="Search" />
-            </button>
+          <div className="flex items-center gap-0.5">
+            <SearchBox />
 
             <button className="hidden sm:inline-flex items-center justify-center h-9 w-9 rounded-full transition hover:text-[var(--leaf)]">
               <User className="h-4 w-4" aria-label="Account" />
