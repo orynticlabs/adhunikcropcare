@@ -1,4 +1,5 @@
 import Image from "next/image"
+import Link from "next/link"
 import {
   Leaf, ArrowRight, Play,
   Sprout, FlaskConical, Droplets, Tractor, Bug,
@@ -14,6 +15,9 @@ import FAQAccordion from "@/components/faq-accordion"
 import SmartAgriSection from "@/components/smart-agri-section"
 import AddToCartButton from "@/components/add-to-cart-button"
 import CartDrawer from "@/components/cart-drawer"
+import TestimonialsCarousel from "@/components/testimonials-carousel"
+import CropSuccessStories from "@/components/crop-success-stories"
+import SiteFooter from "@/components/site-footer"
 
 /* ─── Data ───────────────────────────────────────────────── */
 const CATEGORIES = [
@@ -63,6 +67,10 @@ function Stars({ count = 5 }: { count?: number }) {
   )
 }
 
+function productHref(name: string) {
+  return `/products/${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`
+}
+
 /* ─── Page ───────────────────────────────────────────────── */
 export default function Home() {
   return (
@@ -73,7 +81,7 @@ export default function Home() {
 
       <main>
         {/* ══ Hero ═══════════════════════════════════════════ */}
-        <section id="home" className="relative isolate overflow-hidden pt-40 pb-24 sm:pt-48 sm:pb-32">
+        <section id="home" className="relative isolate overflow-hidden pt-40 pb-12 sm:pt-48 sm:pb-14">
           {/* Background farm image */}
           <div className="absolute inset-0 -z-10">
             <Image
@@ -124,7 +132,7 @@ export default function Home() {
               </div>
 
               {/* Stats */}
-              <div className="mt-12 flex flex-wrap items-center justify-center gap-8 text-sm text-foreground/60">
+              <div className="mt-7 flex flex-wrap items-center justify-center gap-8 text-sm text-foreground/60">
                 {[
                   { val: "180", label: "Projects Develop" },
                   { val: "100", label: "Service Guarantee" },
@@ -148,7 +156,7 @@ export default function Home() {
         </section>
 
         {/* ══ Categories ══════════════════════════════════════ */}
-        <section id="crop-fertilizers" className="relative py-24 sm:py-32">
+        <section id="crop-fertilizers" className="relative py-12 sm:py-16">
           <div className="mx-auto max-w-7xl px-4">
             <div className="text-center mx-auto max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[--moss]">
@@ -162,7 +170,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {CATEGORIES.map(({ icon: Icon, title, desc, from, to }) => (
                 <div
                   key={title}
@@ -191,7 +199,7 @@ export default function Home() {
         {/* ══ Knowledge Centre ════════════════════════════════ */}
         <section
           id="knowledge-center"
-          className="relative py-24 sm:py-32 bg-gradient-to-b from-transparent via-accent/30 to-transparent"
+          className="relative py-12 sm:py-16 bg-gradient-to-b from-transparent via-accent/30 to-transparent"
         >
           <div className="mx-auto max-w-7xl px-4">
             <div className="text-center mx-auto max-w-2xl">
@@ -207,7 +215,7 @@ export default function Home() {
         </section>
 
         {/* ══ Marketplace ═════════════════════════════════════ */}
-        <section id="marketplace" className="relative py-24 sm:py-32">
+        <section id="marketplace" className="relative py-12 sm:py-16">
           <div className="mx-auto max-w-7xl px-4">
             <div className="flex items-end justify-between gap-6 flex-wrap">
               <div className="max-w-2xl">
@@ -234,7 +242,11 @@ export default function Home() {
                   key={p.name}
                   className="group min-w-[280px] sm:min-w-[340px] snap-start overflow-hidden rounded-3xl border border-border/40 bg-card shadow-soft hover:shadow-luxe transition-all flex-shrink-0"
                 >
-                  <div className="relative aspect-square overflow-hidden bg-accent/40">
+                  <Link
+                    href={productHref(p.name)}
+                    className="relative block aspect-square overflow-hidden bg-accent/40"
+                    aria-label={`View ${p.name}`}
+                  >
                     <Image
                       src={p.img}
                       alt={p.name}
@@ -244,9 +256,11 @@ export default function Home() {
                     <span className="absolute top-4 left-4 rounded-full bg-background/90 text-foreground border border-border/40 px-2.5 py-0.5 text-xs font-semibold shadow">
                       {p.badge}
                     </span>
-                  </div>
+                  </Link>
                   <div className="p-5">
-                    <h4 className="font-display text-xl">{p.name}</h4>
+                    <Link href={productHref(p.name)} className="font-display text-xl hover:text-[--leaf]">
+                      {p.name}
+                    </Link>
                     <div className="mt-1 flex items-center gap-1">
                       <Stars />
                       <span className="ml-1 text-xs text-muted-foreground">(284)</span>
@@ -265,10 +279,10 @@ export default function Home() {
         {/* ══ Farmer Services ═════════════════════════════════ */}
         <section
           id="farmer-services"
-          className="relative py-24 sm:py-32 bg-gradient-to-b from-accent/20 via-transparent to-accent/20"
+          className="relative py-12 sm:py-16 bg-gradient-to-b from-accent/20 via-transparent to-accent/20"
         >
           <div className="mx-auto max-w-7xl px-4">
-            <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+            <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[--moss]">
                   <Leaf className="h-3 w-3" aria-hidden /> Farmer Education Hub
@@ -341,9 +355,9 @@ export default function Home() {
         <SmartAgriSection />
 
         {/* ══ Certifications / Sustainability ═════════════════ */}
-        <section id="certifications" className="relative py-24 sm:py-32">
+        <section id="certifications" className="relative py-12 sm:py-16">
           <div className="mx-auto max-w-7xl px-4">
-            <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+            <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
               <div className="relative aspect-square rounded-[2rem] overflow-hidden shadow-luxe">
                 <Image
                   src="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80"
@@ -380,7 +394,7 @@ export default function Home() {
                   earth.
                 </p>
 
-                <div className="mt-10 grid gap-4 sm:grid-cols-2">
+                <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   {SUSTAINABILITY.map(({ icon: Icon, title, desc }) => (
                     <div
                       key={title}
@@ -397,8 +411,8 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ══ Testimonials ════════════════════════════════════ */}
-        <section className="relative py-24 sm:py-32 bg-gradient-to-b from-accent/20 to-transparent">
+        {/* ══ Testimonials carousel ═══════════════════════════ */}
+        <section className="relative overflow-hidden py-12 sm:py-16 bg-gradient-to-b from-accent/20 to-transparent">
           <div className="mx-auto max-w-7xl px-4">
             <div className="text-center mx-auto max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[--moss]">
@@ -409,35 +423,12 @@ export default function Home() {
               </h2>
             </div>
 
-            <div className="mt-14 grid gap-6 md:grid-cols-3">
-              {TESTIMONIALS.map((t, i) => (
-                <div
-                  key={t.name}
-                  className={`relative rounded-3xl border border-border/40 bg-card/80 p-8 shadow-soft hover:shadow-luxe transition-all ${
-                    i === 1 ? "md:-translate-y-4" : ""
-                  }`}
-                >
-                  <Stars count={5} />
-                  <p className="mt-5 text-foreground/80 leading-relaxed">
-                    &quot;{t.quote}&quot;
-                  </p>
-                  <div className="mt-6 flex items-center gap-3">
-                    <div className="grid h-11 w-11 place-items-center rounded-full bg-gradient-to-br from-[--leaf] to-[--moss] text-cream font-display text-lg font-semibold">
-                      {t.initial}
-                    </div>
-                    <div>
-                      <div className="font-medium">{t.name}</div>
-                      <div className="text-xs text-muted-foreground">{t.role}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <TestimonialsCarousel />
           </div>
         </section>
 
         {/* ══ FAQ ═════════════════════════════════════════════ */}
-        <section id="contact-us" className="relative py-24 sm:py-32">
+        <section id="contact-us" className="relative py-12 sm:py-16">
           <div className="mx-auto max-w-3xl px-4">
             <div className="text-center mx-auto max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[--moss]">
@@ -450,136 +441,11 @@ export default function Home() {
             <FAQAccordion />
           </div>
         </section>
+
+        <CropSuccessStories />
       </main>
 
-      {/* ══ Footer ══════════════════════════════════════════ */}
-        <footer className="relative overflow-hidden bg-[#043927] text-cream">
-          <div className="relative mx-auto max-w-[1440px] px-6 pb-12 pt-10 lg:px-12">
-            <div className="grid grid-cols-1 gap-12 py-12 md:grid-cols-2 lg:grid-cols-5">
-              
-              {/* Company Info */}
-              <div className="lg:col-span-2">
-                <div className="mb-6">
-                  <Image
-                    src="/adhunikwhite.png"
-                    alt="Adhunik Crop Care"
-                    width={100}
-                    height={70}
-                    className="h-16 w-auto object-contain"
-                    priority
-                  />
-                </div>
-
-                <p className="mb-8 max-w-sm text-sm leading-relaxed text-cream/60">
-                  Adhunik Crop Care Pvt. Ltd. supports Indian agriculture with trusted
-                  crop protection solutions, organic plant care products, and practical
-                  farmer education to improve productivity and sustainable farming
-                  practices.
-                </p>
-              </div>
-
-              {/* Footer Columns */}
-              {[
-                {
-                  heading: "Solutions",
-                  links: [
-                    ["Crop Protection", "#crop-fertilizers"],
-                    ["Insecticides", "#pest-management"],
-                    ["Fungicides", "#pest-management"],
-                    ["Weedicides", "#pest-management"],
-                    ["Organic Plant Care", "#organic-range"],
-                  ],
-                },
-                {
-                  heading: "Company",
-                  links: [
-                    ["Our Story", "#our-story"],
-                    ["Certifications", "#certifications"],
-                    ["Sustainability", "#certifications"],
-                    ["Marketplace", "#marketplace"],
-                    ["Contact Us", "#contact-us"],
-                  ],
-                },
-                {
-                  heading: "Farmers",
-                  links: [
-                    ["Farmer Services", "#farmer-services"],
-                    ["Knowledge Center", "#knowledge-center"],
-                    ["Smart Agriculture", "#smart-agriculture"],
-                    ["Soil Care", "#soil-care"],
-                    ["Bulk Support", "#wholesale"],
-                  ],
-                },
-              ].map((column) => (
-                <div key={column.heading}>
-                  <h4 className="mb-6 text-[10px] font-medium uppercase tracking-[0.25em] text-[#D4AF37]">
-                    {column.heading}
-                  </h4>
-
-                  <ul className="space-y-3">
-                    {column.links.map(([label, href]) => (
-                      <li key={label}>
-                        <a
-                          href={href}
-                          className="text-sm text-cream/60 transition-colors duration-300 hover:text-[#2B8633]"
-                        >
-                          {label}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-
-            {/* Bottom Footer */}
-            <div className="flex flex-col items-center justify-between gap-6 border-t border-cream/10 pt-8 lg:flex-row">
-              
-              {/* Left Side */}
-              <div className="text-center text-[10px] uppercase tracking-widest text-cream/40 lg:text-left">
-                <span>
-                  © 2026 Adhunik Crop Care Pvt. Ltd. | Developed By{" "}
-                  <a
-                    href="https://orynticlabs.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-medium text-[#e84118] transition-opacity hover:opacity-80"
-                  >
-                    OrynticLabs Private Limited
-                  </a>
-                </span>
-              </div>
-
-              {/* Right Side */}
-              <div className="flex items-center gap-4 text-[10px] uppercase tracking-widest text-cream/40">
-                <a
-                  href="/privacy-policy"
-                  className="transition-colors hover:text-white"
-                >
-                  Privacy
-                </a>
-
-                <span className="h-1 w-1 rounded-full bg-cream/20" />
-
-                <a
-                  href="/terms-and-conditions"
-                  className="transition-colors hover:text-white"
-                >
-                  Terms
-                </a>
-
-                <span className="h-1 w-1 rounded-full bg-cream/20" />
-
-                <a
-                  href="/cookie-policy"
-                  className="transition-colors hover:text-white"
-                >
-                  Cookies
-                </a>
-              </div>
-            </div>
-          </div>
-        </footer>
+      <SiteFooter />
     </div>
   )
 }

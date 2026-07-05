@@ -30,7 +30,7 @@ export default function FAQAccordion() {
   const [open, setOpen] = useState<number | null>(null)
 
   return (
-    <div className="mt-12 space-y-3">
+    <div className="mt-7 space-y-3">
       {FAQS.map((faq, i) => (
         <div
           key={i}

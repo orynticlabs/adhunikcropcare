@@ -35,7 +35,7 @@ export default function KnowledgeTabs() {
   const [active, setActive] = useState<Season>("Kharif")
 
   return (
-    <div className="mt-12">
+    <div className="mt-7">
       {/* Tab bar */}
       <div className="mx-auto grid w-full max-w-md grid-cols-3 rounded-full bg-background/70 p-1.5 h-12">
         {SEASONS.map((s) => (
@@ -54,7 +54,7 @@ export default function KnowledgeTabs() {
       </div>
 
       {/* Crop cards */}
-      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {CROPS[active].map((crop) => (
           <div
             key={crop.name}
