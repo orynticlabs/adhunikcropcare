@@ -13,7 +13,7 @@ import AnnouncementBar from "@/components/announcement-bar"
 import KnowledgeTabs from "@/components/knowledge-tabs"
 import FAQAccordion from "@/components/faq-accordion"
 import SmartAgriSection from "@/components/smart-agri-section"
-import AddToCartButton from "@/components/add-to-cart-button"
+import SizeCartButton from "@/components/size-cart-button"
 import CartDrawer from "@/components/cart-drawer"
 import TestimonialsCarousel from "@/components/testimonials-carousel"
 import CropSuccessStories from "@/components/crop-success-stories"
@@ -30,12 +30,36 @@ const CATEGORIES = [
 ]
 
 const PRODUCTS = [
-  { name: "Adhunik Bio NPK",   price: "₹ 1,249", badge: "Bestseller",   img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80" },
-  { name: "Vermi+ Compost 25kg", price: "₹ 599",  badge: "Organic",      img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80" },
-  { name: "NeemGuard Spray 1L",  price: "₹ 449",  badge: "Bio Pesticide",img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80" },
-  { name: "SoilRich Booster",    price: "₹ 899",  badge: "New",          img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80" },
-  { name: "DripFlow Starter Kit",price: "₹ 4,999",badge: "Smart",        img: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80" },
-  { name: "MyCo Root Power",     price: "₹ 749",  badge: "Bio",          img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80" },
+  {
+    name: "Adhunik Bio NPK",   price: "₹ 1,249", badge: "Bestseller",
+    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    sizes: ["1 kg", "5 kg", "25 kg"], defaultSize: "5 kg",
+  },
+  {
+    name: "Vermi+ Compost 25kg", price: "₹ 599", badge: "Organic",
+    img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
+    sizes: ["10 kg", "25 kg", "50 kg"], defaultSize: "25 kg",
+  },
+  {
+    name: "NeemGuard Spray 1L", price: "₹ 449", badge: "Bio Pesticide",
+    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    sizes: ["500 ml", "1 L", "5 L"], defaultSize: "1 L",
+  },
+  {
+    name: "SoilRich Booster", price: "₹ 899", badge: "New",
+    img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
+    sizes: ["1 kg", "5 kg"], defaultSize: "1 kg",
+  },
+  {
+    name: "DripFlow Starter Kit", price: "₹ 4,999", badge: "Smart",
+    img: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80",
+    sizes: undefined, defaultSize: undefined,   // kit — no size variants
+  },
+  {
+    name: "MyCo Root Power", price: "₹ 749", badge: "Bio",
+    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    sizes: ["250 g", "500 g", "1 kg"], defaultSize: "500 g",
+  },
 ]
 
 const TUTORIALS = [
@@ -265,9 +289,11 @@ export default function Home() {
                       <Stars />
                       <span className="ml-1 text-xs text-muted-foreground">(284)</span>
                     </div>
-                    <div className="mt-4 flex items-center justify-between">
+                    <div className="mt-4">
                       <span className="font-display text-2xl">{p.price}</span>
-                      <AddToCartButton product={p} />
+                      <div className="mt-3">
+                        <SizeCartButton product={p} />
+                      </div>
                     </div>
                   </div>
                 </div>

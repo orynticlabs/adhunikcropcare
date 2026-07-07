@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import {
   CheckCircle2,
@@ -86,22 +86,51 @@ function Stars({ rating }: { rating: number }) {
 
 export default function ProductDetailView({ product }: { product: ProductDetail }) {
   const [activeImage, setActiveImage] = useState(0)
-  const [activeOption, setActiveOption] = useState(0)
+  const [activeOption, setActiveOption] = useState<number | null>(null)  // null = no size chosen yet
   const [quantity, setQuantity] = useState(1)
   const [pincode, setPincode] = useState("")
   const [checkedPin, setCheckedPin] = useState("")
   const [openDetails, setOpenDetails] = useState<string[]>(["Benefits", "Usage Instructions"])
   const { addItem, openCart } = useCart()
 
-  const selected = product.options[activeOption]
+  /* ── Auto-advance image every 3 s ───────────────────────── */
+  const timerRef  = useRef<ReturnType<typeof setInterval> | null>(null)
+  const hoverRef  = useRef(false)
+
+  const stopImgTimer  = useCallback(() => { if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null } }, [])
+  const startImgTimer = useCallback(() => {
+    stopImgTimer()
+    timerRef.current = setInterval(() => {
+      if (!hoverRef.current) setActiveImage(i => (i + 1) % product.images.length)
+    }, 3000)
+  }, [stopImgTimer, product.images.length])
+
+  useEffect(() => { startImgTimer(); return stopImgTimer }, [startImgTimer, stopImgTimer])
+
+  /* ── Cursor zoom state ───────────────────────────────────── */
+  const [zoom, setZoom]       = useState(false)
+  const [origin, setOrigin]   = useState({ x: 50, y: 50 }) // % from top-left
+  const imgWrapRef            = useRef<HTMLDivElement>(null)
+
+  function onMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = imgWrapRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top)  / rect.height) * 100
+    setOrigin({ x, y })
+  }
+
+  const selected = activeOption !== null ? product.options[activeOption] : null
   const cartProduct = {
-    name: `${product.title} - ${selected.label}`,
-    price: selected.price,
+    name: `${product.title}`,
+    price: selected?.price ?? product.options[0].price,
     img: product.images[0].src,
     badge: product.category,
+    size: selected?.label,             // size goes into the cart item
   }
 
   function addQuantityToCart() {
+    if (activeOption === null) return  // guard: size required
     for (let index = 0; index < quantity; index += 1) {
       addItem(cartProduct)
     }
@@ -130,12 +159,13 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
       <section className="mx-auto max-w-7xl px-4 pb-12 sm:pb-16">
         <div className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
           <div className="grid gap-4 sm:grid-cols-[5.5rem_1fr]">
+            {/* Thumbnails */}
             <div className="order-2 flex gap-3 overflow-x-auto pb-1 sm:order-1 sm:flex-col sm:overflow-visible">
               {product.images.map((image, index) => (
                 <button
                   key={image.src}
                   type="button"
-                  onClick={() => setActiveImage(index)}
+                  onClick={() => { setActiveImage(index); stopImgTimer(); setTimeout(startImgTimer, 4000) }}
                   className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border bg-card shadow-soft transition sm:h-24 sm:w-20 ${
                     activeImage === index
                       ? "border-[--leaf] ring-2 ring-[--leaf]/20"
@@ -144,21 +174,53 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                   aria-label={`Show product image ${index + 1}`}
                 >
                   <Image src={image.src} alt={image.alt} fill sizes="96px" className="object-cover" />
+                  {/* Progress bar under active thumb */}
+                  {activeImage === index && (
+                    <span className="absolute bottom-0 left-0 h-[3px] w-full bg-[--leaf]/30">
+                      <span className="animate-img-progress absolute left-0 top-0 h-full bg-[--leaf]" />
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
 
-            <div className="order-1 relative aspect-square overflow-hidden rounded-[2rem] border border-border/50 bg-card shadow-luxe sm:order-2">
+            {/* Main image with cursor zoom */}
+            <div
+              ref={imgWrapRef}
+              className="order-1 relative aspect-square overflow-hidden rounded-[2rem] border border-border/50 bg-card shadow-luxe sm:order-2"
+              style={{ cursor: zoom ? "zoom-out" : "zoom-in" }}
+              onMouseEnter={() => { hoverRef.current = true; stopImgTimer() }}
+              onMouseLeave={() => { hoverRef.current = false; setZoom(false); startImgTimer() }}
+              onMouseMove={onMouseMove}
+              onClick={() => setZoom(z => !z)}
+            >
               <Image
                 src={product.images[activeImage].src}
                 alt={product.images[activeImage].alt}
                 fill
                 priority
                 sizes="(max-width: 1023px) 100vw, 52vw"
-                className="object-cover transition-transform duration-700 hover:scale-105"
+                className="object-cover transition-[transform,transform-origin] duration-300"
+                style={{
+                  transformOrigin: zoom ? `${origin.x}% ${origin.y}%` : "center center",
+                  transform: zoom ? "scale(2)" : "scale(1)",
+                }}
               />
-              <div className="absolute left-5 top-5 rounded-full bg-[#2B8633] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white shadow-soft">
-                {selected.discount}
+              {selected && (
+                <div className="absolute left-5 top-5 rounded-full bg-[#2B8633] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white shadow-soft">
+                  {selected.discount}
+                </div>
+              )}
+              {/* Dot indicators */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                {product.images.map((_, i) => (
+                  <span
+                    key={i}
+                    className={`rounded-full transition-all duration-300 ${
+                      i === activeImage ? "w-5 h-[5px] bg-white" : "w-[5px] h-[5px] bg-white/50"
+                    }`}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -178,7 +240,12 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
             </p>
 
             <div className="mt-6">
-              <div className="text-sm font-semibold">Pack size</div>
+              <div className="text-sm font-semibold">
+                Pack size
+                {activeOption === null && (
+                  <span className="ml-2 text-xs font-normal text-amber-600">— please select a size</span>
+                )}
+              </div>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 {product.options.map((option, index) => (
                   <button
@@ -187,7 +254,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                     onClick={() => setActiveOption(index)}
                     className={`rounded-2xl border px-4 py-3 text-left transition ${
                       activeOption === index
-                        ? "border-[--leaf] bg-[--leaf]/10 text-foreground"
+                        ? "border-[--leaf] bg-[--leaf]/10 text-foreground ring-2 ring-[--leaf]/20"
                         : "border-border bg-background hover:border-[--leaf]/60"
                     }`}
                   >
@@ -199,13 +266,17 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
             </div>
 
             <div className="mt-6 flex flex-wrap items-end gap-3">
-              <span className="font-display text-4xl">{selected.price}</span>
+              <span className="font-display text-4xl">
+                {selected ? selected.price : product.options[0].price}
+              </span>
               <span className="pb-1 text-lg text-muted-foreground line-through">
-                {selected.originalPrice}
+                {selected ? selected.originalPrice : product.options[0].originalPrice}
               </span>
-              <span className="mb-1 rounded-full bg-[#2B8633] px-3 py-1 text-xs font-bold uppercase tracking-widest text-white">
-                {selected.discount}
-              </span>
+              {selected && (
+                <span className="mb-1 rounded-full bg-[#2B8633] px-3 py-1 text-xs font-bold uppercase tracking-widest text-white">
+                  {selected.discount}
+                </span>
+              )}
             </div>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
@@ -213,7 +284,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                 <button
                   type="button"
                   onClick={() => setQuantity((value) => Math.max(1, value - 1))}
-                  className="grid h-10 w-10 place-items-center rounded-full hover:bg-accent"
+                  className="grid h-10 w-10 place-items-center rounded-full hover:bg-accent hover:text-white"
                   aria-label="Decrease quantity"
                 >
                   <Minus className="h-4 w-4" aria-hidden />
@@ -222,7 +293,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                 <button
                   type="button"
                   onClick={() => setQuantity((value) => Math.min(12, value + 1))}
-                  className="grid h-10 w-10 place-items-center rounded-full hover:bg-accent"
+                  className="grid h-10 w-10 place-items-center rounded-full hover:bg-accent hover:text-white"
                   aria-label="Increase quantity"
                 >
                   <Plus className="h-4 w-4" aria-hidden />
@@ -232,10 +303,15 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               <button
                 type="button"
                 onClick={addQuantityToCart}
-                className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[#2B8633] px-6 text-sm font-bold text-white shadow-luxe transition hover:bg-[#0A0A0A] active:scale-[0.99]"
+                disabled={activeOption === null}
+                className={`inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full px-6 text-sm font-bold text-white shadow-luxe transition active:scale-[0.99] ${
+                  activeOption === null
+                    ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+                    : "bg-[#2B8633] hover:bg-[#0A0A0A]"
+                }`}
               >
                 <ShoppingBag className="h-4 w-4" aria-hidden />
-                Add to Cart
+                {activeOption === null ? "Select a pack size" : "Add to Cart"}
               </button>
             </div>
 
