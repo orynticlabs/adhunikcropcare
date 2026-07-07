@@ -26,10 +26,11 @@ export interface CartProductInput {
   price: string
   img: string
   badge?: string
+  size?: string       // pack / variant label, e.g. "5 kg", "1 L"
 }
 
 export interface CartItem extends CartProductInput {
-  id: string
+  id: string          // encodes name + size so same product in two sizes = two line items
   quantity: number
   priceValue: number
 }
@@ -64,11 +65,11 @@ const INITIAL_CART_ITEMS: CartItem[] = [
   },
 ]
 
-function productId(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "")
+function productId(name: string, size?: string) {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+  if (!size) return base
+  const sizeSlug = size.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+  return `${base}--${sizeSlug}`
 }
 
 function parsePrice(price: string) {
@@ -145,7 +146,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = useCallback((product?: CartProductInput) => {
     if (product) {
-      const id = productId(product.name)
+      const id = productId(product.name, product.size)
 
       setItems((current) => {
         const existing = current.find((item) => item.id === id)
@@ -176,7 +177,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       )
     }
 
-    setAnimKey((k) => k + 1)   // new key → icon element remounts → fresh anim
+    setAnimKey((k) => k + 1)
     playAddSound()
     vibrateDevice()
     if (timer.current) clearTimeout(timer.current)

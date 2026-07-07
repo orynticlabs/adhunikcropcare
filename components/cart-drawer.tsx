@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { CreditCard, Minus, Plus, ShieldCheck, ShoppingBag, Trash2, X } from "lucide-react"
 import { formatCurrency, useCart } from "@/lib/cart-context"
 
@@ -77,7 +78,7 @@ export default function CartDrawer() {
           <button
             type="button"
             onClick={closeCart}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground/70 shadow-sm transition hover:bg-accent hover:text-foreground"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground/70 shadow-sm transition hover:bg-accent hover:text-white"
             aria-label="Close cart"
           >
             <X className="h-4 w-4" aria-hidden />
@@ -109,9 +110,16 @@ export default function CartDrawer() {
                           <h3 className="truncate font-display text-lg leading-tight">
                             {item.name}
                           </h3>
-                          <p className="mt-1 text-xs font-medium text-[--moss]">
-                            {item.badge ?? "Crop care"}
-                          </p>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            {item.size && (
+                              <span className="inline-flex items-center rounded-full border border-[--leaf]/30 bg-[--leaf]/8 px-2 py-0.5 text-[10px] font-semibold text-[--moss]">
+                                {item.size}
+                              </span>
+                            )}
+                            <p className="text-xs font-medium text-[--moss]">
+                              {item.badge ?? "Crop care"}
+                            </p>
+                          </div>
                         </div>
                         <button
                           type="button"
@@ -128,7 +136,7 @@ export default function CartDrawer() {
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-accent"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-accent hover:text-white"
                             aria-label={`Decrease ${item.name} quantity`}
                           >
                             <Minus className="h-3.5 w-3.5" aria-hidden />
@@ -139,7 +147,7 @@ export default function CartDrawer() {
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-accent"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-accent hover:text-white"
                             aria-label={`Increase ${item.name} quantity`}
                           >
                             <Plus className="h-3.5 w-3.5" aria-hidden />
@@ -177,13 +185,14 @@ export default function CartDrawer() {
                 </div>
               </div>
 
-              <button
-                type="button"
+              <Link
+                href="/checkout"
+                onClick={closeCart}
                 className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[--leaf] px-6 text-sm font-semibold text-white shadow-luxe transition hover:bg-[--moss]/90 active:scale-[0.99]"
               >
                 <CreditCard className="h-4 w-4" aria-hidden />
-                Checkout
-              </button>
+                Proceed to Checkout
+              </Link>
 
               <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
                 <ShieldCheck className="h-3.5 w-3.5 text-[--leaf]" aria-hidden />

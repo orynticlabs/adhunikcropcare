@@ -9,9 +9,9 @@ import { useCart } from "@/lib/cart-context"
 
 const NAV_LINKS = [
   { label: "Home", href: "#home" },
+  { label: "Products", href: "/products" },
   { label: "Crop Fertilizers", href: "#crop-fertilizers" },
   { label: "Organic Range", href: "#organic-range" },
-  { label: "Smart Agriculture", href: "#smart-agriculture" },
   { label: "Marketplace", href: "#marketplace" },
 ]
 
@@ -74,7 +74,7 @@ export default function Header() {
                   <a
                     key={l.href}
                     href={l.href}
-                    className="block rounded-xl px-3 py-2 text-sm text-foreground/80 hover:text-foreground transition"
+                    className="block rounded-xl px-3 py-2 text-sm text-foreground/80 hover:text-[--leaf] transition"
                   >
                     {l.label}
                   </a>
@@ -124,7 +124,7 @@ export default function Header() {
                 key={l.href}
                 href={l.href}
                 onClick={() => setMobileOpen(false)}
-                className="block rounded-xl px-4 py-2.5 text-sm font-medium text-foreground/80 hover:text-foreground transition"
+                className="block rounded-xl px-4 py-2.5 text-sm font-medium text-foreground/80 hover:text-[--leaf] transition"
               >
                 {l.label}
               </a>
