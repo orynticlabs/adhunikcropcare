@@ -2,25 +2,26 @@
   "name": "adhunikcropcare",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0 <27"
+  },
   "scripts": {
+    "check:node": "node scripts/check-node-version.mjs",
+    "predev": "npm run check:node",
     "dev": "next dev",
+    "prebuild": "npm run check:node",
     "build": "next build",
+    "prestart": "npm run check:node",
     "start": "next start",
-    "lint": "eslint",
-    "generate:importmap": "payload generate:importmap",
-    "generate:types": "payload generate:types"
+    "lint": "eslint"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
-    "@payloadcms/db-mongodb": "^3.85.2",
-    "@payloadcms/next": "^3.85.2",
-    "@payloadcms/richtext-lexical": "^3.85.2",
     "@sentry/nextjs": "^10.63.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.23.0",
     "next": "16.2.10",
-    "payload": "^3.85.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "shadcn": "^4.13.0",
