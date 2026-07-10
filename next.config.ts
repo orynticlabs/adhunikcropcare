@@ -1,4 +1,3 @@
-import { withPayload } from '@payloadcms/next/withPayload'
 import { withSentryConfig } from '@sentry/nextjs'
 import type { NextConfig } from 'next'
 
@@ -21,7 +20,7 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withSentryConfig(withPayload(nextConfig), {
+export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: 'adhunikcropcare',        // slug only — not the full URL
   authToken: process.env.SENTRY_AUTH_TOKEN,
