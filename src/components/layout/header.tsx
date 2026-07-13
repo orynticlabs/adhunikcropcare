@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react"
 import { User, Menu, X, ChevronDown, ShoppingBag, Leaf } from "lucide-react"
 import Image from "next/image"
+import Link from "next/link"
 import CartIcon from "@/features/cart/components/cart-icon"
 import SearchBox from "@/components/search/search-box"
 import { useCart } from "@/features/cart/cart-context"
+import { useAuth } from "@/features/auth/auth-context"
 
 const NAV_LINKS = [
   { label: "Home",             href: "#home"             },
@@ -32,6 +34,7 @@ const MORE_LINKS = [
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const { openCart } = useCart()
+  const { openAuthModal, user } = useAuth()
 
   /* lock body scroll while drawer is open */
   useEffect(() => {
@@ -95,12 +98,28 @@ export default function Header() {
             <div className="flex items-center gap-0.5">
               <SearchBox />
 
-              <button
-                className="hidden sm:inline-flex items-center justify-center h-9 w-9 rounded-full transition hover:text-[--leaf]"
-                aria-label="Account"
-              >
-                <User className="h-4 w-4" aria-hidden />
-              </button>
+              {user ? (
+                <Link
+                  href="/account"
+                  className="hidden h-9 w-9 items-center justify-center rounded-full transition hover:text-[--leaf] sm:inline-flex"
+                  aria-label="Account"
+                  title={`${user.firstName} ${user.lastName}`}
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[--leaf]/15 text-xs font-bold text-[--leaf]">
+                    {user.firstName[0]}{user.lastName[0]}
+                  </span>
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => openAuthModal("signin")}
+                  className="hidden h-9 w-9 items-center justify-center rounded-full transition hover:text-[--leaf] sm:inline-flex"
+                  aria-label="Sign in"
+                  title="Sign in"
+                >
+                  <User className="h-4 w-4" aria-hidden />
+                </button>
+              )}
 
               <button
                 onClick={openCart}
@@ -216,13 +235,28 @@ export default function Header() {
               <ShoppingBag className="h-4 w-4" aria-hidden />
               View Cart
             </button>
-            <button
-              type="button"
-              className="flex w-full items-center justify-center gap-2 rounded-full border border-border h-10 text-sm font-medium text-foreground/70 transition hover:border-[--leaf] hover:text-[--leaf]"
-            >
-              <User className="h-4 w-4" aria-hidden />
-              My Account
-            </button>
+            {user ? (
+              <Link
+                href="/account"
+                onClick={closeMenu}
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-full border border-border text-sm font-medium text-foreground/70 transition hover:border-[--leaf] hover:text-[--leaf]"
+              >
+                <User className="h-4 w-4" aria-hidden />
+                My Account
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenu()
+                  openAuthModal("signin")
+                }}
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-full border border-border text-sm font-medium text-foreground/70 transition hover:border-[--leaf] hover:text-[--leaf]"
+              >
+                <User className="h-4 w-4" aria-hidden />
+                Sign In
+              </button>
+            )}
           </div>
         </div>
       </div>

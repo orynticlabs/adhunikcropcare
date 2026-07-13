@@ -1,17 +1,18 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import {
-  ChevronRight, Star, Leaf, SlidersHorizontal,
+  ChevronRight, Leaf, SlidersHorizontal,
   ChevronDown, X,
 } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
+import { ProductCard } from "@/components/products/product-card"
 import Header from "@/components/layout/header"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import SiteFooter from "@/components/layout/site-footer"
-import SizeCartButton from "@/features/cart/components/size-cart-button"
 import { formatCurrency } from "@/features/cart/cart-context"
 
 /* ── Constants ──────────────────────────────────────── */
@@ -45,6 +46,11 @@ const PRODUCTS = [
   {
     name: "Adhunik Bio NPK", priceValue: 1249, badge: "Bestseller", category: "Fertilizers",
     img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+      "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80",
+    ],
     sizes: ["1 kg", "5 kg", "25 kg"], defaultSize: "5 kg", rating: 4.8, reviews: 284,
   },
   {
@@ -61,6 +67,10 @@ const PRODUCTS = [
   {
     name: "Vermi+ Compost 25kg", priceValue: 599, badge: "Organic", category: "Organic",
     img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
+      "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80",
+    ],
     sizes: ["10 kg", "25 kg", "50 kg"], defaultSize: "25 kg", rating: 4.7, reviews: 203,
   },
   {
@@ -128,40 +138,44 @@ function productHref(name: string) {
   return `/products/${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`
 }
 
-function Stars({ rating }: { rating: number }) {
-  return (
-    <div className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Star
-          key={i}
-          className={`h-3 w-3 ${i < Math.round(rating) ? "fill-[--gold] text-[--gold]" : "fill-border text-border"}`}
-          aria-hidden
-        />
-      ))}
-    </div>
-  )
+function comparePrice(priceValue: number, uplift = 1.22) {
+  return formatCurrency(Math.ceil((priceValue * uplift) / 10) * 10)
 }
 
 /* ── Page ───────────────────────────────────────────── */
 export default function ProductsPage() {
+  const searchParams = useSearchParams()
+  const searchQuery = searchParams.get("q")?.trim() ?? ""
   const [activeCategory, setActiveCategory] = useState("All")
   const [priceRange,    setPriceRange]    = useState(0)
   const [sortBy,        setSortBy]        = useState("featured")
   const [priceOpen,     setPriceOpen]     = useState(false)
   const [sortOpen,      setSortOpen]      = useState(false)
+  const categoryFromSearch = CATEGORIES.find(
+    (category) => category !== "All" && category.toLowerCase() === searchQuery.toLowerCase(),
+  )
+  const effectiveCategory = categoryFromSearch ?? activeCategory
 
   const filtered = useMemo(() => {
     let result = [...PRODUCTS]
-    if (activeCategory !== "All") result = result.filter(p => p.category === activeCategory)
+    if (searchQuery) {
+      const normalizedQuery = searchQuery.toLowerCase()
+      result = result.filter((product) =>
+        product.name.toLowerCase().includes(normalizedQuery) ||
+        product.category.toLowerCase().includes(normalizedQuery) ||
+        product.badge.toLowerCase().includes(normalizedQuery),
+      )
+    }
+    if (effectiveCategory !== "All") result = result.filter(p => p.category === effectiveCategory)
     const { min, max } = PRICE_RANGES[priceRange]
     result = result.filter(p => p.priceValue >= min && p.priceValue <= max)
     if (sortBy === "price-asc")  result.sort((a, b) => a.priceValue - b.priceValue)
     if (sortBy === "price-desc") result.sort((a, b) => b.priceValue - a.priceValue)
     if (sortBy === "rating")     result.sort((a, b) => b.rating - a.rating)
     return result
-  }, [activeCategory, priceRange, sortBy])
+  }, [effectiveCategory, priceRange, searchQuery, sortBy])
 
-  const activeFiltersCount = (activeCategory !== "All" ? 1 : 0) + (priceRange !== 0 ? 1 : 0)
+  const activeFiltersCount = (effectiveCategory !== "All" ? 1 : 0) + (priceRange !== 0 ? 1 : 0)
 
   function clearFilters() { setActiveCategory("All"); setPriceRange(0) }
 
@@ -239,7 +253,7 @@ export default function ProductsPage() {
                       type="button"
                       onClick={() => setActiveCategory(cat)}
                       className={`shrink-0 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium transition-all duration-200 ${
-                        activeCategory === cat
+                        effectiveCategory === cat
                           ? "bg-[--leaf] text-white shadow-sm"
                           : "border border-border/60 text-foreground/70 bg-background hover:border-[--leaf]/50 hover:text-[--leaf]"
                       }`}
@@ -350,9 +364,9 @@ export default function ProductsPage() {
             {/* Active filter tags */}
             {activeFiltersCount > 0 && (
               <div className="flex flex-wrap gap-2 pb-3">
-                {activeCategory !== "All" && (
+                {effectiveCategory !== "All" && (
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-[--leaf]/20 bg-[--leaf]/10 px-3 py-1 text-xs font-medium text-[--leaf]">
-                    {activeCategory}
+                    {effectiveCategory}
                     <button type="button" onClick={() => setActiveCategory("All")} aria-label="Remove category filter">
                       <X className="h-3 w-3" />
                     </button>
@@ -380,8 +394,8 @@ export default function ProductsPage() {
               Showing{" "}
               <span className="font-semibold text-foreground">{filtered.length}</span>
               {" "}product{filtered.length !== 1 ? "s" : ""}
-              {activeCategory !== "All" && (
-                <span className="text-[--moss]"> in {activeCategory}</span>
+              {effectiveCategory !== "All" && (
+                <span className="text-[--moss]"> in {effectiveCategory}</span>
               )}
             </p>
             {activeFiltersCount > 0 && (
@@ -418,52 +432,20 @@ export default function ProductsPage() {
               {filtered.map(p => {
                 const price = formatCurrency(p.priceValue)
                 return (
-                  <div
+                  <ProductCard
                     key={p.name}
-                    className="group flex flex-col overflow-hidden rounded-3xl border border-border/40 bg-card shadow-soft hover:shadow-luxe transition-all duration-300"
-                  >
-                    {/* Product image */}
-                    <Link
-                      href={productHref(p.name)}
-                      className="relative block aspect-[4/3] overflow-hidden bg-accent/30 shrink-0"
-                      tabIndex={-1}
-                      aria-label={`View ${p.name}`}
-                    >
-                      <Image
-                        src={p.img}
-                        alt={p.name}
-                        fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
-                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      />
-                      {/* Badge */}
-                      <span className="absolute top-3 left-3 rounded-full bg-background/92 border border-border/40 px-2.5 py-0.5 text-[11px] font-semibold shadow-sm backdrop-blur-sm">
-                        {p.badge}
-                      </span>
-                    </Link>
-
-                    {/* Card body */}
-                    <div className="flex flex-col flex-1 gap-3 p-4 sm:p-5">
-                      <Link
-                        href={productHref(p.name)}
-                        className="font-display text-base sm:text-lg leading-snug hover:text-[--leaf] transition-colors"
-                      >
-                        {p.name}
-                      </Link>
-
-                      <div className="flex items-center gap-2">
-                        <Stars rating={p.rating} />
-                        <span className="text-xs text-muted-foreground">({p.reviews})</span>
-                      </div>
-
-                      <div className="mt-auto pt-1">
-                        <div className="mb-3 font-display text-xl text-[--moss]">{price}</div>
-                        <SizeCartButton
-                          product={{ name: p.name, price, img: p.img, badge: p.badge, sizes: p.sizes, defaultSize: p.defaultSize }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                    href={productHref(p.name)}
+                    name={p.name}
+                    image={p.img}
+                    images={p.images}
+                    price={price}
+                    originalPrice={comparePrice(p.priceValue)}
+                    badge={p.badge}
+                    subtitle={`${p.category} solution for better crop outcomes`}
+                    rating={p.rating}
+                    reviews={p.reviews}
+                    imageSizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                  />
                 )
               })}
             </div>

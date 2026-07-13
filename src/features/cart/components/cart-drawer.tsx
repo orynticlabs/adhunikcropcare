@@ -53,7 +53,7 @@ export default function CartDrawer() {
       />
 
       <aside
-        className={`absolute inset-y-0 right-0 flex h-full w-full flex-col bg-background shadow-2xl transition-transform duration-300 ease-out sm:w-[27rem] lg:w-[30rem] ${
+        className={`absolute inset-y-0 right-0 flex h-full w-full flex-col overflow-hidden bg-[linear-gradient(180deg,#f4f7f2_0%,#edf2ee_100%)] shadow-2xl transition-transform duration-300 ease-out sm:w-[28rem] lg:w-[31rem] ${
           isCartOpen ? "translate-x-0" : "translate-x-full"
         }`}
         inert={!isCartOpen}
@@ -61,28 +61,29 @@ export default function CartDrawer() {
         aria-modal="true"
         aria-label="Shopping cart"
       >
-        <div className="flex items-center justify-between border-b border-border px-5 py-4 sm:px-6">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-[--leaf] text-white">
-                <ShoppingBag className="h-4 w-4" aria-hidden />
+        <div className="border-b border-[#d9e2da] bg-[rgba(244,247,242,0.92)] px-5 py-5 backdrop-blur-md sm:px-6 sm:py-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[linear-gradient(145deg,#0d5a48,#033927)] text-white shadow-[0_10px_24px_rgba(3,57,39,0.18)]">
+                <ShoppingBag className="h-5 w-5" aria-hidden />
               </span>
               <div>
-                <h2 className="font-display text-2xl leading-none">Your cart</h2>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <h2 className="font-display text-[2.1rem] leading-none text-[#203129]">Your cart</h2>
+                <p className="mt-2 text-sm text-[#66756d]">
                   {count} {count === 1 ? "item" : "items"} ready for checkout
                 </p>
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={closeCart}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#d4ddd6] bg-[rgba(255,255,255,0.8)] text-foreground/70 shadow-[0_8px_20px_rgba(31,42,34,0.08)] transition hover:border-[--leaf]/30 hover:text-[--leaf]"
+              aria-label="Close cart"
+            >
+              <X className="h-5 w-5" aria-hidden />
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={closeCart}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-foreground/70 shadow-sm transition hover:bg-accent hover:text-white"
-            aria-label="Close cart"
-          >
-            <X className="h-4 w-4" aria-hidden />
-          </button>
         </div>
 
         {items.length > 0 ? (
@@ -92,31 +93,32 @@ export default function CartDrawer() {
                 {items.map((item) => (
                   <article
                     key={item.id}
-                    className="grid grid-cols-[5rem_1fr] gap-4 rounded-lg border border-border/60 bg-card p-3 shadow-soft"
+                    className="rounded-[1.75rem] border border-[#d8e1d9] bg-white p-4 shadow-[0_10px_28px_rgba(31,42,34,0.08)]"
                   >
-                    <div className="relative h-20 w-20 overflow-hidden rounded-md bg-accent">
-                      <Image
-                        src={item.img}
-                        alt={item.name}
-                        fill
-                        className="object-cover"
-                        sizes="80px"
-                      />
-                    </div>
+                    <div className="grid grid-cols-[5.5rem_1fr] gap-4">
+                      <div className="relative h-[5.5rem] w-[5.5rem] overflow-hidden rounded-[1.2rem] bg-accent/20">
+                        <Image
+                          src={item.img}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                          sizes="88px"
+                        />
+                      </div>
 
-                    <div className="min-w-0">
+                      <div className="min-w-0">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h3 className="truncate font-display text-lg leading-tight">
+                          <h3 className="truncate font-display text-[1.15rem] leading-tight text-[#203129] sm:text-[1.3rem]">
                             {item.name}
                           </h3>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                             {item.size && (
-                              <span className="inline-flex items-center rounded-full border border-[--leaf]/30 bg-[--leaf]/8 px-2 py-0.5 text-[10px] font-semibold text-[--moss]">
+                              <span className="inline-flex items-center rounded-full border border-[--leaf]/20 bg-[--leaf]/8 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[--moss]">
                                 {item.size}
                               </span>
                             )}
-                            <p className="text-xs font-medium text-[--moss]">
+                            <p className="text-sm font-semibold text-[#203129]">
                               {item.badge ?? "Crop care"}
                             </p>
                           </div>
@@ -124,95 +126,96 @@ export default function CartDrawer() {
                         <button
                           type="button"
                           onClick={() => removeItem(item.id)}
-                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-red-50 hover:text-red-600"
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#6f7a73] transition hover:bg-red-50 hover:text-red-600"
                           aria-label={`Remove ${item.name}`}
                         >
-                          <Trash2 className="h-4 w-4" aria-hidden />
+                          <Trash2 className="h-[1.05rem] w-[1.05rem]" aria-hidden />
                         </button>
                       </div>
 
-                      <div className="mt-4 flex items-center justify-between gap-3">
-                        <div className="inline-flex h-9 items-center rounded-full border border-border bg-background p-1">
+                      <div className="mt-5 flex items-end justify-between gap-3">
+                        <div className="inline-flex h-11 items-center rounded-full border border-[#d2ddd3] bg-[#f4f7f2] p-1 shadow-inner">
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-accent hover:text-white"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#203129] transition hover:bg-white hover:text-[--leaf]"
                             aria-label={`Decrease ${item.name} quantity`}
                           >
-                            <Minus className="h-3.5 w-3.5" aria-hidden />
+                            <Minus className="h-4 w-4" aria-hidden />
                           </button>
-                          <span className="min-w-8 text-center text-sm font-semibold">
+                          <span className="min-w-10 text-center text-xl font-semibold text-[#203129]">
                             {item.quantity}
                           </span>
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-full transition hover:bg-accent hover:text-white"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-[#203129] transition hover:bg-white hover:text-[--leaf]"
                             aria-label={`Increase ${item.name} quantity`}
                           >
-                            <Plus className="h-3.5 w-3.5" aria-hidden />
+                            <Plus className="h-4 w-4" aria-hidden />
                           </button>
                         </div>
 
                         <div className="text-right">
-                          <div className="font-display text-lg">
+                          <div className="font-display text-[2rem] leading-none text-[#203129]">
                             {formatCurrency(item.priceValue * item.quantity)}
                           </div>
-                          <div className="text-[11px] text-muted-foreground">
+                          <div className="mt-2 text-sm text-[#66756d]">
                             {item.price} each
                           </div>
                         </div>
                       </div>
+                    </div>
                     </div>
                   </article>
                 ))}
               </div>
             </div>
 
-            <div className="border-t border-border bg-background px-5 py-5 shadow-[0_-12px_36px_rgb(0_0_0/0.06)] sm:px-6">
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center justify-between text-muted-foreground">
+            <div className="border-t border-[#d9e2da] bg-[rgba(244,247,242,0.96)] px-5 py-5 shadow-[0_-18px_42px_rgb(3_57_39/0.07)] sm:px-6">
+              <div className="space-y-4 rounded-[1.8rem] bg-[linear-gradient(180deg,#f4f7f2_0%,#eef4ef_100%)] p-5 ring-1 ring-[#dbe5dd]">
+                <div className="flex items-center justify-between text-lg text-[#66756d]">
                   <span>Subtotal</span>
-                  <span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
+                  <span className="font-semibold text-[#203129]">{formatCurrency(subtotal)}</span>
                 </div>
-                <div className="flex items-center justify-between text-muted-foreground">
+                <div className="flex items-center justify-between text-lg text-[#66756d]">
                   <span>Shipping</span>
-                  <span className="font-medium text-[--leaf]">Free</span>
+                  <span className="font-semibold text-[--leaf]">Free</span>
                 </div>
-                <div className="flex items-center justify-between border-t border-border pt-3 font-display text-2xl">
+                <div className="flex items-center justify-between border-t border-[#d7e2d8] pt-5 font-display text-[2.15rem] text-[#203129]">
                   <span>Total</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
-              </div>
 
-              <Link
-                href="/checkout"
-                onClick={closeCart}
-                className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[--leaf] px-6 text-sm font-semibold text-white shadow-luxe transition hover:bg-[--moss]/90 active:scale-[0.99]"
-              >
-                <CreditCard className="h-4 w-4" aria-hidden />
-                Proceed to Checkout
-              </Link>
+                <Link
+                  href="/checkout"
+                  onClick={closeCart}
+                  className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#0d5a48_0%,#033927_100%)] px-6 text-base font-semibold text-white shadow-[0_18px_36px_rgba(3,57,39,0.16)] transition hover:brightness-105 active:scale-[0.99]"
+                >
+                  <CreditCard className="h-4 w-4" aria-hidden />
+                  Proceed to checkout
+                </Link>
 
-              <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                <ShieldCheck className="h-3.5 w-3.5 text-[--leaf]" aria-hidden />
-                Secure checkout and farmer-friendly returns
+                <div className="flex items-center justify-center gap-2 text-sm text-[#66756d]">
+                  <ShieldCheck className="h-4 w-4 text-[--leaf]" aria-hidden />
+                  Secure checkout and farmer-friendly returns
+                </div>
               </div>
             </div>
           </>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-            <span className="grid h-16 w-16 place-items-center rounded-full bg-[--leaf]/10 text-[--leaf]">
-              <ShoppingBag className="h-7 w-7" aria-hidden />
+            <span className="grid h-20 w-20 place-items-center rounded-[1.8rem] bg-[linear-gradient(145deg,rgba(13,90,72,0.12),rgba(104,156,48,0.12))] text-[--leaf] shadow-soft">
+              <ShoppingBag className="h-8 w-8" aria-hidden />
             </span>
-            <h3 className="mt-5 font-display text-2xl">Your cart is empty</h3>
-            <p className="mt-2 max-w-xs text-sm text-muted-foreground">
+            <h3 className="mt-6 font-display text-3xl text-[#203129]">Your cart is empty</h3>
+            <p className="mt-3 max-w-xs text-sm leading-6 text-[#66756d]">
               Add trusted crop care products from the marketplace to start an order.
             </p>
             <button
               type="button"
               onClick={closeCart}
-              className="mt-6 inline-flex h-10 items-center justify-center rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
+              className="mt-7 inline-flex h-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#0d5a48_0%,#033927_100%)] px-6 text-sm font-medium text-white shadow-[0_18px_36px_rgba(3,57,39,0.14)] transition hover:brightness-105"
             >
               Continue shopping
             </button>

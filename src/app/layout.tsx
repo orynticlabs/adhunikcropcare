@@ -1,7 +1,9 @@
 import type { Metadata } from "next"
 import { Fraunces, Inter } from "next/font/google"
 import { Geist_Mono } from "next/font/google"
+import { AuthModal } from "@/components/auth/auth-modal"
 import { CartProvider } from "@/features/cart/cart-context"
+import { AuthProvider } from "@/features/auth/auth-context"
 import "./globals.css"
 
 const fraunces = Fraunces({
@@ -50,7 +52,12 @@ export default function RootLayout({
       className={`${fraunces.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <CartProvider>{children}</CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            {children}
+            <AuthModal />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   )

@@ -1,10 +1,9 @@
 import Image from "next/image"
-import Link from "next/link"
 import {
   Leaf, ArrowRight, Play,
   Sprout, FlaskConical, Droplets, Tractor, Bug,
   BookOpen, Recycle, ShieldCheck, Heart, Award,
-  Star, Phone, Mail, MapPin, ChevronDown,
+  ChevronDown,
   ChevronLeft, ChevronRight,
   Info,
 } from "lucide-react"
@@ -13,7 +12,7 @@ import AnnouncementBar from "@/components/layout/announcement-bar"
 import KnowledgeTabs from "@/components/home/knowledge-tabs"
 import FAQAccordion from "@/components/home/faq-accordion"
 import SmartAgriSection from "@/components/home/smart-agri-section"
-import SizeCartButton from "@/features/cart/components/size-cart-button"
+import { ProductCard } from "@/components/products/product-card"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import TestimonialsCarousel from "@/components/home/testimonials-carousel"
 import CropSuccessStories from "@/components/home/crop-success-stories"
@@ -31,32 +30,41 @@ const CATEGORIES = [
 
 const PRODUCTS = [
   {
-    name: "Adhunik Bio NPK",   price: "₹ 1,249", badge: "Bestseller",
+    name: "Adhunik Bio NPK",   price: "₹ 1,249", badge: "Bestseller", category: "Fertilizers",
     img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
+      "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
+      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80",
+    ],
     sizes: ["1 kg", "5 kg", "25 kg"], defaultSize: "5 kg",
   },
   {
-    name: "Vermi+ Compost 25kg", price: "₹ 599", badge: "Organic",
+    name: "Vermi+ Compost 25kg", price: "₹ 599", badge: "Organic", category: "Organic",
     img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
+    images: [
+      "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
+      "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80",
+    ],
     sizes: ["10 kg", "25 kg", "50 kg"], defaultSize: "25 kg",
   },
   {
-    name: "NeemGuard Spray 1L", price: "₹ 449", badge: "Bio Pesticide",
+    name: "NeemGuard Spray 1L", price: "₹ 449", badge: "Bio Pesticide", category: "Pest Management",
     img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
     sizes: ["500 ml", "1 L", "5 L"], defaultSize: "1 L",
   },
   {
-    name: "SoilRich Booster", price: "₹ 899", badge: "New",
+    name: "SoilRich Booster", price: "₹ 899", badge: "New", category: "Soil Care",
     img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
     sizes: ["1 kg", "5 kg"], defaultSize: "1 kg",
   },
   {
-    name: "DripFlow Starter Kit", price: "₹ 4,999", badge: "Smart",
+    name: "DripFlow Starter Kit", price: "₹ 4,999", badge: "Smart", category: "Irrigation",
     img: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80",
     sizes: undefined, defaultSize: undefined,   // kit — no size variants
   },
   {
-    name: "MyCo Root Power", price: "₹ 749", badge: "Bio",
+    name: "MyCo Root Power", price: "₹ 749", badge: "Bio", category: "Bio Products",
     img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
     sizes: ["250 g", "500 g", "1 kg"], defaultSize: "500 g",
   },
@@ -68,12 +76,6 @@ const TUTORIALS = [
   { title: "Organic pest control",  duration: "11 min", lang: "Tamil",   img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=300&q=80" },
 ]
 
-const TESTIMONIALS = [
-  { quote: "Adhunik's bio NPK gave us 32% better yield. The team visits us every season — it feels like a partnership.", name: "Ramesh Patel",  role: "Wheat farmer, Gujarat",    initial: "R" },
-  { quote: "Switching to organic was scary. Adhunik made it easy with their farmer hub and free soil testing.",          name: "Lakshmi Devi", role: "Cotton farmer, Telangana", initial: "L" },
-  { quote: "The smart irrigation kit paid for itself in one season. Premium quality, premium results.",                   name: "Arjun Singh",  role: "Vineyard owner, Nashik",   initial: "A" },
-]
-
 const SUSTAINABILITY = [
   { icon: Recycle,     title: "100% biodegradable", desc: "Packaging that returns to soil." },
   { icon: ShieldCheck, title: "Zero chemical residue", desc: "Certified safe across crops." },
@@ -81,18 +83,18 @@ const SUSTAINABILITY = [
   { icon: Award,       title: "Carbon-neutral ops", desc: "Verified by SGS, 2024." },
 ]
 
-function Stars({ count = 5 }: { count?: number }) {
-  return (
-    <div className="flex gap-1 text-[--gold]">
-      {Array.from({ length: count }).map((_, i) => (
-        <Star key={i} className="h-3.5 w-3.5 fill-current" aria-hidden />
-      ))}
-    </div>
-  )
-}
-
 function productHref(name: string) {
   return `/products/${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`
+}
+
+function comparePrice(price: string, uplift = 1.22) {
+  const amount = Number(price.replace(/[^\d]/g, "")) || 0
+  const originalAmount = Math.ceil((amount * uplift) / 10) * 10
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(originalAmount)
 }
 
 /* ─── Page ───────────────────────────────────────────────── */
@@ -262,41 +264,22 @@ export default function Home() {
 
             <div className="mt-7 sm:mt-10 flex gap-4 sm:gap-5 overflow-x-auto pb-4 sm:pb-6 snap-x snap-mandatory scrollbar-none -mx-4 px-4">
               {PRODUCTS.map((p) => (
-                <div
+                <ProductCard
                   key={p.name}
-                  className="group min-w-[240px] sm:min-w-[300px] lg:min-w-[320px] snap-start overflow-hidden rounded-2xl sm:rounded-3xl border border-border/40 bg-card shadow-soft hover:shadow-luxe transition-all flex-shrink-0"
-                >
-                  <Link
-                    href={productHref(p.name)}
-                    className="relative block aspect-square overflow-hidden bg-accent/40"
-                    aria-label={`View ${p.name}`}
-                  >
-                    <Image
-                      src={p.img}
-                      alt={p.name}
-                      fill
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <span className="absolute top-3 left-3 sm:top-4 sm:left-4 rounded-full bg-background/90 text-foreground border border-border/40 px-2.5 py-0.5 text-xs font-semibold shadow">
-                      {p.badge}
-                    </span>
-                  </Link>
-                  <div className="p-4 sm:p-5">
-                    <Link href={productHref(p.name)} className="font-display text-lg sm:text-xl hover:text-[--leaf]">
-                      {p.name}
-                    </Link>
-                    <div className="mt-1 flex items-center gap-1">
-                      <Stars />
-                      <span className="ml-1 text-xs text-muted-foreground">(284)</span>
-                    </div>
-                    <div className="mt-3 sm:mt-4">
-                      <span className="font-display text-xl sm:text-2xl">{p.price}</span>
-                      <div className="mt-2 sm:mt-3">
-                        <SizeCartButton product={p} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  href={productHref(p.name)}
+                  name={p.name}
+                  image={p.img}
+                  images={p.images}
+                  overlayLabel={p.category}
+                  price={p.price}
+                  originalPrice={comparePrice(p.price)}
+                  badge={p.badge}
+                  subtitle={`${p.badge} selection crafted for Indian growers`}
+                  reviews={284}
+                  rating={4.8}
+                  className="min-w-[240px] flex-shrink-0 snap-start sm:min-w-[300px] lg:min-w-[320px]"
+                  imageSizes="(max-width: 640px) 70vw, (max-width: 1024px) 42vw, 320px"
+                />
               ))}
             </div>
           </div>
