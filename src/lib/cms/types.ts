@@ -41,9 +41,28 @@ export type CmsSettings = {
   updatedAt: string
 }
 
+export type HeaderMenuItem = {
+  id: string
+  label: string
+  href: string
+  enabled: boolean
+  position: number
+  system: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export type HeaderMenuView = {
+  visibleItems: HeaderMenuItem[]
+  moreItems: HeaderMenuItem[]
+  hasMore: boolean
+  maxTopLevelItems: number
+  maxDirectLinks: number
+  reservedMoreSlot: boolean
+}
+
 export type AdminSession = {
   email: string
   issuedAt: number
   expiresAt: number
 }
-

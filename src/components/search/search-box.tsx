@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Search, X } from "lucide-react"
 
 const TERMS = [
@@ -22,11 +24,42 @@ const PAUSE_GAP = 380  // pause before typing next word
 
 const ACCENT = "#689C30"
 
+const SEARCH_ITEMS = [
+  { label: "Adhunik Bio NPK", type: "Product", href: "/products/adhunik-bio-npk" },
+  { label: "Vermi+ Compost 25kg", type: "Product", href: "/products/vermi-compost-25kg" },
+  { label: "NeemGuard Spray 1L", type: "Product", href: "/products/neemguard-spray-1l" },
+  { label: "SoilRich Booster", type: "Product", href: "/products/soilrich-booster" },
+  { label: "DripFlow Starter Kit", type: "Product", href: "/products/dripflow-starter-kit" },
+  { label: "MyCo Root Power", type: "Product", href: "/products/myco-root-power" },
+  { label: "Fertilizers", type: "Category", href: "/products?q=Fertilizers" },
+  { label: "Organic", type: "Category", href: "/products?q=Organic" },
+  { label: "Bio Products", type: "Category", href: "/products?q=Bio%20Products" },
+  { label: "Soil Care", type: "Category", href: "/products?q=Soil%20Care" },
+  { label: "Pest Management", type: "Category", href: "/products?q=Pest%20Management" },
+  { label: "Irrigation", type: "Category", href: "/products?q=Irrigation" },
+]
+
 export default function SearchBox() {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
   const wrapperRef = useRef<HTMLDivElement>(null)
   const inputRef   = useRef<HTMLInputElement>(null)
   const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const currentInputRef = useRef<HTMLInputElement | null>(null)
+
+  const trimmedQuery = query.trim()
+  const searchResults = useMemo(() => {
+    if (!trimmedQuery) {
+      return SEARCH_ITEMS.slice(0, 6)
+    }
+
+    const normalizedQuery = trimmedQuery.toLowerCase()
+    return SEARCH_ITEMS.filter((item) =>
+      item.label.toLowerCase().includes(normalizedQuery) ||
+      item.type.toLowerCase().includes(normalizedQuery),
+    ).slice(0, 6)
+  }, [trimmedQuery])
 
   /* ── Typewriter ──────────────────────────────────────────── */
   useEffect(() => {
@@ -102,6 +135,23 @@ export default function SearchBox() {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
+  function closeSearch() {
+    setOpen(false)
+    setQuery("")
+  }
+
+  function submitSearch() {
+    const nextQuery = trimmedQuery
+    if (!nextQuery) {
+      router.push("/products")
+      closeSearch()
+      return
+    }
+
+    router.push(`/products?q=${encodeURIComponent(nextQuery)}`)
+    closeSearch()
+  }
+
   /* ── Render ──────────────────────────────────────────────── */
   return (
     /*
@@ -109,10 +159,16 @@ export default function SearchBox() {
      * input wrapper (second in DOM) → grows LEFTWARD from the button.
      * This keeps the icon anchored in place without shifting other actions.
      */
-    <div ref={wrapperRef} className="flex flex-row-reverse items-center">
+    <div ref={wrapperRef} className="relative flex flex-row-reverse items-center">
       {/* Toggle button */}
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (open) {
+            closeSearch()
+            return
+          }
+          setOpen(true)
+        }}
         className="inline-flex items-center justify-center h-9 w-9 shrink-0
                    bg-transparent hover:bg-transparent active:bg-transparent focus:bg-transparent
                    text-foreground hover:text-[--leaf] active:text-[--leaf]
@@ -144,13 +200,24 @@ export default function SearchBox() {
             aria-hidden
           />
           <input
-            ref={inputRef}
+            ref={(node) => {
+              inputRef.current = node
+              currentInputRef.current = node
+            }}
             type="search"
             autoComplete="off"
+            value={query}
             className="w-full h-9 rounded-full border border-border/50 bg-background/80
                        pl-8 pr-3 text-sm text-foreground outline-none
                        placeholder:text-muted-foreground/70
                        transition-[border-color,box-shadow] duration-200"
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                submitSearch()
+              }
+            }}
             onFocus={(e) => {
               e.currentTarget.style.borderColor = ACCENT
               e.currentTarget.style.boxShadow   = `0 0 0 3px ${ACCENT}22`
@@ -160,6 +227,44 @@ export default function SearchBox() {
               e.currentTarget.style.boxShadow   = ""
             }}
           />
+
+          {open ? (
+            <div className="absolute left-0 right-0 top-[calc(100%+0.55rem)] overflow-hidden rounded-[1.35rem] border border-border/60 bg-background/96 shadow-[0_18px_46px_rgba(3,57,39,0.14)] backdrop-blur-md">
+              <div className="border-b border-border/50 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                {trimmedQuery ? "Search results" : "Popular searches"}
+              </div>
+
+              {searchResults.length > 0 ? (
+                <div className="py-1.5">
+                  {searchResults.map((item) => (
+                    <Link
+                      key={`${item.type}-${item.label}`}
+                      href={item.href}
+                      onClick={closeSearch}
+                      className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-foreground transition hover:bg-[--leaf]/8 hover:text-[--moss]"
+                    >
+                      <span className="truncate">{item.label}</span>
+                      <span className="shrink-0 rounded-full bg-[--leaf]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[--leaf]">
+                        {item.type}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-4 py-4 text-sm text-muted-foreground">
+                  No matching items found.
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={submitSearch}
+                className="flex w-full items-center justify-center border-t border-border/50 px-4 py-3 text-sm font-semibold text-[--moss] transition hover:bg-[--leaf]/8 hover:text-[--leaf]"
+              >
+                Search for {trimmedQuery ? `"${trimmedQuery}"` : "all products"}
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -14,7 +14,7 @@ import {
   Star,
   Truck,
 } from "lucide-react"
-import AddToCartButton from "@/features/cart/components/add-to-cart-button"
+import { ProductCard } from "@/components/products/product-card"
 import { useCart } from "@/features/cart/cart-context"
 
 type ProductImage = {
@@ -36,6 +36,7 @@ type RecommendedProduct = {
   img: string
   badge: string
   rating: string
+  images?: string[]
 }
 
 export type ProductDetail = {
@@ -82,6 +83,20 @@ function Stars({ rating }: { rating: number }) {
       ))}
     </div>
   )
+}
+
+function productHref(name: string) {
+  return `/products/${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`
+}
+
+function comparePrice(price: string, uplift = 1.2) {
+  const amount = Number(price.replace(/[^\d]/g, "")) || 0
+  const originalAmount = Math.ceil((amount * uplift) / 10) * 10
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(originalAmount)
 }
 
 export default function ProductDetailView({ product }: { product: ProductDetail }) {
@@ -458,35 +473,20 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
 
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {product.recommended.map((item) => (
-            <article
+            <ProductCard
               key={item.name}
-              className="group overflow-hidden rounded-3xl border border-border/50 bg-card shadow-soft transition hover:shadow-luxe"
-            >
-              <div className="relative aspect-square overflow-hidden bg-accent/30">
-                <Image
-                  src={item.img}
-                  alt={item.name}
-                  fill
-                  sizes="(max-width: 1023px) 50vw, 25vw"
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <span className="absolute left-4 top-4 rounded-full bg-background/90 px-3 py-1 text-xs font-semibold">
-                  {item.badge}
-                </span>
-              </div>
-              <div className="p-5">
-                <h3 className="font-display text-xl">{item.name}</h3>
-                <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{item.desc}</p>
-                <div className="mt-3 flex items-center gap-2">
-                  <Stars rating={Number(item.rating)} />
-                  <span className="text-xs text-muted-foreground">{item.rating}</span>
-                </div>
-                <div className="mt-5 flex items-center justify-between gap-3">
-                  <span className="font-display text-2xl">{item.price}</span>
-                  <AddToCartButton product={item} />
-                </div>
-              </div>
-            </article>
+              href={productHref(item.name)}
+              name={item.name}
+              image={item.img}
+              images={item.images}
+              price={item.price}
+              originalPrice={comparePrice(item.price)}
+              badge={item.badge}
+              subtitle={item.desc}
+              rating={Number(item.rating)}
+              reviews={Number(item.rating) * 40}
+              imageSizes="(max-width: 1023px) 50vw, 25vw"
+            />
           ))}
         </div>
       </section>
