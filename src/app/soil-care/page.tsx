@@ -1,0 +1,93 @@
+import type { Metadata } from "next"
+import Image from "next/image"
+import Link from "next/link"
+import { ArrowRight, ChevronRight, Droplets, Gauge, Layers3, Leaf, Microscope, Sprout } from "lucide-react"
+import AnnouncementBar from "@/components/layout/announcement-bar"
+import Header from "@/components/layout/header"
+import SiteFooter from "@/components/layout/site-footer"
+import CartDrawer from "@/features/cart/components/cart-drawer"
+
+export const metadata: Metadata = {
+  title: "Soil Care | Adhunik Crop Care",
+  description: "Explore soil conditioners, pH support, root-zone care, and practical soil health solutions.",
+}
+
+const LAYERS = [
+  ["01", "Surface", "Residue, water entry, temperature, and early biological activity.", "bg-[#d7b982]"],
+  ["02", "Root zone", "Structure, air, moisture, nutrient exchange, and active roots.", "bg-[#a9794f] text-white"],
+  ["03", "Foundation", "Compaction, drainage, mineral balance, and long-term field response.", "bg-[#65452f] text-white"],
+]
+
+const PRODUCTS = [
+  ["SoilRich Booster", "Root-zone conditioner", "Supports soil response, nutrient efficiency, and stronger crop establishment.", "/products?q=SoilRich", "https://images.unsplash.com/photo-1582284540020-8acbe03f4924?w=900&q=88"],
+  ["pH Balance Pro", "Reaction management", "Helps farmers build a more suitable root environment where pH requires attention.", "/products?q=pH%20Balance", "https://images.unsplash.com/photo-1598512752271-33f913a5af13?w=900&q=88"],
+  ["Humic Acid Granules", "Organic carbon support", "Designed to support aggregation, moisture behaviour, and nutrient-use efficiency.", "/products?q=Humic%20Acid", "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?w=900&q=88"],
+]
+
+export default function SoilCarePage() {
+  return (
+    <div className="min-h-screen overflow-hidden bg-[#f1eee5] text-[#2d3029]">
+      <AnnouncementBar /><Header /><CartDrawer />
+      <main>
+        <section className="relative overflow-hidden pb-24 pt-36 sm:pt-44">
+          <div className="absolute inset-y-0 right-0 hidden w-[45%] lg:block">
+            <Image src="https://images.unsplash.com/photo-1582284540020-8acbe03f4924?w=1400&q=90" alt="Rich healthy agricultural soil" fill priority sizes="45vw" className="object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#f1eee5] via-transparent to-transparent" />
+          </div>
+          <div className="relative mx-auto max-w-7xl px-4">
+            <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.2em] text-[#7e776a]">
+              <Link href="/">Home</Link><ChevronRight className="h-3.5 w-3.5" /><span className="text-[#689c30]">Soil Care</span>
+            </nav>
+            <div className="mt-14 max-w-3xl">
+              <span className="inline-flex items-center gap-2 rounded-full bg-[#e2dac8] px-4 py-2 text-xs font-bold uppercase tracking-[.18em]"><Layers3 className="h-4 w-4 text-[#689c30]" />Look beneath the crop</span>
+              <h1 className="mt-7 font-display text-6xl leading-[.9] sm:text-8xl lg:text-[7rem]">Good harvests have <span className="block italic text-[#8b6645]">deep foundations.</span></h1>
+              <p className="mt-7 max-w-xl text-lg leading-8 text-[#69675f]">Soil care begins with structure, moisture, pH, biology, and roots working as one connected environment.</p>
+              <div className="mt-9 flex flex-wrap gap-3">
+                <a href="#soil-profile" className="inline-flex h-12 items-center gap-2 rounded-full bg-[#493526] px-7 text-sm font-bold text-white hover:text-white">Read the profile <ArrowRight className="h-4 w-4" /></a>
+                <Link href="/contact" className="inline-flex h-12 items-center rounded-full border border-[#b9ad9a] bg-white/65 px-7 text-sm font-bold">Discuss your soil</Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="soil-profile" className="bg-[#e3d7c3] py-20 sm:py-28">
+          <div className="mx-auto max-w-7xl px-4">
+            <div className="grid gap-12 lg:grid-cols-[.7fr_1.3fr]">
+              <div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#689c30]">The soil profile</p><h2 className="mt-4 font-display text-5xl leading-tight">Three layers.<br />One living system.</h2></div>
+              <div className="overflow-hidden rounded-[2.5rem] shadow-2xl">
+                {LAYERS.map(([number, title, copy, tone]) => (
+                  <div key={number} className={`grid gap-5 border-b border-black/10 p-7 last:border-0 sm:grid-cols-[70px_160px_1fr] sm:items-center ${tone}`}>
+                    <span className="font-display text-4xl opacity-45">{number}</span><h3 className="font-display text-3xl">{title}</h3><p className="leading-7 opacity-75">{copy}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-20 sm:py-28">
+          <div className="mx-auto max-w-7xl px-4">
+            <div className="grid gap-6 lg:grid-cols-4">
+              <div className="rounded-[2.5rem] bg-[#254737] p-8 text-white lg:col-span-2 lg:row-span-2">
+                <Microscope className="h-8 w-8 text-[#e9c46a]" /><p className="mt-16 text-xs font-bold uppercase tracking-[.2em] text-[#bdd879]">Field diagnosis</p>
+                <h2 className="mt-4 font-display text-5xl">Treat the condition, not only the symptom.</h2>
+                <p className="mt-6 max-w-lg leading-7 text-white/65">Yellowing, weak roots, poor water entry, or uneven growth may begin below ground. Good decisions start by connecting visible symptoms with soil conditions.</p>
+              </div>
+              {[[Gauge,"Reaction","Understand pH and nutrient availability."],[Droplets,"Moisture","Improve infiltration, holding, and drainage."],[Sprout,"Roots","Create space for active, healthy root growth."],[Leaf,"Biology","Support organic matter and living processes."]].map(([Icon,title,copy]) => { const I=Icon as typeof Leaf; return <div key={title as string} className="rounded-[2.2rem] bg-white p-7"><I className="h-6 w-6 text-[#689c30]" /><h3 className="mt-10 font-display text-3xl">{title as string}</h3><p className="mt-3 leading-6 text-[#6b716b]">{copy as string}</p></div>})}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[#254737] py-20 text-white sm:py-28">
+          <div className="mx-auto max-w-7xl px-4">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#e9c46a]">Soil-care range</p><h2 className="mt-4 font-display text-5xl">Tools for the root environment.</h2></div><Link href="/products?q=Soil%20Care" className="font-bold text-[#bdd879]">View all soil products →</Link></div>
+            <div className="mt-12 grid gap-6 lg:grid-cols-3">
+              {PRODUCTS.map(([name,label,copy,href,image]) => <article key={name} className="overflow-hidden rounded-[2.3rem] bg-[#f1eee5] text-[#2d3029]"><div className="relative aspect-[4/3]"><Image src={image} alt={name} fill sizes="33vw" className="object-cover" /><span className="absolute left-5 top-5 rounded-full bg-white/85 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.15em]">{label}</span></div><div className="p-6"><h3 className="font-display text-3xl">{name}</h3><p className="mt-3 min-h-20 leading-6 text-[#69675f]">{copy}</p><Link href={href} className="mt-5 inline-flex items-center gap-2 font-bold text-[#493526]">Explore <ArrowRight className="h-4 w-4" /></Link></div></article>)}
+            </div>
+          </div>
+        </section>
+      </main>
+      <SiteFooter />
+    </div>
+  )
+}

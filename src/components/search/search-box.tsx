@@ -31,12 +31,12 @@ const SEARCH_ITEMS = [
   { label: "SoilRich Booster", type: "Product", href: "/products/soilrich-booster" },
   { label: "DripFlow Starter Kit", type: "Product", href: "/products/dripflow-starter-kit" },
   { label: "MyCo Root Power", type: "Product", href: "/products/myco-root-power" },
-  { label: "Fertilizers", type: "Category", href: "/products?q=Fertilizers" },
-  { label: "Organic", type: "Category", href: "/products?q=Organic" },
-  { label: "Bio Products", type: "Category", href: "/products?q=Bio%20Products" },
-  { label: "Soil Care", type: "Category", href: "/products?q=Soil%20Care" },
+  { label: "Crop Fertilizers", type: "Category", href: "/crop-fertilizers" },
+  { label: "Organic Range", type: "Category", href: "/organic-range" },
+  { label: "Bio Products", type: "Category", href: "/bio-products" },
+  { label: "Soil Care", type: "Category", href: "/soil-care" },
   { label: "Pest Management", type: "Category", href: "/products?q=Pest%20Management" },
-  { label: "Irrigation", type: "Category", href: "/products?q=Irrigation" },
+  { label: "Irrigation", type: "Category", href: "/irrigation-solutions" },
 ]
 
 export default function SearchBox() {

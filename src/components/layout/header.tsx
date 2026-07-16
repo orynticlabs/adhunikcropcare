@@ -9,26 +9,31 @@ import SearchBox from "@/components/search/search-box"
 import { useCart } from "@/features/cart/cart-context"
 import { useAuth } from "@/features/auth/auth-context"
 
-const NAV_LINKS = [
-  { label: "Home",             href: "#home"             },
+const MAIN_LINKS = [
   { label: "Products",         href: "/products"         },
-  { label: "Crop Fertilizers", href: "#crop-fertilizers" },
-  { label: "Organic Range",    href: "#organic-range"    },
+  { label: "Crop Fertilizers", href: "/crop-fertilizers" },
+  { label: "Organic Range",    href: "/organic-range"    },
   { label: "Marketplace",      href: "#marketplace"      },
 ]
 
+const NAV_LINKS = [
+  { label: "Home", href: "/" },
+  ...MAIN_LINKS.slice(0, 4),
+]
+
 const MORE_LINKS = [
-  { label: "Our Story",           href: "#our-story"           },
-  { label: "Bio Products",        href: "#bio-products"        },
-  { label: "Soil Care",           href: "#soil-care"           },
-  { label: "Irrigation Solutions",href: "#irrigation-solutions"},
+  { label: "About Us",            href: "/about"               },
+  ...MAIN_LINKS.slice(4),
+  { label: "Bio Products",        href: "/bio-products"        },
+  { label: "Soil Care",           href: "/soil-care"           },
+  { label: "Irrigation Solutions",href: "/irrigation-solutions"},
   { label: "Pest Management",     href: "#pest-management"     },
   { label: "Farmer Services",     href: "#farmer-services"     },
   { label: "Wholesale",           href: "#wholesale"           },
-  { label: "Certifications",      href: "#certifications"      },
+  { label: "Certifications",      href: "/certifications"      },
   { label: "Knowledge Center",    href: "#knowledge-center"    },
-  { label: "Blogs",               href: "#blogs"               },
-  { label: "Contact Us",          href: "#contact-us"          },
+  { label: "Blogs",               href: "/blog"                },
+  { label: "Contact Us",          href: "/contact"             },
 ]
 
 export default function Header() {
@@ -52,7 +57,7 @@ export default function Header() {
           <div className="navbar-glass flex items-center justify-between rounded-full border px-3 py-2 shadow-soft transition-colors duration-300 sm:px-5 sm:py-2.5">
 
             {/* Logo */}
-            <a href="#home" className="flex items-center pl-1 sm:pl-2 shrink-0">
+            <Link href="/" className="flex items-center pl-1 sm:pl-2 shrink-0">
               <Image
                 src="https://adhunikcropcare.com/assets/img/logo/logo.png"
                 alt="Adhunik Crop Care"
@@ -61,7 +66,7 @@ export default function Header() {
                 className="h-8 w-auto object-contain sm:h-10"
                 priority
               />
-            </a>
+            </Link>
 
             {/* Desktop nav */}
             <nav className="hidden lg:flex items-center gap-1">
@@ -166,13 +171,15 @@ export default function Header() {
         >
           {/* Panel header */}
           <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
-            <Image
-              src="https://adhunikcropcare.com/assets/img/logo/logo.png"
-              alt="Adhunik Crop Care"
-              width={130}
-              height={40}
-              className="h-9 w-auto object-contain"
-            />
+            <Link href="/" onClick={closeMenu}>
+              <Image
+                src="https://adhunikcropcare.com/assets/img/logo/logo.png"
+                alt="Adhunik Crop Care"
+                width={130}
+                height={40}
+                className="h-9 w-auto object-contain"
+              />
+            </Link>
             <button
               type="button"
               onClick={closeMenu}
