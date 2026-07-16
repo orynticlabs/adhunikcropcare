@@ -4,21 +4,22 @@ const FOOTER_COLUMNS = [
   {
     heading: "Solutions",
     links: [
-      ["Crop Protection", "/#crop-fertilizers"],
+      ["Crop Fertilizers", "/crop-fertilizers"],
       ["Insecticides", "/#pest-management"],
       ["Fungicides", "/#pest-management"],
       ["Weedicides", "/#pest-management"],
-      ["Organic Plant Care", "/#organic-range"],
+      ["Organic Plant Care", "/organic-range"],
     ],
   },
   {
     heading: "Company",
     links: [
-      ["Our Story", "/#our-story"],
-      ["Certifications", "/#certifications"],
-      ["Sustainability", "/#certifications"],
+      ["About Us", "/about"],
+      ["Certifications", "/certifications"],
+      ["Sustainability", "/certifications"],
+      ["Field Journal", "/blog"],
       ["Marketplace", "/#marketplace"],
-      ["Contact Us", "/#contact-us"],
+      ["Contact Us", "/contact"],
     ],
   },
   {
@@ -26,8 +27,8 @@ const FOOTER_COLUMNS = [
     links: [
       ["Farmer Services", "/#farmer-services"],
       ["Knowledge Center", "/#knowledge-center"],
-      ["Smart Agriculture", "/#smart-agriculture"],
-      ["Soil Care", "/#soil-care"],
+      ["Smart Agriculture", "/irrigation-solutions"],
+      ["Soil Care", "/soil-care"],
       ["Bulk Support", "/#wholesale"],
     ],
   },

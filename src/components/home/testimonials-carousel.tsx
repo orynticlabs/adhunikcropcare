@@ -187,7 +187,7 @@ export default function TestimonialsCarousel() {
               aria-label={`Testimonial ${i + 1}`}
               className={`rounded-full transition-all duration-300 ${
                 i === active
-                  ? "w-6 h-[6px] bg-[--moss]"
+                  ? "w-6 h-[6px] bg-[#689c30]"
                   : "w-[6px] h-[6px] bg-border hover:bg-[--leaf]"
               }`}
             />

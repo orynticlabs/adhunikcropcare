@@ -403,11 +403,11 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
             />
             <span className="text-xs leading-relaxed text-muted-foreground">
               I agree to the{" "}
-              <Link href="/terms" className="font-medium text-[--leaf] hover:underline">
+              <Link href="/terms-and-conditions" className="font-medium text-[--leaf] hover:underline">
                 Terms of Service
               </Link>{" "}
               and{" "}
-              <Link href="/privacy" className="font-medium text-[--leaf] hover:underline">
+              <Link href="/privacy-policy" className="font-medium text-[--leaf] hover:underline">
                 Privacy Policy
               </Link>
             </span>

@@ -1,4 +1,5 @@
 import Image from "next/image"
+import Link from "next/link"
 import {
   Leaf, ArrowRight, Play,
   Sprout, FlaskConical, Droplets, Tractor, Bug,
@@ -149,12 +150,12 @@ export default function Home() {
 
               {/* CTAs */}
               <div className="mt-7 sm:mt-9 flex flex-wrap items-center justify-center gap-3">
-                <button className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-6 sm:px-7 h-11 sm:h-12 text-sm font-medium hover:bg-primary/90 transition shadow-luxe">
+                <Link href="/products" className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-6 sm:px-7 h-11 sm:h-12 text-sm font-medium shadow-luxe transition-shadow hover:shadow-xl">
                   Explore Products <ArrowRight className="h-4 w-4" aria-hidden />
-                </button>
-                <button className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/60 backdrop-blur px-6 sm:px-7 h-11 sm:h-12 text-sm font-medium hover:bg-accent hover:text-accent-foreground transition">
+                </Link>
+                <Link href="/about" className="inline-flex items-center gap-2 rounded-full border border-white bg-white px-6 sm:px-7 h-11 sm:h-12 text-sm font-medium text-foreground shadow-luxe transition hover:bg-white/90 hover:shadow-xl">
                   <Info className="h-4 w-4" aria-hidden /> Learn About ACCPL
-                </button>
+                </Link>
               </div>
 
               {/* Stats */}
@@ -209,12 +210,24 @@ export default function Home() {
                     </div>
                     <h3 className="font-display text-2xl">{title}</h3>
                     <p className="mt-2 text-foreground/70">{desc}</p>
-                    <a
-                      href="#"
+                    <Link
+                      href={
+                        title === "Crop Fertilizers"
+                          ? "/crop-fertilizers"
+                          : title === "Organic Range"
+                            ? "/organic-range"
+                            : title === "Bio Products"
+                              ? "/bio-products"
+                              : title === "Soil Care"
+                                ? "/soil-care"
+                                : title === "Irrigation"
+                                  ? "/irrigation-solutions"
+                                  : "/products"
+                      }
                       className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-[--moss] hover:gap-2 transition-all"
                     >
                       Explore <ArrowRight className="h-4 w-4" aria-hidden />
-                    </a>
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -253,10 +266,10 @@ export default function Home() {
                 </h2>
               </div>
               <div className="flex gap-2">
-                <button className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground transition">
+                <button className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-input bg-background shadow-sm hover:border-[#689c30] hover:bg-[#689c30] hover:text-white transition">
                   <ChevronLeft className="h-4 w-4" aria-label="Previous" />
                 </button>
-                <button className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground transition">
+                <button className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-input bg-background shadow-sm hover:border-[#689c30] hover:bg-[#689c30] hover:text-white transition">
                   <ChevronRight className="h-4 w-4" aria-label="Next" />
                 </button>
               </div>
@@ -322,9 +335,9 @@ export default function Home() {
                   ))}
                 </div>
 
-                <button className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-8 h-10 text-sm font-medium hover:bg-primary/90 transition shadow">
+                <Link href="#knowledge-center" className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-8 h-10 text-sm font-medium shadow transition-shadow hover:shadow-lg">
                   <BookOpen className="h-4 w-4" aria-hidden /> Open Knowledge Center
-                </button>
+                </Link>
               </div>
 
               {/* Tutorial video cards */}

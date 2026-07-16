@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight, Leaf, Play } from "lucide-react"
 
@@ -59,6 +59,8 @@ export default function CropSuccessStories() {
   const [active, setActive] = useState(0)
   const [visibleSlots, setVisibleSlots] = useState(6)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const directionRef = useRef(0)
   const touchX = useRef(0)
   const total = STORIES.length
 
@@ -101,6 +103,7 @@ export default function CropSuccessStories() {
   const startTimer = () => {
     stopTimer()
     intervalRef.current = setInterval(() => {
+      directionRef.current = 1
       setActive((current) => (current + 1) % total)
     }, 3000)
   }
@@ -111,8 +114,23 @@ export default function CropSuccessStories() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total])
 
-  const goNext = () => setActive((current) => (current + 1) % total)
-  const goPrev = () => setActive((current) => (current - 1 + total) % total)
+  useLayoutEffect(() => {
+    if (!gridRef.current || !directionRef.current) return
+    const distance = gridRef.current.offsetWidth / visibleSlots
+    gridRef.current.animate(
+      [{ transform: `translateX(${directionRef.current * distance}px)` }, { transform: "translateX(0)" }],
+      { duration: 900, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
+    )
+  }, [active, visibleSlots])
+
+  const goNext = () => {
+    directionRef.current = 1
+    setActive((current) => (current + 1) % total)
+  }
+  const goPrev = () => {
+    directionRef.current = -1
+    setActive((current) => (current - 1 + total) % total)
+  }
 
   function handleTouchStart(event: React.TouchEvent) {
     touchX.current = event.touches[0].clientX
@@ -154,6 +172,7 @@ export default function CropSuccessStories() {
           onTouchEnd={handleTouchEnd}
         >
           <div
+            ref={gridRef}
             className="grid w-full items-start gap-2 sm:gap-3 lg:gap-4"
             style={{ gridTemplateColumns: `repeat(${visibleSlots}, minmax(0, 1fr))` }}
           >
@@ -242,12 +261,15 @@ export default function CropSuccessStories() {
               <button
                 key={story.product}
                 type="button"
-                onClick={() => setActive(index)}
+                onClick={() => {
+                  directionRef.current = index > active ? 1 : -1
+                  setActive(index)
+                }}
                 onMouseEnter={stopTimer}
                 onMouseLeave={startTimer}
                 className={`rounded-full transition-all duration-300 ${
                   index === active
-                    ? "h-2 w-8 bg-[--moss]"
+                    ? "h-2 w-8 bg-[#689c30]"
                     : "h-2 w-2 bg-border hover:bg-[--leaf]"
                 }`}
                 aria-label={`Show ${story.product} story`}
