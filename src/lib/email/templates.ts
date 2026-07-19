@@ -12,6 +12,7 @@ export type EmailTemplateName =
 
 type TemplateInput = {
   actionUrl?: string
+  otp?: string
   firstName?: string
   orderNumber?: string
   productName?: string
@@ -37,7 +38,7 @@ function button(label: string, url?: string) {
 }
 
 export const emailTemplates: Record<EmailTemplateName, (input: TemplateInput) => { html: string; subject: string; text: string }> = {
-  accountVerification: (i) => ({ subject: `Confirm your ${brand} email`, text: `Hello ${i.firstName ?? ""}, confirm your email: ${i.actionUrl}`, html: layout("Confirm your email", `<p>Hello ${escapeHtml(i.firstName)},</p><p>Welcome! Please confirm your email address to finish setting up your account.</p>${button("Confirm email", i.actionUrl)}`, i.unsubscribeUrl) }),
+  accountVerification: (i) => ({ subject: `Your ${brand} verification OTP`, text: `Your email verification OTP is ${i.otp}. It expires in 5 minutes.`, html: layout("Verify your email", `<p>Use this one-time password to verify your email and finish creating your account:</p><p style="font-size:32px;font-weight:700;letter-spacing:8px;margin:24px 0">${escapeHtml(i.otp)}</p><p>This OTP expires in 5 minutes. Do not share it with anyone.</p>`, i.unsubscribeUrl) }),
   emailVerified: (i) => ({ subject: "Your email is confirmed", text: "Your Adhunik Crop Care email was confirmed successfully.", html: layout("Email confirmed", `<p>Hello ${escapeHtml(i.firstName)},</p><p>Your email address has been confirmed successfully.</p>`, i.unsubscribeUrl) }),
   passwordReset: (i) => ({ subject: "Reset your password", text: `Reset your password: ${i.actionUrl}`, html: layout("Reset your password", `<p>Hello ${escapeHtml(i.firstName)},</p><p>Use the secure link below to choose a new password. It expires in one hour.</p>${button("Reset password", i.actionUrl)}<p>If you did not request this, you can ignore this email.</p>`, i.unsubscribeUrl) }),
   orderPlaced: (i) => ({ subject: `Order ${i.orderNumber} confirmed`, text: `Your order ${i.orderNumber} is confirmed. Total: INR ${Number(i.total ?? 0).toFixed(2)}`, html: layout("Order confirmed", `<p>Hello ${escapeHtml(i.firstName)},</p><p>Your order <strong>${escapeHtml(i.orderNumber)}</strong> has been placed.</p><p>Total: <strong>INR ${Number(i.total ?? 0).toFixed(2)}</strong></p>`, i.unsubscribeUrl) }),

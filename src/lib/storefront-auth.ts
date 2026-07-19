@@ -92,6 +92,7 @@ export async function csrfResponse() {
 
 export async function createUser(input: {
   email: string
+  emailVerificationToken: string
   firstName: string
   lastName: string
   password: string
@@ -107,6 +108,7 @@ export async function createUser(input: {
   if (!validateEmail(email)) throw new Error("Enter a valid email.")
   if (!validatePassword(input.password)) throw new Error("Password must include 8 characters, an uppercase letter, and a number.")
   if (phone.length < 10) throw new Error("Enter a valid mobile number.")
+  if (!input.emailVerificationToken) throw new Error("Verify your email with the OTP before creating your account.")
 
   const [existing] = await orycmsPrisma.$queryRaw<{ id: string }[]>`
     SELECT id FROM storefront_users WHERE lower(email) = lower(${email}) LIMIT 1
@@ -115,13 +117,77 @@ export async function createUser(input: {
 
   const passwordHash = await bcrypt.hash(input.password, 12)
   const [user] = await orycmsPrisma.$queryRaw<UserRow[]>`
-    INSERT INTO storefront_users (first_name, last_name, email, phone, password_hash)
-    VALUES (${firstName}, ${lastName}, ${email}, ${phone}, ${passwordHash})
+    WITH claimed_otp AS (
+      UPDATE storefront_signup_otps
+      SET consumed_at = now()
+      WHERE email = ${email}
+        AND verification_token_hash = ${hash(input.emailVerificationToken)}
+        AND verified_at IS NOT NULL AND consumed_at IS NULL AND expires_at > now()
+      RETURNING id
+    )
+    INSERT INTO storefront_users (first_name, last_name, email, phone, password_hash, email_verified_at)
+    SELECT ${firstName}, ${lastName}, ${email}, ${phone}, ${passwordHash}, now()
+    FROM claimed_otp
     RETURNING *
   `
-  const verifyToken = await createAuthToken(user.id, "verify_email", 24 * 60 * 60)
+  if (!user) throw new Error("Email verification has expired. Send and verify a new OTP.")
 
-  return { user: toUserDTO(user), verifyToken }
+  return { user: toUserDTO(user) }
+}
+
+export async function createSignupOtp(emailInput: string) {
+  const email = emailInput.trim().toLowerCase()
+  if (!validateEmail(email)) throw new Error("Enter a valid email.")
+  const [existing] = await orycmsPrisma.$queryRaw<{ id: string }[]>`
+    SELECT id FROM storefront_users WHERE lower(email) = lower(${email}) LIMIT 1
+  `
+  if (existing) throw new Error("An account already exists with this email.")
+  await orycmsPrisma.$executeRaw`
+    UPDATE storefront_signup_otps SET consumed_at = now()
+    WHERE email = ${email} AND consumed_at IS NULL
+  `
+  const otp = crypto.randomInt(100000, 1000000).toString()
+  await orycmsPrisma.$executeRaw`
+    INSERT INTO storefront_signup_otps (email, otp_hash, expires_at)
+    VALUES (${email}, ${hash(otp)}, ${new Date(Date.now() + 5 * 60_000)})
+  `
+  return { email, otp }
+}
+
+export async function verifySignupOtp(emailInput: string, otpInput: string) {
+  const email = emailInput.trim().toLowerCase()
+  const otp = otpInput.trim()
+  if (!validateEmail(email) || !/^\d{6}$/.test(otp)) throw new Error("Enter the valid 6-digit OTP.")
+  const verificationToken = randomToken(32)
+  const [verified] = await orycmsPrisma.$queryRaw<{ id: string }[]>`
+    UPDATE storefront_signup_otps
+    SET verified_at = now(), verification_token_hash = ${hash(verificationToken)}
+    WHERE id = (
+      SELECT id FROM storefront_signup_otps
+      WHERE email = ${email} AND consumed_at IS NULL AND verified_at IS NULL
+      ORDER BY created_at DESC LIMIT 1
+    )
+      AND otp_hash = ${hash(otp)}
+      AND attempts < 5
+      AND expires_at > now()
+    RETURNING id
+  `
+  if (verified) return verificationToken
+
+  const [failed] = await orycmsPrisma.$queryRaw<{ attempts: number; expires_at: Date }[]>`
+    UPDATE storefront_signup_otps
+    SET attempts = attempts + 1
+    WHERE id = (
+      SELECT id FROM storefront_signup_otps
+      WHERE email = ${email} AND consumed_at IS NULL AND verified_at IS NULL
+      ORDER BY created_at DESC LIMIT 1
+    )
+      AND attempts < 5
+      AND expires_at > now()
+    RETURNING attempts, expires_at
+  `
+  if (!failed) throw new Error("OTP has expired or too many attempts were made. Send a new OTP.")
+  throw new Error(`The OTP is incorrect. ${Math.max(0, 5 - failed.attempts)} attempt(s) remaining.`)
 }
 
 export async function authenticateUser(emailInput: string, password: string) {
@@ -136,7 +202,7 @@ export async function authenticateUser(emailInput: string, password: string) {
     throw new Error("Invalid email or password.")
   }
   if (!user.email_verified_at) {
-    throw new Error("Confirm your email before signing in. Please check your inbox for the verification link.")
+    throw new Error("Verify your email before signing in. Create your account after completing email OTP verification.")
   }
   if (user.status !== "active") {
     throw new Error(user.status === "blocked" ? "Your account is blocked. Contact support." : "Your account is inactive. Contact support.")

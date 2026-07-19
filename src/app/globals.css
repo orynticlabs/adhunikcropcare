@@ -114,6 +114,21 @@ body {
   background: #f0f4f1;
   color: #1f2a22;
   font-family: var(--font-inter), Arial, sans-serif;
+  overflow-x: clip;
+}
+
+img,
+video,
+svg {
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 * {
