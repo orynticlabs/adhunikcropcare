@@ -1,37 +1,16 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import {
-  createFreshEmailVerificationToken,
-  findUserByEmail,
-  jsonError,
-  rateLimit,
-  requestKey,
-  requireCsrf,
-} from "@/lib/storefront-auth"
-import { emailBaseUrl, sendEmail } from "@/lib/email/mailer"
+import { jsonError, rateLimit, requestKey, requireCsrf } from "@/lib/storefront-auth"
 
 export const runtime = "nodejs"
 
-const GENERIC_MESSAGE = "If an unverified customer account exists for this email, a new confirmation link has been sent."
+const GENERIC_MESSAGE = "Email verification is completed with a 5-minute OTP on the create-account form."
 
 export async function POST(request: NextRequest) {
   try {
     await rateLimit(await requestKey("resend-verification"), 3, 10 * 60_000)
     await requireCsrf()
-    const body = await request.json()
-    const user = await findUserByEmail(String(body.email ?? ""))
-
-    if (user && !user.emailVerified) {
-      const verifyToken = await createFreshEmailVerificationToken(user.id)
-      await sendEmail({
-        actionUrl: `${emailBaseUrl()}/verify-email?token=${encodeURIComponent(verifyToken)}&email=${encodeURIComponent(user.email)}`,
-        firstName: user.firstName,
-        template: "accountVerification",
-        to: user.email,
-        unsubscribeUrl: "",
-        userId: user.id,
-      }).catch((error) => console.error("Resent verification email failed", error))
-    }
+    await request.json()
 
     return NextResponse.json({ success: true, data: { message: GENERIC_MESSAGE } })
   } catch (error) {

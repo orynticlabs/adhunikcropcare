@@ -21,7 +21,9 @@ interface AuthCtx {
   isAuthModalOpen: boolean
   loadingUser: boolean
   login: (email: string, password: string) => Promise<void>
-  signup: (data: SignupData) => Promise<{ email: string }>
+  signup: (data: SignupData) => Promise<{ user: AuthUser }>
+  sendSignupOtp: (email: string) => Promise<string>
+  verifySignupOtp: (email: string, otp: string) => Promise<string>
   logout: () => Promise<void>
   updateProfile: (data: Partial<AuthUser>) => Promise<void>
   forgotPassword: (email: string) => Promise<string>
@@ -36,13 +38,14 @@ interface AuthCtx {
 
 export interface SignupData {
   email: string
+  emailVerificationToken: string
   firstName: string
   lastName: string
   password: string
   phone: string
 }
 
-export type AuthView = "forgot" | "signin" | "signup"
+export type AuthView = "forgot" | "reset" | "signin" | "signup"
 
 type AuthModalOptions = {
   redirectTo?: string
@@ -60,20 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loadingUser, setLoadingUser] = useState(true)
   const [toast, setToast] = useState<Toast | null>(null)
   const [user, setUser] = useState<AuthUser | null>(null)
-
-  useEffect(() => {
-    void bootstrap()
-  }, [])
-
-  useEffect(() => {
-    function onStorage(event: StorageEvent) {
-      if (event.key !== "acc_auth_event") return
-      void bootstrap()
-    }
-
-    window.addEventListener("storage", onStorage)
-    return () => window.removeEventListener("storage", onStorage)
-  }, [])
 
   async function bootstrap() {
     try {
@@ -98,12 +87,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signup(data: SignupData) {
-    const result = await authFetch<{ email: string }>("/api/auth/signup", {
+    const result = await authFetch<{ user: AuthUser }>("/api/auth/signup", {
       body: JSON.stringify(data),
       method: "POST",
     })
-    pushToast("Account created. Check your email to confirm it before signing in.", "success")
+    setUser(result.user)
+    notifyAuthTabs("login")
+    pushToast("Account created and signed in successfully.", "success")
     return result
+  }
+
+  async function sendSignupOtp(email: string) {
+    const result = await authFetch<{ message: string }>("/api/auth/send-signup-otp", {
+      body: JSON.stringify({ email }),
+      method: "POST",
+    })
+    pushToast(result.message, "success")
+    return result.message
+  }
+
+  async function verifySignupOtp(email: string, otp: string) {
+    const result = await authFetch<{ verificationToken: string }>("/api/auth/verify-email", {
+      body: JSON.stringify({ email, otp }),
+      method: "POST",
+    })
+    pushToast("Email verified successfully.", "success")
+    return result.verificationToken
   }
 
   async function logout() {
@@ -228,6 +237,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.setTimeout(() => setToast((current) => (current?.id === item.id ? null : current)), 3200)
   }
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => void bootstrap(), 0)
+    return () => window.clearTimeout(timer)
+  }, [])
+
+  useEffect(() => {
+    function onStorage(event: StorageEvent) {
+      if (event.key !== "acc_auth_event") return
+      void bootstrap()
+    }
+
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [])
+
   return (
     <AuthContext.Provider
       value={{
@@ -244,6 +268,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetPassword,
         setAuthView,
         signup,
+        sendSignupOtp,
+        verifySignupOtp,
         updateProfile,
         user,
         verifyEmail,
