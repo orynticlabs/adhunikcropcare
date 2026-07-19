@@ -39,7 +39,7 @@ export default function FAQAccordion() {
           }`}
         >
           <button
-            className="flex w-full items-center justify-between py-4 text-left font-display text-lg font-medium cursor-pointer hover:text-[--moss] transition-colors"
+            className="flex w-full items-center justify-between py-4 text-left font-display text-lg font-medium cursor-pointer hover:text-[#033927] transition-colors"
             onClick={() => setOpen(open === i ? null : i)}
             aria-expanded={open === i}
           >

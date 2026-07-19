@@ -3,120 +3,134 @@ import CartDrawer from "@/features/cart/components/cart-drawer"
 import Header from "@/components/layout/header"
 import ProductDetailView, { ProductDetail } from "@/features/products/components/product-detail-view"
 import SiteFooter from "@/components/layout/site-footer"
+import {
+  ensureProductImages,
+  getPublishedOryCMSProductBySlug,
+  listOryCMSProducts,
+  productPrimaryImage,
+  type OryCMSProductDTO,
+} from "@/lib/orycms/products"
+import { notFound } from "next/navigation"
 
-const PRODUCT: ProductDetail = {
-  title: "Adhunik Bio NPK",
-  category: "Bio Fertilizer",
-  rating: 4.8,
-  reviews: 284,
-  images: [
-    {
-      src: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1200&q=85",
-      alt: "Adhunik Bio NPK product pack with healthy crop background",
-    },
-    {
-      src: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1200&q=85",
-      alt: "Organic soil and crop nutrition application",
-    },
-    {
-      src: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200&q=85",
-      alt: "Field crop treated with Adhunik Bio NPK",
-    },
-    {
-      src: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1200&q=85",
-      alt: "Farmland result after balanced nutrition program",
-    },
-  ],
-  options: [
-    { label: "1 kg", price: "₹ 349", originalPrice: "₹ 499", discount: "30% OFF" },
-    { label: "5 kg", price: "₹ 1,249", originalPrice: "₹ 1,799", discount: "31% OFF" },
-    { label: "25 kg", price: "₹ 5,499", originalPrice: "₹ 7,250", discount: "24% OFF" },
-  ],
-  description:
-    "Adhunik Bio NPK is a premium bio-fertilizer formulated with beneficial microbial cultures that help improve nutrient availability, root activity, and crop vigor. It supports balanced nitrogen, phosphorus, and potassium uptake while helping farmers improve soil biological activity over repeated applications.",
-  benefits: [
-    "Improves nutrient uptake for stronger vegetative growth.",
-    "Supports healthy root development and crop establishment.",
-    "Helps improve soil microbial activity and long-term fertility.",
-    "Compatible with integrated nutrient management programs.",
-    "Useful across vegetables, cereals, pulses, fruits, and plantation crops.",
-  ],
-  usage: [
-    "Apply during early growth stage or as recommended by an agronomist.",
-    "Mix with well-decomposed compost, farmyard manure, or soil before broadcasting.",
-    "Maintain adequate soil moisture after application for best microbial activity.",
-    "Avoid mixing directly with strong chemical pesticides or fungicides.",
-  ],
-  dosage: [
-    "Seed treatment: 10-20 g per kg seed, depending on crop requirement.",
-    "Soil application: 1-2 kg per acre with compost or farmyard manure.",
-    "Nursery application: 5-10 g per square meter mixed into growing media.",
-    "Repeat application after 30-45 days for long-duration crops if required.",
-  ],
-  ingredients: [
-    "Nitrogen-fixing beneficial microbes.",
-    "Phosphate-solubilizing microbial cultures.",
-    "Potash-mobilizing microbial cultures.",
-    "Organic carrier material suitable for field application.",
-  ],
-  safety: [
-    "Use gloves while handling and wash hands after application.",
-    "Keep away from children, animal feed, and drinking water.",
-    "Do not inhale dust during mixing or broadcasting.",
-    "For agricultural use only.",
-  ],
-  storage: [
-    "Store in a cool, dry, and shaded place.",
-    "Keep the pack tightly closed after opening.",
-    "Avoid direct sunlight and high heat exposure.",
-    "Use before expiry date for best microbial performance.",
-  ],
-  video: {
-    title: "Bio NPK Field Application Demo",
-    caption:
-      "Watch a muted preview of Bio NPK being used in field conditions, with practical application flow and farmer result context.",
-    src: "https://cdn.shopify.com/videos/c/vp/1fd4b8e04f13460c9ebea85425f8bbba/1fd4b8e04f13460c9ebea85425f8bbba.SD-480p-0.9Mbps-83328126.mp4",
-    poster:
-      "https://cdn.shopify.com/s/files/1/0579/7924/0580/files/ebd18c8c-45b7-46f7-ae6b-875404629700_thumbnail.jpg?v=1777898677",
-  },
-  recommended: [
-    {
-      name: "Vermi+ Compost 25kg",
-      desc: "Organic compost for soil structure, microbial activity, and steady crop nutrition.",
-      price: "₹ 599",
-      img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=700&q=80",
-      badge: "Organic",
-      rating: "4.7",
-    },
-    {
-      name: "NeemGuard Spray 1L",
-      desc: "Bio pest support for reducing crop damage in integrated protection schedules.",
-      price: "₹ 449",
-      img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=700&q=80",
-      badge: "Bio Pesticide",
-      rating: "4.6",
-    },
-    {
-      name: "SoilRich Booster",
-      desc: "Soil conditioner designed to improve root zone response and nutrient efficiency.",
-      price: "₹ 899",
-      img: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=700&q=80",
-      badge: "Soil Care",
-      rating: "4.8",
-    },
-    {
-      name: "MyCo Root Power",
-      desc: "Mycorrhiza-based root support for improved crop stand and establishment.",
-      price: "₹ 749",
-      img: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=700&q=80",
-      badge: "Bio",
-      rating: "4.7",
-    },
-  ],
-}
+export const dynamic = "force-dynamic"
 
 export function generateStaticParams() {
-  return [{ slug: "adhunik-bio-npk" }]
+  return []
+}
+
+const inr = new Intl.NumberFormat("en-IN", {
+  currency: "INR",
+  maximumFractionDigits: 0,
+  style: "currency",
+})
+
+function formatINR(amount: number) {
+  return inr.format(amount)
+}
+
+function comparePrice(amount: number, uplift = 1.2) {
+  return formatINR(Math.ceil((amount * uplift) / 10) * 10)
+}
+
+function discountLabel(price: number, originalPrice: number) {
+  if (originalPrice <= price) return "Best Price"
+
+  return `${Math.round(((originalPrice - price) / originalPrice) * 100)}% OFF`
+}
+
+function mapOryCMSProductToDetail(
+  product: OryCMSProductDTO,
+  recommended: OryCMSProductDTO[] = [],
+): ProductDetail {
+  const images = ensureProductImages(product).map((image) => ({
+    alt: image.name || product.name,
+    src: image.url,
+  }))
+  const packs =
+    product.packSizes.length > 0
+      ? product.packSizes
+      : [{ price: product.salePrice ?? product.price, size: `1 ${product.unit}` }]
+  const options = packs.map((pack) => {
+    const original = product.salePrice && product.price > product.salePrice ? product.price : pack.price
+
+    return {
+      discount: discountLabel(pack.price, original),
+      label: pack.size,
+      originalPrice: comparePrice(original, original === pack.price ? 1.2 : 1),
+      price: formatINR(pack.price),
+    }
+  })
+
+  return {
+    benefits:
+      product.tags.length > 0
+        ? product.tags.map((tag) => `${tag} support for healthier crop performance.`)
+        : [product.shortDescription],
+    brand: product.brand,
+    category: product.category,
+    description: product.fullDescription || product.shortDescription,
+    dosage: packs.map((pack) => `${pack.size}: use as recommended by crop, soil condition, and agronomist guidance.`),
+    images,
+    ingredients: [
+      product.brand ? `${product.brand} formulation` : `${product.category} formulation`,
+      `${product.unit} based pack unit`,
+      "Quality agricultural input for field use",
+    ],
+    options,
+    rating: 4.8,
+    recommended: recommended.slice(0, 4).map((item) => ({
+      badge: item.featured ? "Featured" : item.category,
+      desc: item.shortDescription,
+      img: productPrimaryImage(item),
+      images: ensureProductImages(item).map((image) => image.url),
+      name: item.name,
+      price: formatINR(item.salePrice ?? item.price),
+      rating: "4.8",
+      slug: item.slug,
+    })),
+    reviews: 120,
+    safety: [
+      "Use gloves while handling and wash hands after application.",
+      "Keep away from children, animal feed, and drinking water.",
+      "Follow label guidance and local agronomy recommendations.",
+    ],
+    sku: product.sku,
+    slug: product.slug,
+    stockQuantity: product.stockQuantity,
+    storage: [
+      "Store in a cool, dry, and shaded place.",
+      "Keep the pack tightly closed after opening.",
+      "Avoid direct sunlight and high heat exposure.",
+    ],
+    title: product.name,
+    unit: product.unit,
+    usage: [
+      "Apply during the recommended crop stage for best results.",
+      "Use with adequate soil moisture or irrigation support where applicable.",
+      "Avoid mixing with incompatible chemicals unless advised by an agronomist.",
+    ],
+    video: {
+      caption: product.shortDescription,
+      poster: productPrimaryImage(product),
+      src: "",
+      title: product.name,
+    },
+  }
+}
+
+async function loadProduct(slug: string) {
+  try {
+    const product = await getPublishedOryCMSProductBySlug(slug)
+    if (!product) return null
+
+    const allProducts = await listOryCMSProducts({ publishedOnly: true })
+    return mapOryCMSProductToDetail(
+      product,
+      allProducts.filter((item) => item.id !== product.id),
+    )
+  } catch {
+    return null
+  }
 }
 
 export default async function ProductPage({
@@ -124,14 +138,17 @@ export default async function ProductPage({
 }: {
   params: Promise<{ slug: string }>
 }) {
-  await params
+  const { slug } = await params
+  const product = await loadProduct(slug)
+
+  if (!product) notFound()
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AnnouncementBar />
       <Header />
       <CartDrawer />
-      <ProductDetailView product={PRODUCT} />
+      <ProductDetailView product={product} />
       <SiteFooter />
     </div>
   )

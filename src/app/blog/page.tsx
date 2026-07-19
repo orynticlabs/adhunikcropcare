@@ -248,7 +248,7 @@ export default function BlogPage() {
                       className="h-12 w-full rounded-full border border-[#c6b269]/45 bg-white pl-11 pr-4 text-sm outline-none focus:border-[#203e31]"
                     />
                   </span>
-                  <button className="h-12 rounded-full bg-[#203e31] px-6 text-sm font-bold text-white hover:text-white">
+                  <button className="h-12 rounded-full bg-[#033927] px-6 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">
                     Subscribe
                   </button>
                 </label>

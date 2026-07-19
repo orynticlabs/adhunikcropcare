@@ -1,28 +1,8 @@
 import type { Metadata } from "next"
-import { Fraunces, Inter } from "next/font/google"
-import { Geist_Mono } from "next/font/google"
 import { AuthModal } from "@/components/auth/auth-modal"
 import { CartProvider } from "@/features/cart/cart-context"
 import { AuthProvider } from "@/features/auth/auth-context"
 import "./globals.css"
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  display: "swap",
-  axes: ["SOFT", "WONK"],
-})
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-})
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-})
 
 export const metadata: Metadata = {
   title: "Adhunik Crop Care — Premium Eco Agriculture Solutions",
@@ -49,7 +29,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${fraunces.variable} ${inter.variable} ${geistMono.variable} h-full antialiased`}
+      className="h-full antialiased [--font-fraunces:Georgia,serif] [--font-geist-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] [--font-inter:Inter,ui-sans-serif,system-ui,sans-serif]"
     >
       <body className="min-h-full">
         <AuthProvider>

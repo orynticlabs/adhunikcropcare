@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Leaf, Play } from "lucide-react"
 
 const STORIES = [
   {
-    product: "Adhunik Bio NPK",
+    product: "Field Story 01",
     result: "Increased Yield by 28%",
     farmer: "Ramesh Patel",
     location: "Nashik, Maharashtra",
@@ -14,7 +14,7 @@ const STORIES = [
     video: "https://cdn.shopify.com/videos/c/vp/1fd4b8e04f13460c9ebea85425f8bbba/1fd4b8e04f13460c9ebea85425f8bbba.SD-480p-0.9Mbps-83328126.mp4",
   },
   {
-    product: "NeemGuard Spray",
+    product: "Field Story 02",
     result: "Reduced Pest Damage",
     farmer: "Kavita Sharma",
     location: "Kota, Rajasthan",
@@ -22,7 +22,7 @@ const STORIES = [
     video: "https://cdn.shopify.com/videos/c/vp/8cdae9552e114b3a98617dcf2ba809af/8cdae9552e114b3a98617dcf2ba809af.SD-480p-0.9Mbps-83328136.mp4",
   },
   {
-    product: "Vermi+ Compost 25kg",
+    product: "Field Story 03",
     result: "Improved Soil Health",
     farmer: "Harpreet Singh",
     location: "Ludhiana, Punjab",
@@ -30,7 +30,7 @@ const STORIES = [
     video: "https://cdn.shopify.com/videos/c/vp/c30ef9875a0342cfa57d149f4c8b7938/c30ef9875a0342cfa57d149f4c8b7938.SD-480p-0.9Mbps-83328138.mp4",
   },
   {
-    product: "SoilRich Booster",
+    product: "Field Story 04",
     result: "Stronger Root Growth",
     farmer: "Meena Reddy",
     location: "Guntur, Andhra Pradesh",
@@ -38,7 +38,7 @@ const STORIES = [
     video: "https://cdn.shopify.com/videos/c/vp/fdeb9a03e2db43f7a0b98e7fe191c81e/fdeb9a03e2db43f7a0b98e7fe191c81e.SD-480p-0.9Mbps-81870814.mp4",
   },
   {
-    product: "MyCo Root Power",
+    product: "Field Story 05",
     result: "Healthier Crop Stand",
     farmer: "Imran Khan",
     location: "Bharuch, Gujarat",
@@ -46,7 +46,7 @@ const STORIES = [
     video: "https://cdn.shopify.com/videos/c/vp/1fd4b8e04f13460c9ebea85425f8bbba/1fd4b8e04f13460c9ebea85425f8bbba.SD-480p-0.9Mbps-83328126.mp4",
   },
   {
-    product: "Crop Shield Plus",
+    product: "Field Story 06",
     result: "Better Field Recovery",
     farmer: "Sunita Yadav",
     location: "Indore, Madhya Pradesh",
@@ -152,7 +152,7 @@ export default function CropSuccessStories() {
     >
       <div className="relative">
         <div className="text-center mx-auto max-w-3xl px-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/70 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[--moss]">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/70 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
             <Leaf className="h-3 w-3" aria-hidden /> Field demonstrations
           </div>
           <h2 className="mt-5 font-display text-4xl sm:text-5xl leading-[1.1] tracking-tight">
@@ -208,7 +208,7 @@ export default function CropSuccessStories() {
                     ) : (
                       <Image
                         src={story.thumbnail}
-                        alt={`${story.product} field demonstration preview`}
+                        alt={`${story.result} field demonstration preview`}
                         fill
                         sizes="(max-width: 639px) 33vw, (max-width: 1023px) 25vw, 17vw"
                         className="object-cover"
@@ -227,11 +227,11 @@ export default function CropSuccessStories() {
                     )}
 
                     <div className="absolute inset-x-0 bottom-0 p-3 text-white sm:p-4 lg:p-5">
-                      <div className="inline-flex rounded-full bg-[--leaf] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest text-white shadow-soft sm:text-[10px] lg:text-xs">
+                      <div className="inline-flex rounded-full bg-[#689c30] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest text-white shadow-soft sm:text-[10px] lg:text-xs">
                         {story.result}
                       </div>
                       <h3 className="mt-3 font-display text-base leading-tight sm:text-xl lg:text-2xl">
-                        {story.product}
+                        {story.result}
                       </h3>
                       <p className="mt-1.5 text-[11px] leading-snug text-white/78 sm:text-xs lg:text-sm">
                         {story.farmer} · {story.location}
@@ -250,7 +250,7 @@ export default function CropSuccessStories() {
             onClick={goPrev}
             onMouseEnter={stopTimer}
             onMouseLeave={startTimer}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/80 text-foreground shadow-soft backdrop-blur-sm hover:border-[--leaf] hover:text-[--leaf]"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/80 text-foreground shadow-soft backdrop-blur-sm hover:border-[#689c30] hover:text-[#689c30]"
             aria-label="Previous crop success story"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden />
@@ -270,9 +270,9 @@ export default function CropSuccessStories() {
                 className={`rounded-full transition-all duration-300 ${
                   index === active
                     ? "h-2 w-8 bg-[#689c30]"
-                    : "h-2 w-2 bg-border hover:bg-[--leaf]"
+                    : "h-2 w-2 bg-border hover:bg-[#689c30]"
                 }`}
-                aria-label={`Show ${story.product} story`}
+                aria-label={`Show ${story.result} story`}
               />
             ))}
           </div>
@@ -282,7 +282,7 @@ export default function CropSuccessStories() {
             onClick={goNext}
             onMouseEnter={stopTimer}
             onMouseLeave={startTimer}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/80 text-foreground shadow-soft backdrop-blur-sm hover:border-[--leaf] hover:text-[--leaf]"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/80 text-foreground shadow-soft backdrop-blur-sm hover:border-[#689c30] hover:text-[#689c30]"
             aria-label="Next crop success story"
           >
             <ChevronRight className="h-4 w-4" aria-hidden />

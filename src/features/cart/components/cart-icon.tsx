@@ -45,7 +45,7 @@ export default function CartIcon() {
           className={`
             pointer-events-none absolute -right-2.5 -top-2.5
             flex min-w-[10px] h-[12px] items-center justify-center
-            rounded-full bg-[--leaf] px-1
+            rounded-full bg-[#689c30] px-1
             text-[8px] font-bold leading-none text-[var(--forest)]
             shadow-sm ring-2 ring-[var(--forest)] select-none
             ${animKey > 0 ? "animate-badge-pop" : ""}

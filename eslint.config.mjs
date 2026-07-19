@@ -11,6 +11,10 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "app/**",
+    "components/**",
+    "orycms/**",
+    "orycms.config.ts",
     "next-env.d.ts",
   ]),
 ]);

@@ -30,7 +30,7 @@ export default function IrrigationPage() {
               <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#bed7d0] bg-white/55 px-4 py-2 text-xs font-bold uppercase tracking-[.18em]"><Droplet className="h-4 w-4 text-[#16826d]" />Designed around every drop</div>
               <h1 className="mt-7 font-display text-6xl leading-[.9] sm:text-8xl lg:text-[7rem]">Water should move<span className="block italic text-[#16826d]">with purpose.</span></h1>
               <p className="mt-7 max-w-xl text-lg leading-8 text-[#5d7069]">Efficient irrigation connects source, pressure, filtration, timing, delivery, and the root zone into one dependable system.</p>
-              <div className="mt-9 flex flex-wrap gap-3"><a href="#water-flow" className="inline-flex h-12 items-center gap-2 rounded-full bg-[#075949] px-7 text-sm font-bold text-white hover:text-white">Follow the flow <ArrowDown className="h-4 w-4" /></a><Link href="/contact" className="inline-flex h-12 items-center rounded-full border border-[#a9c8bf] bg-white/60 px-7 text-sm font-bold">Plan a system</Link></div>
+              <div className="mt-9 flex flex-wrap gap-3"><a href="#water-flow" className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">Follow the flow <ArrowDown className="h-4 w-4" /></a><Link href="/contact" className="inline-flex h-12 items-center rounded-full bg-[#033927] px-7 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">Plan a system</Link></div>
             </div>
             <div className="hidden lg:block"><div className="ml-auto grid w-[470px] grid-cols-2 gap-4">
               <div className="col-span-2 rounded-[2.5rem] bg-[#075949] p-8 text-white shadow-2xl"><Radio className="h-7 w-7 text-[#9bd3c5]" /><p className="mt-12 text-xs font-bold uppercase tracking-[.2em] text-[#9bd3c5]">System signal</p><p className="mt-2 font-display text-4xl">Measure before you irrigate.</p></div>
@@ -59,7 +59,7 @@ export default function IrrigationPage() {
           </div>
         </section>
 
-        <section className="pb-24"><div className="mx-auto max-w-7xl px-4"><div className="rounded-[3rem] bg-[#d8eee8] p-8 sm:p-12 lg:flex lg:items-center lg:justify-between lg:p-16"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-[#16826d]">Build the right system</p><h2 className="mt-4 max-w-3xl font-display text-5xl">Match irrigation to water, crop, soil, and field.</h2></div><Link href="/products?q=Irrigation" className="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#075949] px-7 font-bold text-white hover:text-white lg:mt-0">Explore irrigation <ArrowRight className="h-4 w-4" /></Link></div></div></section>
+        <section className="pb-24"><div className="mx-auto max-w-7xl px-4"><div className="rounded-[3rem] bg-[#d8eee8] p-8 sm:p-12 lg:flex lg:items-center lg:justify-between lg:p-16"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-[#16826d]">Build the right system</p><h2 className="mt-4 max-w-3xl font-display text-5xl">Match irrigation to water, crop, soil, and field.</h2></div><Link href="/products?q=Irrigation" className="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black lg:mt-0">Explore irrigation <ArrowRight className="h-4 w-4" /></Link></div></div></section>
       </main>
       <SiteFooter />
     </div>

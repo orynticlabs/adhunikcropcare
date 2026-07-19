@@ -69,8 +69,8 @@ export default function SizeCartButton({ product }: { product: Product }) {
               onClick={() => handleSizePick(size)}
               className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold transition-all duration-200 ${
                 selectedSize === size
-                  ? "border-[--leaf] bg-[--leaf]/10 text-[--leaf]"
-                  : "border-border text-muted-foreground hover:border-[--leaf]/50 hover:text-[--leaf]"
+                  ? "border-[#033927] bg-[#033927] text-white"
+                  : "border-border text-muted-foreground hover:border-[#689c30]/50 hover:bg-[#689c30]/10 hover:!text-black"
               }`}
             >
               {size}
@@ -88,7 +88,7 @@ export default function SizeCartButton({ product }: { product: Product }) {
         <button
           type="button"
           onClick={handleAdd}
-          className="flex w-full h-9 items-center justify-center gap-1.5 rounded-full border border-primary bg-primary text-primary-foreground text-[13px] font-medium transition-colors hover:border-[--leaf] hover:bg-[--leaf] hover:text-white"
+          className="flex w-full h-9 items-center justify-center gap-1.5 rounded-full border border-[#033927] bg-[#033927] text-white text-[13px] font-medium transition-colors hover:border-[#689c30] hover:bg-[#689c30] hover:!text-black"
         >
           <ShoppingCart className="h-3.5 w-3.5" aria-hidden />
           Add to Cart
@@ -101,22 +101,22 @@ export default function SizeCartButton({ product }: { product: Product }) {
           inCart ? "opacity-100" : "opacity-0 pointer-events-none h-0 overflow-hidden"
         }`}
       >
-        <div className="flex h-9 items-center justify-between rounded-full border-2 border-[--leaf] bg-background px-1">
+        <div className="flex h-9 items-center justify-between rounded-full border-2 border-[#689c30] bg-background px-1">
           <button
             type="button"
             onClick={handleDecrease}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[--leaf] transition hover:bg-[--leaf] hover:text-white"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-black transition hover:bg-[#689c30] hover:!text-black"
             aria-label="Decrease quantity"
           >
             <Minus className="h-3.5 w-3.5" aria-hidden />
           </button>
-          <span className="min-w-8 text-center text-sm font-bold text-[--leaf]">
+          <span className="min-w-8 text-center text-sm font-bold text-[#033927]">
             {qty}
           </span>
           <button
             type="button"
             onClick={handleIncrease}
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-[--leaf] text-white transition hover:bg-[--moss]"
+            className="flex h-7 w-7 items-center justify-center rounded-full bg-[#033927] text-white transition hover:bg-[#689c30] hover:!text-black"
             aria-label="Increase quantity"
           >
             <Plus className="h-3.5 w-3.5" aria-hidden />

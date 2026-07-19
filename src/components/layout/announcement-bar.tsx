@@ -99,7 +99,7 @@ export default function AnnouncementBar() {
       {/* Prev arrow — desktop only */}
       <button
         onClick={() => { prev(); resetTimer() }}
-        className="absolute left-3 hidden sm:flex items-center justify-center h-5 w-5 rounded-full text-white/50 hover:text-[--leaf] hover:bg-white/10 transition"
+        className="absolute left-3 hidden sm:flex items-center justify-center h-5 w-5 rounded-full text-white/50 hover:text-[#689c30] hover:bg-white/10 transition"
         aria-label="Previous offer"
       >
         <ChevronLeft className="h-3.5 w-3.5" />
@@ -112,7 +112,7 @@ export default function AnnouncementBar() {
         style={{ transition: `opacity ${FADE_MS}ms ease, transform ${FADE_MS}ms ease` }}
       >
         {ann.code && (
-          <Tag className="h-3 w-3 shrink-0 text-[--gold]" aria-hidden />
+          <Tag className="h-3 w-3 shrink-0 text-[#e9c46a]" aria-hidden />
         )}
 
         <span>{ann.text}&nbsp;</span>
@@ -125,7 +125,7 @@ export default function AnnouncementBar() {
             </span>
           ) : (
             /* Bold accent text */
-            <span className="font-semibold text-[--gold]">{ann.highlight}</span>
+            <span className="font-semibold text-[#e9c46a]">{ann.highlight}</span>
           )
         )}
 
@@ -135,7 +135,7 @@ export default function AnnouncementBar() {
       {/* Next arrow — desktop only */}
       <button
         onClick={() => { next(); resetTimer() }}
-        className="absolute right-8 hidden sm:flex items-center justify-center h-5 w-5 rounded-full text-white/50 hover:text-[--leaf] hover:bg-white/10 transition"
+        className="absolute right-8 hidden sm:flex items-center justify-center h-5 w-5 rounded-full text-white/50 hover:text-[#689c30] hover:bg-white/10 transition"
         aria-label="Next offer"
       >
         <ChevronRight className="h-3.5 w-3.5" />
@@ -151,7 +151,7 @@ export default function AnnouncementBar() {
             className={`rounded-full transition-all duration-300 ${
               i === index
                 ? "w-3.5 h-[3px] bg-white"
-                : "w-[3px] h-[3px] bg-white/35 hover:bg-[--leaf]"
+                : "w-[3px] h-[3px] bg-white/35 hover:bg-[#689c30]"
             }`}
           />
         ))}

@@ -25,30 +25,6 @@ export const metadata: Metadata = {
     "Discover compost, vermicompost, neem cake, and organic plant care solutions created for living soil and resilient crops.",
 }
 
-const PRODUCTS = [
-  {
-    name: "Vermi+ Compost 25kg",
-    label: "Soil foundation",
-    copy: "Rich organic matter for better soil structure, microbial activity, moisture retention, and steady plant nutrition.",
-    image: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=900&q=85",
-    href: "/products?q=Vermi%20Compost",
-  },
-  {
-    name: "Neem Cake Powder",
-    label: "Plant & soil care",
-    copy: "A traditional neem-based soil input that supports root-zone health and integrated crop management.",
-    image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=900&q=85",
-    href: "/products?q=Neem%20Cake",
-  },
-  {
-    name: "Enriched Cow Manure",
-    label: "Organic nourishment",
-    copy: "Well-processed farm manure designed to restore organic carbon and provide gradual nutrition to growing crops.",
-    image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=900&q=85",
-    href: "/products?q=Enriched%20Cow%20Manure",
-  },
-]
-
 const CYCLE = [
   {
     number: "01",
@@ -120,13 +96,13 @@ export default function OrganicRangePage() {
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link
                   href="#organic-products"
-                  className="inline-flex h-12 items-center gap-2 rounded-full bg-[#e9c46a] px-7 text-sm font-bold text-[#203129] shadow-xl transition-shadow hover:text-[#203129] hover:shadow-2xl"
+                  className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black"
                 >
                   Discover the range <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/contact"
-                  className="inline-flex h-12 items-center rounded-full border border-white/25 bg-white/10 px-7 text-sm font-semibold text-white backdrop-blur hover:bg-white/15 hover:text-white"
+                  className="inline-flex h-12 items-center rounded-full bg-[#033927] px-7 text-sm font-semibold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black"
                 >
                   Plan organic nutrition
                 </Link>
@@ -246,32 +222,8 @@ export default function OrganicRangePage() {
               </Link>
             </div>
 
-            <div className="mt-12 grid gap-6 lg:grid-cols-3">
-              {PRODUCTS.map((product, index) => (
-                <article key={product.name} className="group overflow-hidden rounded-[2.25rem] bg-[#f3f0e8] text-[#203129]">
-                  <Link href={product.href} className="relative block aspect-[4/3] overflow-hidden">
-                    <Image
-                      src={product.image}
-                      alt={product.name}
-                      fill
-                      sizes="(max-width: 1024px) 100vw, 33vw"
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#172f24]/65 via-transparent to-transparent" />
-                    <span className="absolute left-5 top-5 rounded-full bg-[#f3f0e8]/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] backdrop-blur">
-                      {product.label}
-                    </span>
-                    <span className="absolute bottom-5 right-5 font-display text-5xl text-white/70">0{index + 1}</span>
-                  </Link>
-                  <div className="p-6">
-                    <h3 className="font-display text-3xl">{product.name}</h3>
-                    <p className="mt-3 min-h-20 leading-6 text-[#667369]">{product.copy}</p>
-                    <Link href={product.href} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#1b4938]">
-                      Explore product <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </div>
-                </article>
-              ))}
+            <div className="mt-12 rounded-[2.25rem] border border-dashed border-white/20 bg-white/10 p-10 text-center text-white/75">
+              Published organic products are loaded from OryCMS on the main products page.
             </div>
           </div>
         </section>
@@ -328,7 +280,7 @@ export default function OrganicRangePage() {
               </div>
               <Link
                 href="/contact"
-                className="relative mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#203e31] px-7 text-sm font-bold text-white shadow-xl hover:text-white lg:mt-0"
+                className="relative mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black lg:mt-0"
               >
                 Get organic guidance <ArrowRight className="h-4 w-4" />
               </Link>

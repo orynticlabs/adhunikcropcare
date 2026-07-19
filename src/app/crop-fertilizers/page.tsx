@@ -50,33 +50,6 @@ const PROGRAMS = [
   },
 ]
 
-const PRODUCTS = [
-  {
-    name: "Adhunik Bio NPK",
-    tag: "Biological nutrition",
-    formula: "N + P + K",
-    copy: "Beneficial microbial cultures that improve nutrient availability and strengthen soil biological activity.",
-    image: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=900&q=85",
-    href: "/products/adhunik-bio-npk",
-  },
-  {
-    name: "NPK 19-19-19",
-    tag: "Water soluble",
-    formula: "19 : 19 : 19",
-    copy: "A versatile balanced formula for active crop growth through drip irrigation or foliar application.",
-    image: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=900&q=85",
-    href: "/products?q=NPK%2019-19-19",
-  },
-  {
-    name: "Humic Acid Granules",
-    tag: "Soil performance",
-    formula: "Root zone +",
-    copy: "Soil-building granules developed to support nutrient efficiency, root spread, and moisture response.",
-    image: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=900&q=85",
-    href: "/products?q=Humic%20Acid",
-  },
-]
-
 const BENEFITS = [
   "Crop-stage focused formulations",
   "Suitable for integrated nutrient programs",
@@ -127,13 +100,13 @@ export default function CropFertilizersPage() {
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link
                   href="#fertilizer-range"
-                  className="inline-flex h-12 items-center gap-2 rounded-full bg-[#e9c46a] px-7 text-sm font-bold text-[#17382d] shadow-xl transition-shadow hover:text-[#17382d] hover:shadow-2xl"
+                  className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black"
                 >
                   Explore the range <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/contact"
-                  className="inline-flex h-12 items-center rounded-full border border-white/25 bg-white/10 px-7 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/15 hover:text-white"
+                  className="inline-flex h-12 items-center rounded-full bg-[#033927] px-7 text-sm font-semibold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black"
                 >
                   Ask an agronomist
                 </Link>
@@ -240,33 +213,8 @@ export default function CropFertilizersPage() {
               </Link>
             </div>
 
-            <div className="mt-12 grid gap-6 lg:grid-cols-3">
-              {PRODUCTS.map((product, index) => (
-                <article key={product.name} className="group overflow-hidden rounded-[2.25rem] bg-white shadow-[0_14px_40px_rgba(3,57,39,.08)]">
-                  <Link href={product.href} className="relative block aspect-[5/4] overflow-hidden">
-                    <Image
-                      src={product.image}
-                      alt={product.name}
-                      fill
-                      sizes="(max-width: 1024px) 100vw, 33vw"
-                      className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#032b20]/65 via-transparent to-transparent" />
-                    <span className="absolute left-5 top-5 rounded-full bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#033927] backdrop-blur">
-                      {product.tag}
-                    </span>
-                    <p className="absolute bottom-5 left-5 font-display text-3xl text-white">{product.formula}</p>
-                  </Link>
-                  <div className="p-6">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#689c30]">Formula 0{index + 1}</p>
-                    <h3 className="mt-2 font-display text-3xl">{product.name}</h3>
-                    <p className="mt-3 min-h-20 leading-6 text-foreground/62">{product.copy}</p>
-                    <Link href={product.href} className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#033927]">
-                      View formulation <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  </div>
-                </article>
-              ))}
+            <div className="mt-12 rounded-[2.25rem] border border-dashed border-[#033927]/20 bg-white p-10 text-center text-[#40584e]">
+              Published fertilizer products are loaded from OryCMS on the main products page.
             </div>
           </div>
         </section>

@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useRef,
   useState,
 } from "react"
@@ -17,6 +18,7 @@ interface CartContextValue {
   addItem: (product?: CartProductInput) => void
   updateQuantity: (id: string, quantity: number) => void
   removeItem: (id: string) => void
+  clearCart: () => void
   openCart: () => void
   closeCart: () => void
 }
@@ -35,35 +37,8 @@ export interface CartItem extends CartProductInput {
   priceValue: number
 }
 
-const INITIAL_CART_ITEMS: CartItem[] = [
-  {
-    id: "adhunik-bio-npk",
-    name: "Adhunik Bio NPK",
-    price: "₹ 1,249",
-    priceValue: 1249,
-    quantity: 1,
-    badge: "Bestseller",
-    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-  },
-  {
-    id: "vermi-compost-25kg",
-    name: "Vermi+ Compost 25kg",
-    price: "₹ 599",
-    priceValue: 599,
-    quantity: 1,
-    badge: "Organic",
-    img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
-  },
-  {
-    id: "neemguard-spray-1l",
-    name: "NeemGuard Spray 1L",
-    price: "₹ 449",
-    priceValue: 449,
-    quantity: 1,
-    badge: "Bio Pesticide",
-    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-  },
-]
+const INITIAL_CART_ITEMS: CartItem[] = []
+const CART_STORAGE_KEY = "adhunik-cart"
 
 function productId(name: string, size?: string) {
   const base = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
@@ -93,6 +68,7 @@ const CartContext = createContext<CartContextValue>({
   addItem: () => {},
   updateQuantity: () => {},
   removeItem: () => {},
+  clearCart: () => {},
   openCart: () => {},
   closeCart: () => {},
 })
@@ -141,8 +117,29 @@ function vibrateDevice() {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(INITIAL_CART_ITEMS)
   const [animKey, setAnimKey] = useState(0)
+  const [hydrated, setHydrated] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(CART_STORAGE_KEY)
+      if (saved) setItems(sanitizeCartItems(JSON.parse(saved)))
+    } catch {
+      // Ignore corrupted or unavailable storage.
+    } finally {
+      setHydrated(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!hydrated) return
+    try {
+      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+    } catch {
+      // Storage can be unavailable in private/restricted contexts.
+    }
+  }, [hydrated, items])
 
   const addItem = useCallback((product?: CartProductInput) => {
     if (product) {
@@ -169,12 +166,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           },
         ]
       })
-    } else {
-      setItems((current) =>
-        current.map((item, index) =>
-          index === 0 ? { ...item, quantity: item.quantity + 1 } : item
-        )
-      )
     }
 
     setAnimKey((k) => k + 1)
@@ -199,6 +190,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((current) => current.filter((item) => item.id !== id))
   }, [])
 
+  const clearCart = useCallback(() => {
+    setItems([])
+  }, [])
+
   const openCart = useCallback(() => setIsCartOpen(true), [])
   const closeCart = useCallback(() => setIsCartOpen(false), [])
 
@@ -219,6 +214,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         addItem,
         updateQuantity,
         removeItem,
+        clearCart,
         openCart,
         closeCart,
       }}
@@ -230,4 +226,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
 export function useCart() {
   return useContext(CartContext)
+}
+
+function sanitizeCartItems(value: unknown): CartItem[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is CartItem => {
+    if (!item || typeof item !== "object") return false
+    const candidate = item as Partial<CartItem>
+    return (
+      typeof candidate.id === "string" &&
+      typeof candidate.name === "string" &&
+      typeof candidate.price === "string" &&
+      typeof candidate.img === "string" &&
+      typeof candidate.quantity === "number" &&
+      typeof candidate.priceValue === "number"
+    )
+  })
 }

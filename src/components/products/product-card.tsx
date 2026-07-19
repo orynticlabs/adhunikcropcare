@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Star } from "lucide-react"
@@ -50,46 +50,41 @@ export function ProductCard({
 }: ProductCardProps) {
   const supportingLine = buildSubtitle(badge, subtitle)
   const gallery = useMemo(() => (images && images.length > 0 ? images : [image]), [image, images])
-  const [activeImage, setActiveImage] = useState(0)
-
-  useEffect(() => {
-    if (gallery.length <= 1) {
-      return
-    }
-
-    const timer = window.setInterval(() => {
-      setActiveImage((current) => (current + 1) % gallery.length)
-    }, 3000)
-
-    return () => window.clearInterval(timer)
-  }, [gallery])
 
   return (
     <article
-      className={`group overflow-hidden rounded-[1.9rem] border border-[#e7ddd1] bg-[#fbf8f2] shadow-[0_10px_30px_rgba(61,43,31,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(61,43,31,0.14)] ${className}`}
+      className={`group overflow-hidden rounded-2xl border border-[#e2e7df] bg-white shadow-sm transition-colors duration-200 hover:border-[#b9cdb3] hover:shadow-md ${className}`}
     >
-      <Link href={href} className="relative block aspect-square overflow-hidden bg-[#e7d2b5]" aria-label={`View ${name}`}>
+      <Link href={href} className="relative block aspect-square overflow-hidden bg-white" aria-label={`View ${name}`}>
         <Image
-          src={gallery[activeImage % gallery.length] ?? image}
+          src={gallery[0] ?? image}
           alt={name}
           fill
           sizes={imageSizes}
-          className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.04]"
+          className="object-contain object-center p-4"
         />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[rgba(38,24,14,0.16)] via-transparent to-transparent" />
-
         {overlayLabel ? (
-          <div className="absolute right-3 top-3 rounded-full bg-[rgba(251,248,242,0.2)] px-3 py-1 text-[11px] font-semibold text-white shadow-sm ring-1 ring-white/25 backdrop-blur-md">
+          <div className="absolute right-3 top-3 rounded-full border border-[#d7e0da] bg-white px-3 py-1 text-[11px] font-semibold text-[#173c31]">
             {overlayLabel}
           </div>
         ) : null}
 
-        <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md bg-[rgba(251,248,242,0.95)] px-2.5 py-1 text-xs font-medium text-[#173c31] shadow-sm ring-1 ring-[rgba(61,43,31,0.08)] backdrop-blur-sm">
+        <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md border border-[#d7e0da] bg-white px-2.5 py-1 text-xs font-medium text-[#173c31]">
           <span>{rating.toFixed(1)}</span>
           <Star className="h-3.5 w-3.5 fill-[#1d6b57] text-[#1d6b57]" />
           <span className="text-[#947f69]">| {reviews}</span>
         </div>
+        {gallery.length > 1 ? (
+          <div className="absolute bottom-3 right-3 flex gap-1">
+            {gallery.slice(0, 4).map((_, index) => (
+              <span
+                key={index}
+                className={`h-1.5 w-1.5 rounded-full border border-[#b9cdb3] ${index === 0 ? "bg-[#0d5a48]" : "bg-white"}`}
+              />
+            ))}
+          </div>
+        ) : null}
       </Link>
 
       <div className="space-y-4 px-4 pb-4 pt-5 sm:px-5 sm:pb-5">
@@ -123,7 +118,7 @@ export function ProductCard({
 
             <Link
               href={href}
-              className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#0d5a48] px-4.5 text-sm font-semibold text-white transition-colors hover:bg-[#084838] hover:text-white"
+              className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#033927] px-4.5 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black"
             >
               View Product
             </Link>

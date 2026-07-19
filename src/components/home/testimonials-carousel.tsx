@@ -134,13 +134,13 @@ export default function TestimonialsCarousel() {
                   h-full rounded-3xl border p-8
                   transition-[box-shadow,border-color] duration-500
                   ${s === "center"
-                    ? "border-[--leaf]/25 bg-card shadow-luxe"
+                    ? "border-[#689c30]/25 bg-card shadow-luxe"
                     : "border-border/40 bg-card/80 shadow-soft"
                   }
                 `}
               >
                 {/* Stars */}
-                <div className="flex gap-1 text-[--gold]">
+                <div className="flex gap-1 text-[#e9c46a]">
                   {Array.from({ length: 5 }).map((_, k) => (
                     <Star key={k} className="h-4 w-4 fill-current" aria-hidden />
                   ))}
@@ -153,7 +153,7 @@ export default function TestimonialsCarousel() {
 
                 {/* Author */}
                 <div className="mt-6 flex items-center gap-3">
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[--leaf] to-[--moss] font-display text-lg font-semibold text-cream">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#689c30] to-[#033927] font-display text-lg font-semibold text-cream">
                     {item.initial}
                   </div>
                   <div>
@@ -172,7 +172,7 @@ export default function TestimonialsCarousel() {
         <button
           onClick={goPrev}
           className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-border
-                     hover:border-[--leaf] hover:text-[--leaf] transition-colors"
+                     hover:border-[#689c30] hover:text-[#689c30] transition-colors"
           aria-label="Previous testimonial"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -188,7 +188,7 @@ export default function TestimonialsCarousel() {
               className={`rounded-full transition-all duration-300 ${
                 i === active
                   ? "w-6 h-[6px] bg-[#689c30]"
-                  : "w-[6px] h-[6px] bg-border hover:bg-[--leaf]"
+                  : "w-[6px] h-[6px] bg-border hover:bg-[#689c30]"
               }`}
             />
           ))}
@@ -197,7 +197,7 @@ export default function TestimonialsCarousel() {
         <button
           onClick={goNext}
           className="inline-flex items-center justify-center h-8 w-8 rounded-full border border-border
-                     hover:border-[--leaf] hover:text-[--leaf] transition-colors"
+                     hover:border-[#689c30] hover:text-[#689c30] transition-colors"
           aria-label="Next testimonial"
         >
           <ChevronRight className="h-4 w-4" />

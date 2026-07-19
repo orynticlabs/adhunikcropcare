@@ -22,7 +22,7 @@ function Bar({ label, value }: { label: string; value: number }) {
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-cream/15">
         <div
-          className="h-full bg-gradient-to-r from-[--gold] to-cream transition-all duration-700"
+          className="h-full bg-gradient-to-r from-[#e9c46a] to-cream transition-all duration-700"
           style={{ width: `${value}%` }}
         />
       </div>
@@ -37,11 +37,11 @@ export default function SmartAgriSection() {
   return (
     <section id="smart-agriculture" className="relative py-12 sm:py-16">
       <div className="mx-auto max-w-6xl px-4">
-        <div className="relative overflow-hidden rounded-[2.5rem] border border-border/40 bg-gradient-to-br from-[--moss] via-[--moss] to-[--bark]/80 p-10 sm:p-16 text-cream shadow-luxe">
+        <div className="relative overflow-hidden rounded-[2.5rem] border border-border/40 bg-gradient-to-br from-[#033927] via-[#033927] to-[#3d2b1f]/80 p-10 sm:p-16 text-cream shadow-luxe">
           {/* Decorative blobs */}
-          <div className="absolute -top-20 -right-20 h-80 w-80 rounded-full bg-[--gold]/30 blur-3xl animate-blob pointer-events-none" />
+          <div className="absolute -top-20 -right-20 h-80 w-80 rounded-full bg-[#e9c46a]/30 blur-3xl animate-blob pointer-events-none" />
           <div
-            className="absolute -bottom-20 -left-10 h-72 w-72 rounded-full bg-[--leaf]/20 blur-3xl animate-blob pointer-events-none"
+            className="absolute -bottom-20 -left-10 h-72 w-72 rounded-full bg-[#689c30]/20 blur-3xl animate-blob pointer-events-none"
             style={{ animationDelay: "3s" }}
           />
 
@@ -61,7 +61,7 @@ export default function SmartAgriSection() {
                 <select
                   value={crop}
                   onChange={(e) => setCrop(e.target.value)}
-                  className="h-11 rounded-full bg-cream/15 border border-cream/20 px-5 text-cream backdrop-blur outline-none cursor-pointer"
+                  className="h-11 rounded-full border border-[#d5ddd6] bg-white px-5 text-sm font-medium text-[#203129] outline-none transition focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/20 [color-scheme:light]"
                 >
                   {CROPS.map((c) => (
                     <option key={c} value={c} className="text-foreground">
@@ -69,7 +69,7 @@ export default function SmartAgriSection() {
                     </option>
                   ))}
                 </select>
-                <button className="inline-flex items-center gap-2 rounded-full bg-[--gold] text-[--bark] px-6 h-11 text-sm font-medium hover:bg-[--gold]/90 transition shadow">
+                <button className="inline-flex h-11 items-center gap-2 rounded-full bg-[#033927] px-6 text-sm font-semibold text-white shadow transition-colors hover:bg-[#689c30] hover:!text-black">
                   Analyze Now <ArrowRight className="h-4 w-4" aria-hidden />
                 </button>
               </div>

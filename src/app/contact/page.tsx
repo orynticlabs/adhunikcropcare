@@ -51,7 +51,7 @@ const CHANNELS = [
 ]
 
 const FIELD_CLASS =
-  "h-12 w-full rounded-2xl border border-[#d5ddd6] bg-white px-4 text-sm text-[#203129] outline-none transition focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15"
+  "h-12 w-full rounded-2xl border border-[#d5ddd6] bg-white px-4 text-sm text-[#203129] outline-none transition focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15 [color-scheme:light]"
 
 export default function ContactPage() {
   return (
@@ -198,7 +198,7 @@ export default function ContactPage() {
               </div>
               <button
                 type="submit"
-                className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl transition-shadow hover:text-white hover:shadow-2xl"
+                className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black"
               >
                 Send enquiry <Send className="h-4 w-4" />
               </button>
@@ -223,7 +223,7 @@ export default function ContactPage() {
                   <div className="mt-8 flex flex-wrap gap-3">
                     <a
                       href="mailto:hello@adhunikcrop.in"
-                      className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-6 text-sm font-bold text-white shadow-xl hover:text-white"
+                      className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-6 text-sm font-bold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black"
                     >
                       <Mail className="h-4 w-4" /> Email our team
                     </a>

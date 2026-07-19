@@ -23,25 +23,24 @@ export default function AddToCartButton({ product }: { product: CartProductInput
       className={`
         inline-flex items-center gap-1.5 rounded-full h-8 px-3.5
         text-xs font-semibold tracking-wide
-        transition-all duration-300 ease-out shadow-sm
-        active:scale-95 cursor-pointer
+        transition-colors duration-300 ease-out shadow-sm cursor-pointer
         ${isAdded
-          ? "bg-[--leaf] text-white scale-95"
-          : "bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105"
+          ? "bg-[#033927] text-white"
+          : "bg-[#033927] text-white hover:bg-[#689c30] hover:!text-black"
         }
       `}
       aria-label={isAdded ? "Added to cart" : "Add to cart"}
     >
       <span
         className={`transition-all duration-200 ${
-          isAdded ? "scale-100 opacity-100" : "scale-75 opacity-0 absolute"
+          isAdded ? "opacity-100" : "opacity-0 absolute"
         }`}
       >
         <Check className="h-3 w-3" aria-hidden />
       </span>
       <span
         className={`transition-all duration-200 ${
-          isAdded ? "scale-75 opacity-0 absolute" : "scale-100 opacity-100"
+          isAdded ? "opacity-0 absolute" : "opacity-100"
         }`}
       >
         <ShoppingBag className="h-3 w-3" aria-hidden />

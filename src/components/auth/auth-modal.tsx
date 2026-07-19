@@ -19,12 +19,12 @@ import { AuthSidePanel } from "@/components/auth/auth-side-panel"
 import { type AuthView, useAuth } from "@/features/auth/auth-context"
 
 const inputCls = (err?: string) =>
-  `h-11 w-full rounded-xl border bg-background px-4 text-sm outline-none transition-colors focus:border-[--leaf] focus:ring-2 focus:ring-[--leaf]/15 ${
-    err ? "border-red-400" : "border-border/60 hover:border-[--leaf]/40"
+  `h-11 w-full rounded-xl border bg-background px-4 text-sm outline-none transition-colors focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15 ${
+    err ? "border-red-400" : "border-border/60 hover:border-[#689c30]/40"
   }`
 
 const authSubmitButtonCls =
-  "flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#689c30_0%,#033927_100%)] text-sm font-bold text-white shadow-[0_14px_30px_rgba(3,57,39,0.18)] transition hover:bg-[linear-gradient(135deg,#7aac3f_0%,#044531_100%)] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[--leaf]/30 disabled:opacity-60 active:scale-[0.99]"
+  "flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#033927] text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#689c30] hover:!text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#689c30]/30 disabled:opacity-60"
 
 function PasswordStrength({ password }: { password: string }) {
   const checks = [
@@ -34,7 +34,7 @@ function PasswordStrength({ password }: { password: string }) {
     { label: "Special character", ok: /[^A-Za-z0-9]/.test(password) },
   ]
   const score = checks.filter((check) => check.ok).length
-  const colors = ["bg-destructive/70", "bg-[--gold]/80", "bg-[--leaf]/60", "bg-[--leaf]", "bg-[--leaf]"]
+  const colors = ["bg-destructive/70", "bg-[#e9c46a]/80", "bg-[#689c30]/60", "bg-[#689c30]", "bg-[#689c30]"]
   const labels = ["", "Weak", "Fair", "Good", "Strong"]
 
   if (!password) return null
@@ -58,7 +58,7 @@ function PasswordStrength({ password }: { password: string }) {
         {checks.map((check) => (
           <div key={check.label} className="flex items-center gap-1.5">
             <CheckCircle2
-              className={`h-3 w-3 shrink-0 ${check.ok ? "text-[--leaf]" : "text-border"}`}
+              className={`h-3 w-3 shrink-0 ${check.ok ? "text-[#689c30]" : "text-border"}`}
             />
             <span className="text-[11px] text-muted-foreground">{check.label}</span>
           </div>
@@ -109,7 +109,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
   return (
     <>
       <div className="mb-8">
-        <h2 className="font-display text-3xl text-[--moss]">Sign in</h2>
+        <h2 className="font-display text-3xl text-[#033927]">Sign in</h2>
         <p className="mt-1 text-sm text-muted-foreground">Enter your credentials to continue</p>
       </div>
 
@@ -143,7 +143,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
             <label className="text-sm font-medium text-foreground/80">
               Password <span className="text-red-500">*</span>
             </label>
-            <Link href="/forgot-password" className="text-xs text-[--leaf] hover:underline">
+            <Link href="/forgot-password" className="text-xs text-[#689c30] hover:underline">
               Forgot password?
             </Link>
           </div>
@@ -160,7 +160,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
             <button
               type="button"
               onClick={() => setShowPass((value) => !value)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-black transition-colors hover:text-[#689c30]"
               aria-label={showPass ? "Hide password" : "Show password"}
             >
               {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -195,7 +195,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
 
       <button
         type="button"
-        className="flex h-11 w-full items-center justify-center gap-3 rounded-full border border-border/60 bg-card text-sm font-medium text-foreground shadow-sm transition hover:border-[--leaf]/40 hover:bg-muted/50"
+        className="flex h-11 w-full items-center justify-center gap-3 rounded-full border border-border/60 bg-card text-sm font-medium text-foreground shadow-sm transition hover:border-[#689c30]/40 hover:bg-muted/50"
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden>
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -208,7 +208,7 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{" "}
-        <button type="button" onClick={onSwitch} className="font-semibold text-[--leaf] hover:underline">
+        <button type="button" onClick={onSwitch} className="font-semibold text-[#689c30] hover:underline">
           Sign up free
         </button>
       </p>
@@ -250,11 +250,13 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
     setLoading(true)
 
     try {
-      await signup({ firstName, lastName, email, phone, password })
+      const result = await signup({ firstName, lastName, email, phone, password })
       const redirectPath = consumeAuthRedirectPath()
       closeAuthModal()
       if (redirectPath) {
         router.push(redirectPath)
+      } else if (result.verifyToken) {
+        router.push(`/verify-email?token=${encodeURIComponent(result.verifyToken)}`)
       }
     } finally {
       setLoading(false)
@@ -264,7 +266,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
   return (
     <>
       <div className="mb-7">
-        <h2 className="font-display text-3xl text-[--moss]">Create account</h2>
+        <h2 className="font-display text-3xl text-[#033927]">Create account</h2>
         <p className="mt-1 text-sm text-muted-foreground">Fill in your details to get started</p>
       </div>
 
@@ -357,7 +359,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
             <button
               type="button"
               onClick={() => setShowPass((value) => !value)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-black transition-colors hover:text-[#689c30]"
               aria-label={showPass ? "Hide" : "Show"}
             >
               {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -384,7 +386,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
             <button
               type="button"
               onClick={() => setShowConf((value) => !value)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-black transition-colors hover:text-[#689c30]"
               aria-label={showConf ? "Hide" : "Show"}
             >
               {showConf ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -399,15 +401,15 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
               type="checkbox"
               checked={agree}
               onChange={(event) => setAgree(event.target.checked)}
-              className="mt-0.5 h-4 w-4 cursor-pointer rounded border-border accent-[--leaf]"
+              className="mt-0.5 h-4 w-4 cursor-pointer rounded border-border accent-[#033927]"
             />
             <span className="text-xs leading-relaxed text-muted-foreground">
               I agree to the{" "}
-              <Link href="/terms-and-conditions" className="font-medium text-[--leaf] hover:underline">
+              <Link href="/terms-and-conditions" className="font-medium text-[#689c30] hover:underline">
                 Terms of Service
               </Link>{" "}
               and{" "}
-              <Link href="/privacy-policy" className="font-medium text-[--leaf] hover:underline">
+              <Link href="/privacy-policy" className="font-medium text-[#689c30] hover:underline">
                 Privacy Policy
               </Link>
             </span>
@@ -441,7 +443,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
 
       <button
         type="button"
-        className="flex h-11 w-full items-center justify-center gap-3 rounded-full border border-border/60 bg-card text-sm font-medium text-foreground shadow-sm transition hover:border-[--leaf]/40 hover:bg-muted/50"
+        className="flex h-11 w-full items-center justify-center gap-3 rounded-full border border-border/60 bg-card text-sm font-medium text-foreground shadow-sm transition hover:border-[#689c30]/40 hover:bg-muted/50"
       >
         <svg className="h-4 w-4" viewBox="0 0 24 24" aria-hidden>
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -453,13 +455,13 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
       </button>
 
       <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-        <ShieldCheck className="h-3.5 w-3.5 text-[--leaf]" />
+        <ShieldCheck className="h-3.5 w-3.5 text-[#689c30]" />
         Your data is safe and never shared with third parties
       </div>
 
       <p className="mt-5 text-center text-sm text-muted-foreground">
         Already have an account?{" "}
-        <button type="button" onClick={onSwitch} className="font-semibold text-[--leaf] hover:underline">
+        <button type="button" onClick={onSwitch} className="font-semibold text-[#689c30] hover:underline">
           Sign in
         </button>
       </p>
@@ -511,7 +513,7 @@ export function AuthModal() {
         <button
           type="button"
           onClick={closeAuthModal}
-          className="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-[rgba(255,255,255,0.85)] text-foreground/70 shadow-sm backdrop-blur transition hover:border-[--leaf]/30 hover:text-[--leaf]"
+          className="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-[rgba(255,255,255,0.85)] text-foreground/70 shadow-sm backdrop-blur transition hover:border-[#689c30]/30 hover:text-[#689c30]"
           aria-label="Close"
         >
           <X className="h-4 w-4" />
@@ -554,8 +556,8 @@ export function AuthModal() {
                 onClick={() => setAuthView(tab.id)}
                 className={`flex-1 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
                   authView === tab.id
-                    ? "bg-white text-[--moss] shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+                    ? "bg-[#033927] text-white shadow-sm"
+                    : "text-muted-foreground hover:text-[#689c30]"
                 }`}
               >
                 {tab.label}

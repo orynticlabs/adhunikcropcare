@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Search, X } from "lucide-react"
+import { Package, Search, Tag, X } from "lucide-react"
+import { matchesSearchQuery } from "@/lib/search"
 
 const TERMS = [
   "Insecticides",
@@ -24,24 +25,37 @@ const PAUSE_GAP = 380  // pause before typing next word
 
 const ACCENT = "#689C30"
 
-const SEARCH_ITEMS = [
-  { label: "Adhunik Bio NPK", type: "Product", href: "/products/adhunik-bio-npk" },
-  { label: "Vermi+ Compost 25kg", type: "Product", href: "/products/vermi-compost-25kg" },
-  { label: "NeemGuard Spray 1L", type: "Product", href: "/products/neemguard-spray-1l" },
-  { label: "SoilRich Booster", type: "Product", href: "/products/soilrich-booster" },
-  { label: "DripFlow Starter Kit", type: "Product", href: "/products/dripflow-starter-kit" },
-  { label: "MyCo Root Power", type: "Product", href: "/products/myco-root-power" },
-  { label: "Crop Fertilizers", type: "Category", href: "/crop-fertilizers" },
-  { label: "Organic Range", type: "Category", href: "/organic-range" },
-  { label: "Bio Products", type: "Category", href: "/bio-products" },
-  { label: "Soil Care", type: "Category", href: "/soil-care" },
-  { label: "Pest Management", type: "Category", href: "/products?q=Pest%20Management" },
-  { label: "Irrigation", type: "Category", href: "/irrigation-solutions" },
+type SearchItem = {
+  label: string
+  type: "Product" | "Category"
+  keywords: string
+  href: string
+  category?: string
+  price?: string
+}
+
+type CmsProduct = {
+  category: string
+  name: string
+  price: number
+  salePrice: number | null
+  shortDescription: string
+  slug: string
+}
+
+const CATEGORY_ITEMS: SearchItem[] = [
+  { label: "Fertilizers", type: "Category", keywords: "crop nutrition npk", href: "/products?q=Fertilizers" },
+  { label: "Organic", type: "Category", keywords: "compost manure natural", href: "/products?q=Organic" },
+  { label: "Bio Products", type: "Category", keywords: "biological biofertilizer", href: "/products?q=Bio%20Products" },
+  { label: "Soil Care", type: "Category", keywords: "conditioner booster", href: "/products?q=Soil%20Care" },
+  { label: "Pest Management", type: "Category", keywords: "pesticide insecticide crop protection", href: "/products?q=Pest%20Management" },
+  { label: "Irrigation", type: "Category", keywords: "drip sprinkler water", href: "/products?q=Irrigation" },
 ]
 
 export default function SearchBox() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [productItems, setProductItems] = useState<SearchItem[]>([])
   const [query, setQuery] = useState("")
   const wrapperRef = useRef<HTMLDivElement>(null)
   const inputRef   = useRef<HTMLInputElement>(null)
@@ -49,17 +63,43 @@ export default function SearchBox() {
   const currentInputRef = useRef<HTMLInputElement | null>(null)
 
   const trimmedQuery = query.trim()
+  useEffect(() => {
+    fetch("/api/products")
+      .then((response) => response.json())
+      .then((json) => {
+        if (!json.success || !Array.isArray(json.data)) return
+        setProductItems(
+          json.data.map((product: CmsProduct) => ({
+            category: product.category,
+            href: `/products/${product.slug}`,
+            keywords: [product.category, product.shortDescription].join(" "),
+            label: product.name,
+            price: new Intl.NumberFormat("en-IN", {
+              currency: "INR",
+              maximumFractionDigits: 0,
+              style: "currency",
+            }).format(product.salePrice ?? product.price),
+            type: "Product" as const,
+          })),
+        )
+      })
+      .catch(() => undefined)
+  }, [])
+
   const searchResults = useMemo(() => {
+    const searchItems = [...productItems, ...CATEGORY_ITEMS]
+
     if (!trimmedQuery) {
-      return SEARCH_ITEMS.slice(0, 6)
+      return productItems.slice(0, 6)
     }
 
-    const normalizedQuery = trimmedQuery.toLowerCase()
-    return SEARCH_ITEMS.filter((item) =>
-      item.label.toLowerCase().includes(normalizedQuery) ||
-      item.type.toLowerCase().includes(normalizedQuery),
-    ).slice(0, 6)
-  }, [trimmedQuery])
+    return searchItems
+      .filter((item) =>
+        matchesSearchQuery(trimmedQuery, [item.label, item.type, item.category, item.keywords]),
+      )
+      .sort((a, b) => Number(b.type === "Product") - Number(a.type === "Product"))
+      .slice(0, 7)
+  }, [productItems, trimmedQuery])
 
   /* ── Typewriter ──────────────────────────────────────────── */
   useEffect(() => {
@@ -171,7 +211,7 @@ export default function SearchBox() {
         }}
         className="inline-flex items-center justify-center h-9 w-9 shrink-0
                    bg-transparent hover:bg-transparent active:bg-transparent focus:bg-transparent
-                   text-foreground hover:text-[--leaf] active:text-[--leaf]
+                   text-foreground hover:text-[#689c30] active:text-[#689c30]
                    focus:outline-none transition-colors duration-200 cursor-pointer"
         aria-label={open ? "Close search" : "Open search"}
         aria-expanded={open}
@@ -189,7 +229,7 @@ export default function SearchBox() {
           opacity: open ? 1 : 0,
           transition:
             "width 320ms cubic-bezier(0.4, 0, 0.2, 1), opacity 220ms ease",
-          overflow: "hidden",
+          overflow: open ? "visible" : "hidden",
         }}
       >
         {/* small right gap so input doesn't touch the toggle button */}
@@ -229,26 +269,43 @@ export default function SearchBox() {
           />
 
           {open ? (
-            <div className="absolute left-0 right-0 top-[calc(100%+0.55rem)] overflow-hidden rounded-[1.35rem] border border-border/60 bg-background/96 shadow-[0_18px_46px_rgba(3,57,39,0.14)] backdrop-blur-md">
+            <div
+              data-testid="search-suggestions"
+              className="absolute right-0 top-[calc(100%+0.55rem)] z-50 w-[min(92vw,23rem)] overflow-hidden rounded-[1.35rem] border border-border/60 bg-background/96 shadow-[0_18px_46px_rgba(3,57,39,0.14)] backdrop-blur-md"
+            >
               <div className="border-b border-border/50 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                 {trimmedQuery ? "Search results" : "Popular searches"}
               </div>
 
               {searchResults.length > 0 ? (
                 <div className="py-1.5">
-                  {searchResults.map((item) => (
-                    <Link
-                      key={`${item.type}-${item.label}`}
-                      href={item.href}
-                      onClick={closeSearch}
-                      className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-foreground transition hover:bg-[--leaf]/8 hover:text-[--moss]"
-                    >
-                      <span className="truncate">{item.label}</span>
-                      <span className="shrink-0 rounded-full bg-[--leaf]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[--leaf]">
-                        {item.type}
-                      </span>
-                    </Link>
-                  ))}
+                  {searchResults.map((item) => {
+                    const Icon = item.type === "Product" ? Package : Tag
+
+                    return (
+                      <Link
+                        key={`${item.type}-${item.label}`}
+                        href={item.href}
+                        onClick={closeSearch}
+                        className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm text-foreground transition hover:bg-[#689c30]/8 hover:text-[#033927]"
+                      >
+                        <span className="flex min-w-0 items-center gap-3">
+                          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#689c30]/10 text-[#689c30]">
+                            <Icon className="h-4 w-4" aria-hidden />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">{item.label}</span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {item.type === "Product" ? item.category : "Category"}
+                            </span>
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-xs font-semibold text-[#689c30]">
+                          {item.price ?? item.type}
+                        </span>
+                      </Link>
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="px-4 py-4 text-sm text-muted-foreground">
@@ -259,7 +316,7 @@ export default function SearchBox() {
               <button
                 type="button"
                 onClick={submitSearch}
-                className="flex w-full items-center justify-center border-t border-border/50 px-4 py-3 text-sm font-semibold text-[--moss] transition hover:bg-[--leaf]/8 hover:text-[--leaf]"
+                className="flex w-full items-center justify-center border-t border-border/50 px-4 py-3 text-sm font-semibold text-[#033927] transition hover:bg-[#689c30]/8 hover:text-[#689c30]"
               >
                 Search for {trimmedQuery ? `"${trimmedQuery}"` : "all products"}
               </button>

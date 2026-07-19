@@ -60,8 +60,8 @@ export default function KnowledgeTabs() {
             key={crop.name}
             className="border border-border/40 rounded-2xl bg-card/80 p-6 text-center shadow-soft hover:shadow-luxe hover:-translate-y-1 transition-all"
           >
-            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-[--leaf]/30 to-[--gold]/20">
-              <Sprout className="h-7 w-7 text-[--moss]" aria-hidden />
+            <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-gradient-to-br from-[#689c30]/30 to-[#e9c46a]/20">
+              <Sprout className="h-7 w-7 text-[#033927]" aria-hidden />
             </div>
             <h4 className="mt-4 font-display text-xl">{crop.name}</h4>
             <p className="mt-1 text-xs text-muted-foreground">

@@ -18,57 +18,21 @@ import CartDrawer from "@/features/cart/components/cart-drawer"
 import TestimonialsCarousel from "@/components/home/testimonials-carousel"
 import CropSuccessStories from "@/components/home/crop-success-stories"
 import SiteFooter from "@/components/layout/site-footer"
+import {
+  ensureProductImages,
+  listOryCMSProducts,
+  productPrimaryImage,
+  type OryCMSProductDTO,
+} from "@/lib/orycms/products"
 
 /* ─── Data ───────────────────────────────────────────────── */
 const CATEGORIES = [
-  { icon: Sprout,       title: "Crop Fertilizers", desc: "NPK blends, micronutrients, growth boosters.", from: "from-[--leaf]/20", to: "to-[--moss]/30" },
-  { icon: Leaf,         title: "Organic Range",    desc: "Compost, vermicompost, neem cake.",            from: "from-[--gold]/20", to: "to-[--leaf]/20" },
-  { icon: FlaskConical, title: "Bio Products",     desc: "Rhizobium, mycorrhiza, beneficial microbes.",  from: "from-[--moss]/30", to: "to-[--leaf]/20" },
-  { icon: Droplets,     title: "Soil Care",        desc: "pH balancers, conditioners, gypsum.",          from: "from-[--bark]/15", to: "to-[--gold]/20" },
-  { icon: Tractor,      title: "Irrigation",       desc: "Drip systems, sprinklers, smart valves.",      from: "from-[--leaf]/25", to: "to-[--gold]/15" },
-  { icon: Bug,          title: "Pest Management",  desc: "Bio-pesticides, IPM kits, traps.",             from: "from-[--moss]/20", to: "to-[--bark]/15" },
-]
-
-const PRODUCTS = [
-  {
-    name: "Adhunik Bio NPK",   price: "₹ 1,249", badge: "Bestseller", category: "Fertilizers",
-    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-    images: [
-      "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-      "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
-      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80",
-    ],
-    sizes: ["1 kg", "5 kg", "25 kg"], defaultSize: "5 kg",
-  },
-  {
-    name: "Vermi+ Compost 25kg", price: "₹ 599", badge: "Organic", category: "Organic",
-    img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
-    images: [
-      "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
-      "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80",
-    ],
-    sizes: ["10 kg", "25 kg", "50 kg"], defaultSize: "25 kg",
-  },
-  {
-    name: "NeemGuard Spray 1L", price: "₹ 449", badge: "Bio Pesticide", category: "Pest Management",
-    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-    sizes: ["500 ml", "1 L", "5 L"], defaultSize: "1 L",
-  },
-  {
-    name: "SoilRich Booster", price: "₹ 899", badge: "New", category: "Soil Care",
-    img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
-    sizes: ["1 kg", "5 kg"], defaultSize: "1 kg",
-  },
-  {
-    name: "DripFlow Starter Kit", price: "₹ 4,999", badge: "Smart", category: "Irrigation",
-    img: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80",
-    sizes: undefined, defaultSize: undefined,   // kit — no size variants
-  },
-  {
-    name: "MyCo Root Power", price: "₹ 749", badge: "Bio", category: "Bio Products",
-    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-    sizes: ["250 g", "500 g", "1 kg"], defaultSize: "500 g",
-  },
+  { icon: Sprout,       title: "Crop Fertilizers", desc: "NPK blends, micronutrients, growth boosters.", from: "from-[#689c30]/20", to: "to-[#033927]/30" },
+  { icon: Leaf,         title: "Organic Range",    desc: "Compost, vermicompost, neem cake.",            from: "from-[#e9c46a]/20", to: "to-[#689c30]/20" },
+  { icon: FlaskConical, title: "Bio Products",     desc: "Rhizobium, mycorrhiza, beneficial microbes.",  from: "from-[#033927]/30", to: "to-[#689c30]/20" },
+  { icon: Droplets,     title: "Soil Care",        desc: "pH balancers, conditioners, gypsum.",          from: "from-[#3d2b1f]/15", to: "to-[#e9c46a]/20" },
+  { icon: Tractor,      title: "Irrigation",       desc: "Drip systems, sprinklers, smart valves.",      from: "from-[#689c30]/25", to: "to-[#e9c46a]/15" },
+  { icon: Bug,          title: "Pest Management",  desc: "Bio-pesticides, IPM kits, traps.",             from: "from-[#033927]/20", to: "to-[#3d2b1f]/15" },
 ]
 
 const TUTORIALS = [
@@ -84,22 +48,31 @@ const SUSTAINABILITY = [
   { icon: Award,       title: "Carbon-neutral ops", desc: "Verified by SGS, 2024." },
 ]
 
-function productHref(name: string) {
-  return `/products/${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`
-}
-
-function comparePrice(price: string, uplift = 1.22) {
-  const amount = Number(price.replace(/[^\d]/g, "")) || 0
-  const originalAmount = Math.ceil((amount * uplift) / 10) * 10
+function formatINR(amount: number) {
   return new Intl.NumberFormat("en-IN", {
-    style: "currency",
     currency: "INR",
     maximumFractionDigits: 0,
-  }).format(originalAmount)
+    style: "currency",
+  }).format(amount)
+}
+
+function comparePrice(amount: number, uplift = 1.22) {
+  const originalAmount = Math.ceil((amount * uplift) / 10) * 10
+  return formatINR(originalAmount)
+}
+
+async function getHomeProducts() {
+  try {
+    return (await listOryCMSProducts({ publishedOnly: true })).slice(0, 8)
+  } catch {
+    return [] as OryCMSProductDTO[]
+  }
 }
 
 /* ─── Page ───────────────────────────────────────────────── */
-export default function Home() {
+export default async function Home() {
+  const products = await getHomeProducts()
+
   return (
     <div className="relative min-h-screen overflow-x-hidden">
       <AnnouncementBar />
@@ -122,9 +95,9 @@ export default function Home() {
           </div>
 
           {/* Decorative blobs */}
-          <div className="pointer-events-none absolute -top-20 -left-20 h-96 w-96 rounded-full bg-[--leaf]/30 blur-3xl animate-blob" />
+          <div className="pointer-events-none absolute -top-20 -left-20 h-96 w-96 rounded-full bg-[#689c30]/30 blur-3xl animate-blob" />
           <div
-            className="pointer-events-none absolute -bottom-32 -right-20 h-[28rem] w-[28rem] rounded-full bg-[--gold]/25 blur-3xl animate-blob"
+            className="pointer-events-none absolute -bottom-32 -right-20 h-[28rem] w-[28rem] rounded-full bg-[#e9c46a]/25 blur-3xl animate-blob"
             style={{ animationDelay: "5s" }}
           />
 
@@ -132,7 +105,7 @@ export default function Home() {
             <div className="mx-auto max-w-3xl text-center">
               {/* Badge */}
               <div className="inline-flex items-center gap-1.5 mb-5 sm:mb-6 rounded-full bg-background/80 text-foreground border border-border/60 px-3 sm:px-4 py-1.5 backdrop-blur text-xs font-semibold">
-                <Leaf className="h-3.5 w-3.5 text-[--leaf]" aria-hidden />
+                <Leaf className="h-3.5 w-3.5 text-[#689c30]" aria-hidden />
                 ISO Certified Company · ISO 9001
               </div>
 
@@ -186,7 +159,7 @@ export default function Home() {
         <section id="crop-fertilizers" className="relative py-10 sm:py-16">
           <div className="mx-auto max-w-7xl px-4">
             <div className="text-center mx-auto max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[--moss]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
                 <Leaf className="h-3 w-3" aria-hidden /> What we grow
               </div>
               <h2 className="mt-4 sm:mt-5 font-display text-3xl sm:text-4xl lg:text-5xl leading-[1.1] tracking-tight">
@@ -205,7 +178,7 @@ export default function Home() {
                 >
                   <div className="relative grain" />
                   <div className="relative">
-                    <div className="mb-6 inline-grid h-14 w-14 place-items-center rounded-2xl bg-background/80 text-[--moss] shadow-soft group-hover:scale-110 transition">
+                    <div className="mb-6 inline-grid h-14 w-14 place-items-center rounded-2xl bg-background/80 text-[#033927] shadow-soft group-hover:scale-110 transition">
                       <Icon className="h-7 w-7" aria-hidden />
                     </div>
                     <h3 className="font-display text-2xl">{title}</h3>
@@ -224,7 +197,7 @@ export default function Home() {
                                   ? "/irrigation-solutions"
                                   : "/products"
                       }
-                      className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-[--moss] hover:gap-2 transition-all"
+                      className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-[#033927] hover:gap-2 transition-all"
                     >
                       Explore <ArrowRight className="h-4 w-4" aria-hidden />
                     </Link>
@@ -242,7 +215,7 @@ export default function Home() {
         >
           <div className="mx-auto max-w-7xl px-4">
             <div className="text-center mx-auto max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[--moss]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
                 <Leaf className="h-3 w-3" aria-hidden /> Seasonal guidance
               </div>
               <h2 className="mt-5 font-display text-4xl sm:text-5xl leading-[1.1] tracking-tight">
@@ -258,7 +231,7 @@ export default function Home() {
           <div className="mx-auto max-w-7xl px-4">
             <div className="flex items-end justify-between gap-4 flex-wrap">
               <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[--moss]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
                   <Leaf className="h-3 w-3" aria-hidden /> Marketplace
                 </div>
                 <h2 className="mt-4 sm:mt-5 font-display text-3xl sm:text-4xl lg:text-5xl leading-[1.1] tracking-tight">
@@ -266,34 +239,44 @@ export default function Home() {
                 </h2>
               </div>
               <div className="flex gap-2">
-                <button className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-input bg-background shadow-sm hover:border-[#689c30] hover:bg-[#689c30] hover:text-white transition">
+                <button className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-input bg-white text-black shadow-sm transition-colors hover:border-[#689c30] hover:bg-[#689c30] hover:!text-black">
                   <ChevronLeft className="h-4 w-4" aria-label="Previous" />
                 </button>
-                <button className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-input bg-background shadow-sm hover:border-[#689c30] hover:bg-[#689c30] hover:text-white transition">
+                <button className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-input bg-white text-black shadow-sm transition-colors hover:border-[#689c30] hover:bg-[#689c30] hover:!text-black">
                   <ChevronRight className="h-4 w-4" aria-label="Next" />
                 </button>
               </div>
             </div>
 
             <div className="mt-7 sm:mt-10 flex gap-4 sm:gap-5 overflow-x-auto pb-4 sm:pb-6 snap-x snap-mandatory scrollbar-none -mx-4 px-4">
-              {PRODUCTS.map((p) => (
-                <ProductCard
-                  key={p.name}
-                  href={productHref(p.name)}
-                  name={p.name}
-                  image={p.img}
-                  images={p.images}
-                  overlayLabel={p.category}
-                  price={p.price}
-                  originalPrice={comparePrice(p.price)}
-                  badge={p.badge}
-                  subtitle={`${p.badge} selection crafted for Indian growers`}
-                  reviews={284}
-                  rating={4.8}
-                  className="min-w-[240px] flex-shrink-0 snap-start sm:min-w-[300px] lg:min-w-[320px]"
-                  imageSizes="(max-width: 640px) 70vw, (max-width: 1024px) 42vw, 320px"
-                />
-              ))}
+              {products.length > 0 ? (
+                products.map((p) => {
+                  const price = p.salePrice ?? p.price
+
+                  return (
+                    <ProductCard
+                      key={p.id}
+                      href={`/products/${p.slug}`}
+                      name={p.name}
+                      image={productPrimaryImage(p)}
+                      images={ensureProductImages(p).map((image) => image.url)}
+                      overlayLabel={p.category}
+                      price={formatINR(price)}
+                      originalPrice={comparePrice(price)}
+                      badge={p.featured ? "Featured" : p.category}
+                      subtitle={p.shortDescription}
+                      reviews={120}
+                      rating={4.8}
+                      className="min-w-[240px] flex-shrink-0 snap-start sm:min-w-[300px] lg:min-w-[320px]"
+                      imageSizes="(max-width: 640px) 70vw, (max-width: 1024px) 42vw, 320px"
+                    />
+                  )
+                })
+              ) : (
+                <div className="min-w-full rounded-3xl border border-dashed border-border bg-card p-10 text-center text-muted-foreground">
+                  Publish products from OryCMS to show marketplace items here.
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -306,7 +289,7 @@ export default function Home() {
           <div className="mx-auto max-w-7xl px-4">
             <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[--moss]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
                   <Leaf className="h-3 w-3" aria-hidden /> Farmer Education Hub
                 </div>
                 <h2 className="mt-4 sm:mt-5 font-display text-3xl sm:text-4xl lg:text-5xl leading-[1.1] tracking-tight">
@@ -329,7 +312,7 @@ export default function Home() {
                       key={s.label}
                       className="rounded-2xl border border-border/40 bg-card/80 p-5 shadow-soft"
                     >
-                      <div className="font-display text-3xl text-[--moss]">{s.val}</div>
+                      <div className="font-display text-3xl text-[#033927]">{s.val}</div>
                       <div className="text-sm text-muted-foreground">{s.label}</div>
                     </div>
                   ))}
@@ -342,7 +325,7 @@ export default function Home() {
 
               {/* Tutorial video cards */}
               <div className="relative">
-                <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-[--leaf]/30 to-[--gold]/20 blur-2xl pointer-events-none" />
+                <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-[#689c30]/30 to-[#e9c46a]/20 blur-2xl pointer-events-none" />
                 <div className="relative grid gap-4">
                   {TUTORIALS.map((t, i) => (
                     <div
@@ -387,10 +370,10 @@ export default function Home() {
                   fill
                   className="object-cover"
                 />
-                <div className="absolute inset-0 bg-gradient-to-tr from-[--moss]/60 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-tr from-[#033927]/60 to-transparent" />
                 <div className="absolute bottom-6 left-6 right-6 rounded-2xl glass border border-border/30 p-5">
                   <div className="flex items-center gap-3">
-                    <div className="grid h-12 w-12 place-items-center rounded-full bg-[--leaf]/20 text-[--moss]">
+                    <div className="grid h-12 w-12 place-items-center rounded-full bg-[#689c30]/20 text-[#033927]">
                       <Leaf className="h-6 w-6" aria-hidden />
                     </div>
                     <div>
@@ -404,7 +387,7 @@ export default function Home() {
               </div>
 
               <div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[--moss]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
                   <Leaf className="h-3 w-3" aria-hidden /> Sustainability Commitment
                 </div>
                 <h2 className="mt-5 font-display text-4xl sm:text-5xl leading-[1.1] tracking-tight">
@@ -422,7 +405,7 @@ export default function Home() {
                       key={title}
                       className="rounded-2xl border border-border/40 bg-card/60 p-5"
                     >
-                      <Icon className="h-6 w-6 text-[--moss]" aria-hidden />
+                      <Icon className="h-6 w-6 text-[#033927]" aria-hidden />
                       <h4 className="mt-3 font-display text-lg">{title}</h4>
                       <p className="text-sm text-muted-foreground">{desc}</p>
                     </div>
@@ -437,7 +420,7 @@ export default function Home() {
         <section className="relative overflow-hidden py-12 sm:py-16 bg-gradient-to-b from-accent/20 to-transparent">
           <div className="mx-auto max-w-7xl px-4">
             <div className="text-center mx-auto max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[--moss]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
                 <Leaf className="h-3 w-3" aria-hidden /> Voices from the field
               </div>
               <h2 className="mt-5 font-display text-4xl sm:text-5xl leading-[1.1] tracking-tight">
@@ -453,7 +436,7 @@ export default function Home() {
         <section id="contact-us" className="relative py-12 sm:py-16">
           <div className="mx-auto max-w-3xl px-4">
             <div className="text-center mx-auto max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[--moss]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
                 <Leaf className="h-3 w-3" aria-hidden /> FAQ
               </div>
               <h2 className="mt-5 font-display text-4xl sm:text-5xl leading-[1.1] tracking-tight">

@@ -120,7 +120,7 @@ export default function CertificationsPage() {
                 practice—connecting standards, verification, responsibility, and improvement.
               </p>
               <div className="mt-9 flex flex-wrap gap-3">
-                <a href="#standards" className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl hover:text-white">
+                <a href="#standards" className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black">
                   Explore standards <ArrowRight className="h-4 w-4" />
                 </a>
                 <Link href="/contact" className="inline-flex h-12 items-center rounded-full border border-[#b8c4b9] bg-white px-7 text-sm font-bold">
@@ -249,7 +249,7 @@ export default function CertificationsPage() {
                   Connect with our quality team.
                 </h2>
               </div>
-              <Link href="/contact" className="relative mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl hover:text-white lg:mt-0">
+              <Link href="/contact" className="relative mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black lg:mt-0">
                 Request details <ArrowRight className="h-4 w-4" />
               </Link>
             </div>

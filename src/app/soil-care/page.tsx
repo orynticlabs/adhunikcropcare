@@ -18,12 +18,6 @@ const LAYERS = [
   ["03", "Foundation", "Compaction, drainage, mineral balance, and long-term field response.", "bg-[#65452f] text-white"],
 ]
 
-const PRODUCTS = [
-  ["SoilRich Booster", "Root-zone conditioner", "Supports soil response, nutrient efficiency, and stronger crop establishment.", "/products?q=SoilRich", "https://images.unsplash.com/photo-1582284540020-8acbe03f4924?w=900&q=88"],
-  ["pH Balance Pro", "Reaction management", "Helps farmers build a more suitable root environment where pH requires attention.", "/products?q=pH%20Balance", "https://images.unsplash.com/photo-1598512752271-33f913a5af13?w=900&q=88"],
-  ["Humic Acid Granules", "Organic carbon support", "Designed to support aggregation, moisture behaviour, and nutrient-use efficiency.", "/products?q=Humic%20Acid", "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?w=900&q=88"],
-]
-
 export default function SoilCarePage() {
   return (
     <div className="min-h-screen overflow-hidden bg-[#f1eee5] text-[#2d3029]">
@@ -43,8 +37,8 @@ export default function SoilCarePage() {
               <h1 className="mt-7 font-display text-6xl leading-[.9] sm:text-8xl lg:text-[7rem]">Good harvests have <span className="block italic text-[#8b6645]">deep foundations.</span></h1>
               <p className="mt-7 max-w-xl text-lg leading-8 text-[#69675f]">Soil care begins with structure, moisture, pH, biology, and roots working as one connected environment.</p>
               <div className="mt-9 flex flex-wrap gap-3">
-                <a href="#soil-profile" className="inline-flex h-12 items-center gap-2 rounded-full bg-[#493526] px-7 text-sm font-bold text-white hover:text-white">Read the profile <ArrowRight className="h-4 w-4" /></a>
-                <Link href="/contact" className="inline-flex h-12 items-center rounded-full border border-[#b9ad9a] bg-white/65 px-7 text-sm font-bold">Discuss your soil</Link>
+                <a href="#soil-profile" className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">Read the profile <ArrowRight className="h-4 w-4" /></a>
+                <Link href="/contact" className="inline-flex h-12 items-center rounded-full bg-[#033927] px-7 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">Discuss your soil</Link>
               </div>
             </div>
           </div>
@@ -81,8 +75,8 @@ export default function SoilCarePage() {
         <section className="bg-[#254737] py-20 text-white sm:py-28">
           <div className="mx-auto max-w-7xl px-4">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#e9c46a]">Soil-care range</p><h2 className="mt-4 font-display text-5xl">Tools for the root environment.</h2></div><Link href="/products?q=Soil%20Care" className="font-bold text-[#bdd879]">View all soil products →</Link></div>
-            <div className="mt-12 grid gap-6 lg:grid-cols-3">
-              {PRODUCTS.map(([name,label,copy,href,image]) => <article key={name} className="overflow-hidden rounded-[2.3rem] bg-[#f1eee5] text-[#2d3029]"><div className="relative aspect-[4/3]"><Image src={image} alt={name} fill sizes="33vw" className="object-cover" /><span className="absolute left-5 top-5 rounded-full bg-white/85 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.15em]">{label}</span></div><div className="p-6"><h3 className="font-display text-3xl">{name}</h3><p className="mt-3 min-h-20 leading-6 text-[#69675f]">{copy}</p><Link href={href} className="mt-5 inline-flex items-center gap-2 font-bold text-[#493526]">Explore <ArrowRight className="h-4 w-4" /></Link></div></article>)}
+            <div className="mt-12 rounded-[2.3rem] border border-dashed border-white/20 bg-white/10 p-10 text-center text-white/75">
+              Published soil-care products are loaded from OryCMS on the main products page.
             </div>
           </div>
         </section>

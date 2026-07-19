@@ -3,10 +3,13 @@
 import { useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { CreditCard, Minus, Plus, ShieldCheck, ShoppingBag, Trash2, X } from "lucide-react"
 import { formatCurrency, useCart } from "@/features/cart/cart-context"
+import { useAuth } from "@/features/auth/auth-context"
 
 export default function CartDrawer() {
+  const router = useRouter()
   const {
     items,
     count,
@@ -16,6 +19,7 @@ export default function CartDrawer() {
     removeItem,
     closeCart,
   } = useCart()
+  const { loadingUser, user } = useAuth()
 
   useEffect(() => {
     if (!isCartOpen) return
@@ -78,7 +82,7 @@ export default function CartDrawer() {
             <button
               type="button"
               onClick={closeCart}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#d4ddd6] bg-[rgba(255,255,255,0.8)] text-foreground/70 shadow-[0_8px_20px_rgba(31,42,34,0.08)] transition hover:border-[--leaf]/30 hover:text-[--leaf]"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#d4ddd6] bg-[rgba(255,255,255,0.8)] text-foreground/70 shadow-[0_8px_20px_rgba(31,42,34,0.08)] transition hover:border-[#689c30]/30 hover:text-[#689c30]"
               aria-label="Close cart"
             >
               <X className="h-4 w-4" aria-hidden />
@@ -114,7 +118,7 @@ export default function CartDrawer() {
                           </h3>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             {item.size && (
-                              <span className="inline-flex items-center rounded-full border border-[--leaf]/20 bg-[--leaf]/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[--moss]">
+                              <span className="inline-flex items-center rounded-full border border-[#689c30]/20 bg-[#689c30]/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#033927]">
                                 {item.size}
                               </span>
                             )}
@@ -138,7 +142,7 @@ export default function CartDrawer() {
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[#203129] transition hover:bg-white hover:text-[--leaf]"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[#203129] transition hover:bg-white hover:text-[#689c30]"
                             aria-label={`Decrease ${item.name} quantity`}
                           >
                             <Minus className="h-3.5 w-3.5" aria-hidden />
@@ -149,7 +153,7 @@ export default function CartDrawer() {
                           <button
                             type="button"
                             onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[#203129] transition hover:bg-white hover:text-[--leaf]"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-[#203129] transition hover:bg-white hover:text-[#689c30]"
                             aria-label={`Increase ${item.name} quantity`}
                           >
                             <Plus className="h-3.5 w-3.5" aria-hidden />
@@ -180,7 +184,7 @@ export default function CartDrawer() {
                 </div>
                 <div className="flex items-center justify-between text-xs text-[#66756d]">
                   <span>Shipping</span>
-                  <span className="font-semibold text-[--leaf]">Free</span>
+                  <span className="font-semibold text-[#689c30]">Free</span>
                 </div>
                 <div className="flex items-center justify-between border-t border-[#d7e2d8] pt-2 font-display text-lg text-[#203129]">
                   <span>Total</span>
@@ -189,15 +193,25 @@ export default function CartDrawer() {
 
                 <Link
                   href="/checkout"
-                  onClick={closeCart}
-                  className="mt-2.5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#033927] bg-[#033927] px-6 text-sm font-semibold text-white shadow-[0_18px_36px_rgba(3,57,39,0.16)] transition hover:border-[#689c30] hover:bg-[#689c30] hover:text-white active:scale-[0.99]"
+                  onClick={(event) => {
+                    if (loadingUser) {
+                      event.preventDefault()
+                      return
+                    }
+                    closeCart()
+                    if (!user) {
+                      event.preventDefault()
+                      router.push("/login?from=/checkout")
+                    }
+                  }}
+                  className="group mt-2.5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#033927] bg-[#033927] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:border-[#689c30] hover:bg-[#689c30] hover:!text-black"
                 >
-                  <CreditCard className="h-4 w-4" aria-hidden />
-                  Proceed to checkout
+                  <CreditCard className="h-4 w-4 text-white transition-colors group-hover:!text-black" aria-hidden />
+                  {loadingUser ? "Checking..." : "Proceed to checkout"}
                 </Link>
 
                 <div className="mt-1 flex items-center justify-center gap-1.5 text-xs text-[#66756d]">
-                  <ShieldCheck className="h-3.5 w-3.5 text-[--leaf]" aria-hidden />
+                  <ShieldCheck className="h-3.5 w-3.5 text-[#689c30]" aria-hidden />
                   Secure checkout and farmer-friendly returns
                 </div>
               </div>
@@ -205,7 +219,7 @@ export default function CartDrawer() {
           </>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-            <span className="grid h-20 w-20 place-items-center rounded-[1.8rem] bg-[linear-gradient(145deg,rgba(13,90,72,0.12),rgba(104,156,48,0.12))] text-[--leaf] shadow-soft">
+            <span className="grid h-20 w-20 place-items-center rounded-[1.8rem] bg-[linear-gradient(145deg,rgba(13,90,72,0.12),rgba(104,156,48,0.12))] text-[#689c30] shadow-soft">
               <ShoppingBag className="h-8 w-8" aria-hidden />
             </span>
             <h3 className="mt-6 font-display text-3xl text-[#203129]">Your cart is empty</h3>

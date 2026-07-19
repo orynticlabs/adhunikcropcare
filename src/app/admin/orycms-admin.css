@@ -1,0 +1,36 @@
+.orycms-admin {
+  --orycms-orange: #FF5A20;
+  --orycms-orange-ink: #7A2400;
+
+  --accent: rgb(255 90 32 / 14%);
+  --accent-foreground: #7A2400;
+
+  --ring: #FF5A20;
+
+  --sidebar-accent: rgb(255 90 32 / 14%);
+  --sidebar-accent-foreground: #7A2400;
+}
+
+.orycms-admin a:hover:not(.text-destructive):not([class*="destructive"]),
+.orycms-admin button:hover:not(.text-destructive):not([class*="destructive"]) {
+  color: var(--orycms-orange) !important;
+}
+
+.orycms-admin a:hover:not(.text-destructive):not([class*="destructive"]) svg,
+.orycms-admin button:hover:not(.text-destructive):not([class*="destructive"]) svg {
+  color: var(--orycms-orange) !important;
+}
+
+.orycms-admin .text-success {
+  color: var(--orycms-orange);
+}
+
+.orycms-admin .bg-success,
+.orycms-admin .bg-success\/10 {
+  background-color: oklch(0.7 0.14 60 / 14%);
+}
+
+.orycms-admin .border-success,
+.orycms-admin .border-success\/30 {
+  border-color: oklch(0.7 0.14 60 / 32%);
+}

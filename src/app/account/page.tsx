@@ -22,10 +22,16 @@ type Tab = "profile" | "orders" | "addresses" | "wishlist"
 
 interface Order {
   id: string
-  date: string
-  status: "delivered" | "processing" | "shipped" | "cancelled"
-  items: { name: string; qty: number; price: number; img: string }[]
-  total: number
+  created_at?: string
+  date?: string
+  invoice_url?: string | null
+  items: { img?: string; image?: string; name: string; price: number; qty?: number; quantity?: number }[]
+  number?: string
+  payment_method?: "cash_on_delivery" | "razorpay"
+  payment_status?: string
+  status: "delivered" | "processing" | "shipped" | "cancelled" | "payment_pending"
+  total: number | string
+  tracking?: string | null
 }
 
 interface Address {
@@ -48,47 +54,6 @@ interface WishlistItem {
   img: string
   inStock: boolean
 }
-
-/* ── Mock data ─────────────────────────────────────────────────── */
-const MOCK_ORDERS: Order[] = [
-  {
-    id: "ACC-14823",
-    date: "2024-12-15",
-    status: "delivered",
-    items: [
-      { name: "Bio NPK Granules 1kg", qty: 2, price: 349, img: "https://adhunikcropcare.com/assets/img/products/bio-npk.jpg" },
-      { name: "Humic Acid Powder", qty: 1, price: 199, img: "https://adhunikcropcare.com/assets/img/products/humic.jpg" },
-    ],
-    total: 897,
-  },
-  {
-    id: "ACC-13201",
-    date: "2024-11-28",
-    status: "shipped",
-    items: [
-      { name: "Organic Soil Conditioner 5kg", qty: 1, price: 699, img: "https://adhunikcropcare.com/assets/img/products/soil.jpg" },
-    ],
-    total: 699,
-  },
-  {
-    id: "ACC-11099",
-    date: "2024-10-10",
-    status: "processing",
-    items: [
-      { name: "Vermi Compost 10kg", qty: 3, price: 450, img: "https://adhunikcropcare.com/assets/img/products/vermi.jpg" },
-    ],
-    total: 1350,
-  },
-  {
-    id: "ACC-09854",
-    date: "2024-08-22",
-    status: "cancelled",
-    items: [
-      { name: "Drip Irrigation Kit", qty: 1, price: 2499, img: "https://adhunikcropcare.com/assets/img/products/drip.jpg" },
-    ],
-    total: 2499,
-  },
-]
 
 const MOCK_ADDRESSES: Address[] = [
   {
@@ -116,11 +81,9 @@ const MOCK_ADDRESSES: Address[] = [
   },
 ]
 
-const MOCK_WISHLIST: WishlistItem[] = [
-  { id: "w1", name: "Bio NPK Granules 5kg", price: 849, img: "https://adhunikcropcare.com/assets/img/products/bio-npk.jpg", inStock: true },
-  { id: "w2", name: "Organic Neem Oil 1L", price: 299, img: "https://adhunikcropcare.com/assets/img/products/neem.jpg", inStock: true },
-  { id: "w3", name: "Potassium Humate Flakes", price: 549, img: "https://adhunikcropcare.com/assets/img/products/humate.jpg", inStock: false },
-]
+const DEFAULT_MEMOJI = "/default-memoji.svg"
+
+const MOCK_WISHLIST: WishlistItem[] = []
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 function fmt(n: number) {
@@ -129,6 +92,14 @@ function fmt(n: number) {
 
 function fmtDate(s: string) {
   return new Date(s).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+}
+
+function orderDate(order: Order) {
+  return order.created_at ?? order.date ?? new Date().toISOString()
+}
+
+function orderTotal(order: Order) {
+  return typeof order.total === "string" ? Number(order.total) : order.total
 }
 
 function productHref(name: string) {
@@ -140,10 +111,15 @@ function comparePrice(amount: number, uplift = 1.18) {
 }
 
 const statusMeta: Record<Order["status"], { label: string; color: string; Icon: React.ElementType }> = {
-  delivered:  { label: "Delivered",  color: "text-[--leaf] bg-[--leaf]/10",   Icon: CheckCircle2 },
-  processing: { label: "Processing", color: "text-[--bark] bg-[--gold]/20",   Icon: Clock },
-  shipped:    { label: "Shipped",    color: "text-[--moss] bg-[--moss]/10",   Icon: Truck },
+  delivered:  { label: "Delivered",  color: "text-[#689c30] bg-[#689c30]/10",   Icon: CheckCircle2 },
+  processing: { label: "Processing", color: "text-[#3d2b1f] bg-[#e9c46a]/20",   Icon: Clock },
+  shipped:    { label: "Shipped",    color: "text-[#033927] bg-[#033927]/10",   Icon: Truck },
   cancelled:  { label: "Cancelled",  color: "text-destructive bg-destructive/10", Icon: XCircle },
+  payment_pending: { label: "Payment Pending", color: "text-[#3d2b1f] bg-[#e9c46a]/20", Icon: Clock },
+}
+
+function paymentLabel(method?: string) {
+  return method === "razorpay" ? "Razorpay Online" : "Cash on Delivery"
 }
 
 /* ── Sub-views ─────────────────────────────────────────────────── */
@@ -155,18 +131,22 @@ function ProfileView({ onEdit }: { onEdit: () => void }) {
       {/* Avatar + name */}
       <div className="flex items-center gap-5">
         <div className="relative">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-[--leaf]/15 text-3xl font-display font-bold text-[--leaf]">
-            {user.firstName[0]}{user.lastName[0]}
+          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-[#689c30]/15 text-3xl font-display font-bold text-[#689c30]">
+            {user.avatar ? (
+              <Image src={user.avatar} alt="" width={80} height={80} className="h-full w-full object-cover" />
+            ) : (
+              <img src={DEFAULT_MEMOJI} alt="" className="h-full w-full object-cover" />
+            )}
           </div>
-          <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[--leaf] text-white shadow">
+          <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#689c30] text-white shadow">
             <BadgeCheck className="h-3.5 w-3.5" />
           </span>
         </div>
         <div>
           <h3 className="font-display text-2xl">{user.firstName} {user.lastName}</h3>
           <p className="text-sm text-muted-foreground">Member since {fmtDate(user.joinedAt)}</p>
-          <p className="mt-1 flex items-center gap-1.5 text-xs text-[--leaf] font-medium">
-            <Leaf className="h-3 w-3" /> Verified Farmer Account
+          <p className="mt-1 flex items-center gap-1.5 text-xs text-[#689c30] font-medium">
+            <Leaf className="h-3 w-3" /> {user.emailVerified ? "Verified Adhunik Account" : "Email verification pending"}
           </p>
         </div>
       </div>
@@ -177,11 +157,12 @@ function ProfileView({ onEdit }: { onEdit: () => void }) {
           { icon: Mail,     label: "Email",  value: user.email },
           { icon: Phone,    label: "Phone",  value: `+91 ${user.phone}` },
           { icon: Calendar, label: "Joined", value: fmtDate(user.joinedAt) },
-          { icon: ShieldCheck, label: "Account", value: "Verified" },
+          { icon: ShieldCheck, label: "Account", value: user.emailVerified ? "Verified" : "Pending verification" },
+          { icon: MapPin, label: "Default Address", value: typeof user.defaultAddress?.line === "string" ? user.defaultAddress.line : "Not set" },
         ].map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-start gap-3 rounded-2xl border border-border/50 bg-card p-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[--leaf]/10">
-              <Icon className="h-4 w-4 text-[--leaf]" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#689c30]/10">
+              <Icon className="h-4 w-4 text-[#689c30]" />
             </div>
             <div>
               <p className="text-xs text-muted-foreground">{label}</p>
@@ -192,16 +173,16 @@ function ProfileView({ onEdit }: { onEdit: () => void }) {
       </div>
 
       {/* Loyalty */}
-      <div className="rounded-2xl border border-[--gold]/40 bg-gradient-to-br from-[--moss]/5 to-[--gold]/5 p-5">
+      <div className="rounded-2xl border border-[#e9c46a]/40 bg-gradient-to-br from-[#033927]/5 to-[#e9c46a]/5 p-5">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Star className="h-4 w-4 text-[--gold]" />
+            <Star className="h-4 w-4 text-[#e9c46a]" />
             <span className="text-sm font-semibold">Loyalty Points</span>
           </div>
-          <span className="font-display text-2xl text-[--moss]">1,250 pts</span>
+          <span className="font-display text-2xl text-[#033927]">1,250 pts</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-border/40">
-          <div className="h-full w-[62%] rounded-full bg-gradient-to-r from-[--leaf] to-[--gold]" />
+          <div className="h-full w-[62%] rounded-full bg-gradient-to-r from-[#689c30] to-[#e9c46a]" />
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
           750 more points to reach <strong className="text-foreground">Gold Tier</strong>
@@ -210,7 +191,7 @@ function ProfileView({ onEdit }: { onEdit: () => void }) {
 
       <button
         onClick={onEdit}
-        className="flex h-11 items-center gap-2 rounded-full border border-[--leaf] px-6 text-sm font-semibold text-[--leaf] transition hover:bg-[--leaf] hover:text-white"
+        className="flex h-11 items-center gap-2 rounded-full bg-[#033927] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black"
       >
         <Edit3 className="h-4 w-4" /> Edit Profile
       </button>
@@ -223,19 +204,27 @@ function EditProfileView({ onBack }: { onBack: () => void }) {
   const [firstName, setFirstName] = useState(user?.firstName ?? "")
   const [lastName,  setLastName]  = useState(user?.lastName  ?? "")
   const [phone,     setPhone]     = useState(user?.phone     ?? "")
+  const [avatar, setAvatar] = useState(user?.avatar ?? "")
+  const [defaultAddress, setDefaultAddress] = useState(typeof user?.defaultAddress?.line === "string" ? user.defaultAddress.line : "")
   const [saved,     setSaved]     = useState(false)
+  const [saving, setSaving] = useState(false)
 
-  const inputCls = "h-11 w-full rounded-xl border border-border/60 bg-background px-4 text-sm outline-none transition focus:border-[--leaf] focus:ring-2 focus:ring-[--leaf]/15"
+  const inputCls = "h-11 w-full rounded-xl border border-border/60 bg-background px-4 text-sm outline-none transition focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15"
 
-  function save() {
-    updateProfile({ firstName, lastName, phone })
-    setSaved(true)
-    setTimeout(() => { setSaved(false); onBack() }, 1200)
+  async function save() {
+    setSaving(true)
+    try {
+      await updateProfile({ avatar, defaultAddress: { line: defaultAddress }, firstName, lastName, phone })
+      setSaved(true)
+      setTimeout(() => { setSaved(false); onBack() }, 900)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <div className="space-y-6">
-      <button onClick={onBack} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-[--leaf] transition">
+      <button onClick={onBack} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-[#689c30] transition">
         <ArrowLeft className="h-4 w-4" /> Back to Profile
       </button>
       <h3 className="font-display text-2xl">Edit Profile</h3>
@@ -253,29 +242,46 @@ function EditProfileView({ onBack }: { onBack: () => void }) {
           <input value={user?.email} disabled className={`${inputCls} opacity-50 cursor-not-allowed`} />
         </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <label className="text-sm font-medium text-foreground/80">Profile photo URL</label>
+          <input value={avatar} onChange={e => setAvatar(e.target.value)} className={inputCls} placeholder="https://..." />
+        </div>
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
           <label className="text-sm font-medium text-foreground/80">Mobile number</label>
           <div className="flex gap-2">
             <span className="flex h-11 items-center rounded-xl border border-border/60 bg-muted/30 px-3 text-sm font-medium select-none">+91</span>
             <input value={phone} maxLength={10} onChange={e => setPhone(e.target.value.replace(/\D/g, ""))} className={`${inputCls} flex-1`} />
           </div>
         </div>
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <label className="text-sm font-medium text-foreground/80">Default address</label>
+          <textarea value={defaultAddress} onChange={e => setDefaultAddress(e.target.value)} className={`${inputCls} min-h-24 py-3`} placeholder="Village, district, state, PIN" />
+        </div>
       </div>
       <button
         onClick={save}
-        className="flex h-11 items-center gap-2 rounded-full bg-[--leaf] px-6 text-sm font-bold text-white shadow transition hover:bg-[--moss]"
+        disabled={saving}
+        className="flex h-11 items-center gap-2 rounded-full bg-[#033927] px-6 text-sm font-bold text-white shadow transition-colors hover:bg-[#689c30] hover:!text-black disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {saved ? <><CheckCircle2 className="h-4 w-4" /> Saved!</> : "Save Changes"}
+        {saved ? <><CheckCircle2 className="h-4 w-4" /> Saved!</> : saving ? "Saving..." : "Save Changes"}
       </button>
     </div>
   )
 }
 
-function OrdersView() {
+function OrdersView({ loading, orders }: { loading: boolean; orders: Order[] }) {
   return (
     <div className="space-y-4">
       <h3 className="font-display text-2xl">My Orders</h3>
-      {MOCK_ORDERS.map(order => {
-        const meta = statusMeta[order.status]
+      {loading ? <p className="rounded-2xl border border-border/50 bg-muted/20 p-5 text-sm text-muted-foreground">Loading orders...</p> : null}
+      {!loading && orders.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-border/50 bg-muted/15 py-12 text-center">
+          <Package className="h-12 w-12 text-muted-foreground/30" strokeWidth={1} />
+          <p className="font-medium">No orders yet.</p>
+          <Link href="/products" className="text-sm font-semibold text-[#689c30] hover:underline">Start shopping</Link>
+        </div>
+      ) : null}
+      {orders.map(order => {
+        const meta = statusMeta[order.status] ?? statusMeta.processing
         const StatusIcon = meta.Icon
         return (
           <div key={order.id} className="rounded-2xl border border-border/50 bg-card overflow-hidden">
@@ -283,15 +289,20 @@ function OrdersView() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 bg-muted/20 px-5 py-3.5">
               <div>
                 <p className="text-xs text-muted-foreground">Order ID</p>
-                <p className="font-display text-base text-[--moss]">{order.id}</p>
+                <p className="font-display text-base text-[#033927]">{order.number ?? order.id}</p>
               </div>
               <div className="hidden sm:block">
                 <p className="text-xs text-muted-foreground">Placed on</p>
-                <p className="text-sm font-medium">{fmtDate(order.date)}</p>
+                <p className="text-sm font-medium">{fmtDate(orderDate(order))}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Total</p>
-                <p className="text-sm font-semibold">{fmt(order.total)}</p>
+                <p className="text-sm font-semibold">{fmt(orderTotal(order))}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Payment</p>
+                <p className="text-sm font-semibold">{paymentLabel(order.payment_method)}</p>
+                <p className="text-[11px] capitalize text-muted-foreground">{(order.payment_status ?? "pending").replace(/_/g, " ")}</p>
               </div>
               <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${meta.color}`}>
                 <StatusIcon className="h-3.5 w-3.5" />
@@ -304,13 +315,13 @@ function OrdersView() {
               {order.items.map(item => (
                 <div key={item.name} className="flex items-center gap-4 px-5 py-4">
                   <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-muted/30">
-                    <Image src={item.img} alt={item.name} fill sizes="56px" className="object-cover" onError={() => {}} />
+                    {item.img || item.image ? <Image src={item.img ?? item.image ?? ""} alt={item.name} fill sizes="56px" className="object-cover" /> : null}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="truncate text-sm font-medium">{item.name}</p>
-                    <p className="text-xs text-muted-foreground">Qty {item.qty}</p>
+                    <p className="text-xs text-muted-foreground">Qty {item.qty ?? item.quantity ?? 1}</p>
                   </div>
-                  <p className="shrink-0 text-sm font-semibold">{fmt(item.price * item.qty)}</p>
+                  <p className="shrink-0 text-sm font-semibold">{fmt(item.price * (item.qty ?? item.quantity ?? 1))}</p>
                 </div>
               ))}
             </div>
@@ -318,7 +329,7 @@ function OrdersView() {
             {/* Footer actions */}
             <div className="flex flex-wrap gap-3 border-t border-border/40 px-5 py-3.5">
               {order.status === "delivered" && (
-                <button className="flex items-center gap-1.5 text-xs font-semibold text-[--leaf] hover:underline">
+                <button className="flex items-center gap-1.5 text-xs font-semibold text-[#689c30] hover:underline">
                   <Star className="h-3.5 w-3.5" /> Write a Review
                 </button>
               )}
@@ -327,10 +338,10 @@ function OrdersView() {
                   <Truck className="h-3.5 w-3.5" /> Track Order
                 </button>
               )}
-              <button className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground ml-auto">
+              <Link href={`/account/orders/${order.id}`} className="ml-auto flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground">
                 <Package className="h-3.5 w-3.5" /> View Details
                 <ChevronRight className="h-3 w-3" />
-              </button>
+              </Link>
             </div>
           </div>
         )
@@ -354,7 +365,7 @@ function AddressesView() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h3 className="font-display text-2xl">Saved Addresses</h3>
-        <button className="flex h-9 items-center gap-2 rounded-full border border-[--leaf] px-4 text-sm font-semibold text-[--leaf] transition hover:bg-[--leaf] hover:text-white">
+        <button className="flex h-9 items-center gap-2 rounded-full bg-[#033927] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black">
           <Plus className="h-3.5 w-3.5" /> Add New
         </button>
       </div>
@@ -370,22 +381,22 @@ function AddressesView() {
         <div
           key={addr.id}
           className={`rounded-2xl border p-5 transition-all ${
-            addr.isDefault ? "border-[--leaf] ring-2 ring-[--leaf]/15" : "border-border/50 bg-card"
+            addr.isDefault ? "border-[#689c30] ring-2 ring-[#689c30]/15" : "border-border/50 bg-card"
           }`}
         >
           <div className="flex items-start justify-between gap-3 mb-3">
             <div className="flex items-center gap-2">
-              <span className="rounded-full bg-[--leaf]/10 px-2.5 py-0.5 text-xs font-semibold text-[--leaf]">
+              <span className="rounded-full bg-[#689c30]/10 px-2.5 py-0.5 text-xs font-semibold text-[#689c30]">
                 {addr.label}
               </span>
               {addr.isDefault && (
-                <span className="rounded-full bg-[--moss] px-2.5 py-0.5 text-xs font-semibold text-white">
+                <span className="rounded-full bg-[#033927] px-2.5 py-0.5 text-xs font-semibold text-white">
                   Default
                 </span>
               )}
             </div>
             <div className="flex items-center gap-3">
-              <button className="text-xs font-medium text-[--leaf] hover:underline">Edit</button>
+              <button className="text-xs font-medium text-[#689c30] hover:underline">Edit</button>
               <button
                 onClick={() => removeAddress(addr.id)}
                 className="text-muted-foreground hover:text-destructive transition"
@@ -409,7 +420,7 @@ function AddressesView() {
           {!addr.isDefault && (
             <button
               onClick={() => setDefault(addr.id)}
-              className="mt-3 text-xs font-medium text-muted-foreground hover:text-[--leaf] transition"
+              className="mt-3 text-xs font-medium text-muted-foreground hover:text-[#689c30] transition"
             >
               Set as default
             </button>
@@ -430,7 +441,7 @@ function WishlistView() {
         <div className="flex flex-col items-center gap-3 py-12 text-center">
           <Heart className="h-12 w-12 text-muted-foreground/30" strokeWidth={1} />
           <p className="text-muted-foreground">Your wishlist is empty.</p>
-          <Link href="/products" className="text-sm font-semibold text-[--leaf] hover:underline">
+          <Link href="/products" className="text-sm font-semibold text-[#689c30] hover:underline">
             Browse Products
           </Link>
         </div>
@@ -464,19 +475,53 @@ function WishlistView() {
 
 /* ── Main Account Page ─────────────────────────────────────────── */
 export default function AccountPage() {
-  const { user, logout, openAuthModal } = useAuth()
+  const { loadingUser, user, logout, openAuthModal } = useAuth()
   const router = useRouter()
+  const [loadingOrders, setLoadingOrders] = useState(false)
+  const [orders, setOrders] = useState<Order[]>([])
   const [tab, setTab] = useState<Tab>("profile")
   const [editMode, setEditMode] = useState(false)
 
   useEffect(() => {
-    if (!user) {
+    if (!loadingUser && !user) {
       openAuthModal("signin", { redirectTo: "/account" })
       router.replace("/")
     }
-  }, [openAuthModal, router, user])
+  }, [loadingUser, openAuthModal, router, user])
 
-  if (!user) return null
+  useEffect(() => {
+    const requestedTab = new URLSearchParams(window.location.search).get("tab")
+    if (requestedTab === "orders" || requestedTab === "addresses" || requestedTab === "wishlist" || requestedTab === "profile") {
+      setTab(requestedTab)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!user) return
+    setLoadingOrders(true)
+    fetch("/api/auth/orders", { credentials: "include" })
+      .then(async (response) => {
+        const json = await response.json()
+        if (!response.ok || !json.success) throw new Error(json.error?.message ?? "Failed to load orders.")
+        setOrders(Array.isArray(json.data) ? json.data : [])
+      })
+      .catch(() => setOrders([]))
+      .finally(() => setLoadingOrders(false))
+  }, [user])
+
+  if (loadingUser || !user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <AnnouncementBar />
+        <Header />
+        <main className="px-4 pt-36">
+          <div className="mx-auto max-w-6xl rounded-2xl border border-border/50 bg-card p-8 text-sm text-muted-foreground">
+            Loading your account...
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   const tabs: { id: Tab; label: string; Icon: React.ElementType }[] = [
     { id: "profile",   label: "Profile",    Icon: User    },
@@ -485,8 +530,8 @@ export default function AccountPage() {
     { id: "wishlist",  label: "Wishlist",   Icon: Heart   },
   ]
 
-  function handleLogout() {
-    logout()
+  async function handleLogout() {
+    await logout()
     router.push("/")
   }
 
@@ -501,7 +546,7 @@ export default function AccountPage() {
 
           {/* Breadcrumb */}
           <div className="mb-6 flex items-center gap-2 text-xs text-muted-foreground">
-            <Link href="/" className="hover:text-[--leaf] transition-colors">Home</Link>
+            <Link href="/" className="hover:text-[#689c30] transition-colors">Home</Link>
             <ChevronRight className="h-3 w-3" />
             <span className="font-medium text-foreground">My Account</span>
           </div>
@@ -513,8 +558,8 @@ export default function AccountPage() {
               {/* User card */}
               <div className="rounded-2xl border border-border/50 bg-card p-5">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[--leaf]/15 font-display text-lg font-bold text-[--leaf]">
-                    {user.firstName[0]}{user.lastName[0]}
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#689c30]/15 font-display text-lg font-bold text-[#689c30]">
+                    <img src={user.avatar || DEFAULT_MEMOJI} alt="" className="h-full w-full rounded-xl object-cover" />
                   </div>
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{user.firstName} {user.lastName}</p>
@@ -529,15 +574,15 @@ export default function AccountPage() {
                       onClick={() => { setTab(id); setEditMode(false) }}
                       className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all ${
                         tab === id
-                          ? "bg-[--leaf]/10 text-[--leaf]"
+                          ? "bg-[#689c30]/10 text-[#689c30]"
                           : "text-foreground/70 hover:bg-muted/50 hover:text-foreground"
                       }`}
                     >
                       <Icon className="h-4 w-4 shrink-0" />
                       {label}
                       {id === "orders" && (
-                        <span className="ml-auto rounded-full bg-[--leaf]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[--leaf]">
-                          {MOCK_ORDERS.length}
+                        <span className="ml-auto rounded-full bg-[#689c30]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[#689c30]">
+                          {orders.length}
                         </span>
                       )}
                     </button>
@@ -548,11 +593,11 @@ export default function AccountPage() {
               {/* Quick stats */}
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: "Orders", value: MOCK_ORDERS.length },
+                  { label: "Orders", value: orders.length },
                   { label: "Wishlist", value: MOCK_WISHLIST.length },
                 ].map(s => (
                   <div key={s.label} className="rounded-2xl border border-border/50 bg-card p-4 text-center">
-                    <p className="font-display text-2xl text-[--moss]">{s.value}</p>
+                    <p className="font-display text-2xl text-[#033927]">{s.value}</p>
                     <p className="text-xs text-muted-foreground">{s.label}</p>
                   </div>
                 ))}
@@ -561,12 +606,12 @@ export default function AccountPage() {
               {/* Help box */}
               <div className="rounded-2xl border border-border/50 bg-card p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <AlertCircle className="h-4 w-4 text-[--leaf]" />
+                  <AlertCircle className="h-4 w-4 text-[#689c30]" />
                   <span className="text-sm font-semibold">Need help?</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Call <strong className="text-foreground">1800-200-CROP</strong> or email{" "}
-                  <a href="mailto:hello@adhunikcrop.in" className="text-[--leaf] hover:underline">
+                  <a href="mailto:hello@adhunikcrop.in" className="text-[#689c30] hover:underline">
                     hello@adhunikcrop.in
                   </a>
                 </p>
@@ -586,7 +631,7 @@ export default function AccountPage() {
             <div className="rounded-2xl border border-border/50 bg-card p-6 sm:p-8 min-h-[400px]">
               {tab === "profile"   && !editMode && <ProfileView onEdit={() => setEditMode(true)} />}
               {tab === "profile"   && editMode  && <EditProfileView onBack={() => setEditMode(false)} />}
-              {tab === "orders"    && <OrdersView />}
+              {tab === "orders"    && <OrdersView loading={loadingOrders} orders={orders} />}
               {tab === "addresses" && <AddressesView />}
               {tab === "wishlist"  && <WishlistView />}
             </div>

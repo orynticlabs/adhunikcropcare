@@ -102,13 +102,13 @@ export default function AboutPage() {
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link
                   href="#our-story"
-                  className="inline-flex h-12 items-center gap-2 rounded-full bg-[#e9c46a] px-7 text-sm font-bold text-[#17382d] shadow-xl hover:text-[#17382d]"
+                  className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black"
                 >
                   Discover our story <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/contact"
-                  className="inline-flex h-12 items-center rounded-full border border-white/25 bg-white/10 px-7 text-sm font-semibold text-white backdrop-blur hover:bg-white/15 hover:text-white"
+                  className="inline-flex h-12 items-center rounded-full bg-[#033927] px-7 text-sm font-semibold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black"
                 >
                   Connect with us
                 </Link>
@@ -273,7 +273,7 @@ export default function AboutPage() {
               </div>
               <Link
                 href="/contact"
-                className="relative mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl hover:text-white lg:mt-0"
+                className="relative mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black lg:mt-0"
               >
                 Contact our team <ArrowRight className="h-4 w-4" />
               </Link>

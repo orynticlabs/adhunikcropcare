@@ -1,12 +1,12 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import {
   ChevronRight, Leaf, SlidersHorizontal,
-  ChevronDown, X,
+  ChevronDown, Loader2, X,
 } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
 import { ProductCard } from "@/components/products/product-card"
@@ -14,6 +14,7 @@ import Header from "@/components/layout/header"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import SiteFooter from "@/components/layout/site-footer"
 import { formatCurrency } from "@/features/cart/cart-context"
+import { matchesSearchQuery } from "@/lib/search"
 
 /* ── Constants ──────────────────────────────────────── */
 const CATEGORIES = [
@@ -41,109 +42,76 @@ const SORT_OPTIONS = [
   { label: "Top Rated",          value: "rating"     },
 ]
 
-const PRODUCTS = [
-  // Fertilizers
-  {
-    name: "Adhunik Bio NPK", priceValue: 1249, badge: "Bestseller", category: "Fertilizers",
-    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-    images: [
-      "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-      "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
-      "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80",
-    ],
-    sizes: ["1 kg", "5 kg", "25 kg"], defaultSize: "5 kg", rating: 4.8, reviews: 284,
-  },
-  {
-    name: "NPK 19-19-19 Water Soluble", priceValue: 799, badge: "Popular", category: "Fertilizers",
-    img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
-    sizes: ["500 g", "1 kg", "5 kg"], defaultSize: "1 kg", rating: 4.6, reviews: 156,
-  },
-  {
-    name: "Humic Acid Granules", priceValue: 549, badge: "Soil Booster", category: "Fertilizers",
-    img: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80",
-    sizes: ["1 kg", "5 kg"], defaultSize: "1 kg", rating: 4.5, reviews: 98,
-  },
-  // Organic
-  {
-    name: "Vermi+ Compost 25kg", priceValue: 599, badge: "Organic", category: "Organic",
-    img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
-    images: [
-      "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
-      "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80",
-    ],
-    sizes: ["10 kg", "25 kg", "50 kg"], defaultSize: "25 kg", rating: 4.7, reviews: 203,
-  },
-  {
-    name: "Neem Cake Powder", priceValue: 349, badge: "Organic", category: "Organic",
-    img: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80",
-    sizes: ["1 kg", "5 kg", "25 kg"], defaultSize: "5 kg", rating: 4.5, reviews: 119,
-  },
-  {
-    name: "Enriched Cow Manure", priceValue: 299, badge: "Farm Fresh", category: "Organic",
-    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-    sizes: ["10 kg", "25 kg"], defaultSize: "10 kg", rating: 4.4, reviews: 87,
-  },
-  // Bio Products
-  {
-    name: "MyCo Root Power", priceValue: 749, badge: "Bio", category: "Bio Products",
-    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-    sizes: ["250 g", "500 g", "1 kg"], defaultSize: "500 g", rating: 4.7, reviews: 142,
-  },
-  {
-    name: "Rhizo-Fix Biofertilizer", priceValue: 449, badge: "New", category: "Bio Products",
-    img: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80",
-    sizes: ["250 g", "500 g"], defaultSize: "250 g", rating: 4.6, reviews: 63,
-  },
-  {
-    name: "Azospirillum Culture", priceValue: 399, badge: "Nitrogen Fix", category: "Bio Products",
-    img: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80",
-    sizes: ["250 g", "500 g"], defaultSize: "250 g", rating: 4.5, reviews: 41,
-  },
-  // Soil Care
-  {
-    name: "SoilRich Booster", priceValue: 899, badge: "New", category: "Soil Care",
-    img: "https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=600&q=80",
-    sizes: ["1 kg", "5 kg"], defaultSize: "1 kg", rating: 4.8, reviews: 176,
-  },
-  {
-    name: "pH Balance Pro", priceValue: 449, badge: "Soil Care", category: "Soil Care",
-    img: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80",
-    sizes: ["1 kg", "5 kg"], defaultSize: "1 kg", rating: 4.3, reviews: 54,
-  },
-  // Pest Management
-  {
-    name: "NeemGuard Spray 1L", priceValue: 449, badge: "Bio Pesticide", category: "Pest Management",
-    img: "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=600&q=80",
-    sizes: ["500 ml", "1 L", "5 L"], defaultSize: "1 L", rating: 4.6, reviews: 198,
-  },
-  {
-    name: "Sticky Trap Kit 20-Pack", priceValue: 299, badge: "IPM", category: "Pest Management",
-    img: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80",
-    sizes: undefined, defaultSize: undefined, rating: 4.4, reviews: 76,
-  },
-  // Irrigation
-  {
-    name: "DripFlow Starter Kit", priceValue: 4999, badge: "Smart", category: "Irrigation",
-    img: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&q=80",
-    sizes: undefined, defaultSize: undefined, rating: 4.9, reviews: 91,
-  },
-  {
-    name: "Micro Sprinkler Set", priceValue: 1899, badge: "Water Saver", category: "Irrigation",
-    img: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600&q=80",
-    sizes: undefined, defaultSize: undefined, rating: 4.5, reviews: 44,
-  },
-]
+const CATEGORY_SEARCH_TERMS: Record<string, string> = {
+  Fertilizers: "crop fertilizer fertilizers nutrition npk plant growth promoter",
+  Organic: "organic products natural compost manure",
+  "Bio Products": "bio biological biofertilizer products",
+  "Soil Care": "soil care conditioner booster",
+  "Pest Management": "pest management pesticide insecticide crop protection neem weedicide",
+  Irrigation: "irrigation drip sprinkler water",
+}
 
-function productHref(name: string) {
-  return `/products/${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`
+type StoreProduct = {
+  badge: string
+  category: string
+  defaultSize?: string
+  images?: string[]
+  img: string
+  name: string
+  priceValue: number
+  rating: number
+  reviews: number
+  shortDescription?: string
+  sizes?: string[]
+  slug?: string
+}
+
+type CmsProduct = {
+  category: string
+  featured: boolean
+  images: { url: string }[]
+  name: string
+  packSizes: { price: number; size: string }[]
+  price: number
+  salePrice: number | null
+  shortDescription: string
+  slug: string
+}
+
+function slugify(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+}
+
+function productHref(product: Pick<StoreProduct, "name" | "slug">) {
+  return `/products/${product.slug || slugify(product.name)}`
 }
 
 function comparePrice(priceValue: number, uplift = 1.22) {
   return formatCurrency(Math.ceil((priceValue * uplift) / 10) * 10)
 }
 
+function cmsProductToStoreProduct(product: CmsProduct): StoreProduct {
+  const images = product.images.map((image) => image.url).filter(Boolean)
+  const priceValue = product.salePrice ?? product.price
+
+  return {
+    badge: product.featured ? "Featured" : product.category,
+    category: product.category,
+    defaultSize: product.packSizes[0]?.size,
+    images,
+    img: images[0] || "/placeholder.svg",
+    name: product.name,
+    priceValue,
+    rating: 4.8,
+    reviews: 120,
+    shortDescription: product.shortDescription,
+    sizes: product.packSizes.map((pack) => pack.size),
+    slug: product.slug,
+  }
+}
+
 /* ── Page ───────────────────────────────────────────── */
-export default function ProductsPage() {
+function ProductsPageContent() {
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get("q")?.trim() ?? ""
   const [activeCategory, setActiveCategory] = useState("All")
@@ -151,31 +119,56 @@ export default function ProductsPage() {
   const [sortBy,        setSortBy]        = useState("featured")
   const [priceOpen,     setPriceOpen]     = useState(false)
   const [sortOpen,      setSortOpen]      = useState(false)
-  const categoryFromSearch = CATEGORIES.find(
-    (category) => category !== "All" && category.toLowerCase() === searchQuery.toLowerCase(),
-  )
-  const effectiveCategory = categoryFromSearch ?? activeCategory
+  const [cmsProducts,   setCmsProducts]   = useState<StoreProduct[]>([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  useEffect(() => {
+    let alive = true
 
+    fetch("/api/products")
+      .then((response) => response.json())
+      .then((json) => {
+        if (alive && json.success && Array.isArray(json.data)) {
+          setCmsProducts(json.data.map(cmsProductToStoreProduct))
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (alive) setProductsLoading(false)
+      })
+
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const products = cmsProducts
+  const categories = useMemo(
+    () => Array.from(new Set([...CATEGORIES, ...products.map((product) => product.category)])),
+    [products],
+  )
   const filtered = useMemo(() => {
-    let result = [...PRODUCTS]
+    let result = [...products]
     if (searchQuery) {
-      const normalizedQuery = searchQuery.toLowerCase()
       result = result.filter((product) =>
-        product.name.toLowerCase().includes(normalizedQuery) ||
-        product.category.toLowerCase().includes(normalizedQuery) ||
-        product.badge.toLowerCase().includes(normalizedQuery),
+        matchesSearchQuery(searchQuery, [
+          product.name,
+          product.category,
+          product.badge,
+          product.sizes?.join(" "),
+          CATEGORY_SEARCH_TERMS[product.category],
+        ]),
       )
     }
-    if (effectiveCategory !== "All") result = result.filter(p => p.category === effectiveCategory)
+    if (activeCategory !== "All") result = result.filter(p => p.category === activeCategory)
     const { min, max } = PRICE_RANGES[priceRange]
     result = result.filter(p => p.priceValue >= min && p.priceValue <= max)
     if (sortBy === "price-asc")  result.sort((a, b) => a.priceValue - b.priceValue)
     if (sortBy === "price-desc") result.sort((a, b) => b.priceValue - a.priceValue)
     if (sortBy === "rating")     result.sort((a, b) => b.rating - a.rating)
     return result
-  }, [effectiveCategory, priceRange, searchQuery, sortBy])
+  }, [activeCategory, priceRange, products, searchQuery, sortBy])
 
-  const activeFiltersCount = (effectiveCategory !== "All" ? 1 : 0) + (priceRange !== 0 ? 1 : 0)
+  const activeFiltersCount = (activeCategory !== "All" ? 1 : 0) + (priceRange !== 0 ? 1 : 0)
 
   function clearFilters() { setActiveCategory("All"); setPriceRange(0) }
 
@@ -199,7 +192,7 @@ export default function ProductsPage() {
           />
 
           {/* Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[--moss]/85 via-[--moss]/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#033927]/85 via-[#033927]/50 to-transparent" />
           <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-background/30" />
 
           {/* Content — bottom-left aligned */}
@@ -223,8 +216,8 @@ export default function ProductsPage() {
               {/* Stats row */}
               <div className="mt-4 sm:mt-7 flex gap-5 sm:gap-8">
                 {[
-                  { val: "80+", label: "Products"   },
-                  { val: "6",   label: "Categories" },
+                  { val: String(products.length), label: "Products"   },
+                  { val: String(Math.max(0, categories.length - 1)),   label: "Categories" },
                   { val: "ISO", label: "Certified"  },
                 ].map(s => (
                   <div key={s.label}>
@@ -233,6 +226,12 @@ export default function ProductsPage() {
                   </div>
                 ))}
               </div>
+              <Link
+                href="/admin/products/new"
+                className="mt-5 inline-flex h-10 items-center rounded-full bg-[#033927] px-5 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-[#689c30] hover:!text-black"
+              >
+                Add Product
+              </Link>
             </div>
           </div>
         </div>
@@ -247,15 +246,15 @@ export default function ProductsPage() {
               {/* Category pills — only this inner element scrolls horizontally */}
               <div className="flex-1 min-w-0 overflow-x-auto scrollbar-none">
                 <div className="flex gap-1.5 sm:gap-2 w-max">
-                  {CATEGORIES.map(cat => (
+                  {categories.map(cat => (
                     <button
                       key={cat}
                       type="button"
                       onClick={() => setActiveCategory(cat)}
                       className={`shrink-0 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium transition-all duration-200 ${
-                        effectiveCategory === cat
-                          ? "bg-[--leaf] text-white shadow-sm"
-                          : "border border-border/60 text-foreground/70 bg-background hover:border-[--leaf]/50 hover:text-[--leaf]"
+                        activeCategory === cat
+                          ? "bg-[#033927] text-white shadow-sm"
+                          : "border border-border/60 text-foreground/70 bg-background hover:border-[#689c30]/50 hover:text-[#689c30]"
                       }`}
                     >
                       {cat}
@@ -277,20 +276,20 @@ export default function ProductsPage() {
                     onClick={() => { setPriceOpen(v => !v); setSortOpen(false) }}
                     className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-all ${
                       priceOpen || priceRange !== 0
-                        ? "border-[--leaf] bg-[--leaf]/10 text-[--leaf]"
-                        : "border-border/60 text-foreground/70 hover:border-[--leaf]/50 hover:text-[--leaf]"
+                        ? "border-[#689c30] bg-[#689c30]/10 text-[#689c30]"
+                        : "border-border/60 text-foreground/70 hover:border-[#689c30]/50 hover:text-[#689c30]"
                     }`}
                   >
                     <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
                     <span className="hidden sm:inline">Price</span>
-                    {priceRange !== 0 && <span className="h-1.5 w-1.5 rounded-full bg-[--leaf]" />}
-                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${priceOpen ? "rotate-180" : ""}`} aria-hidden />
+                    {priceRange !== 0 && <span className="h-1.5 w-1.5 rounded-full bg-[#689c30]" />}
+                    <ChevronDown className="h-3.5 w-3.5" aria-hidden />
                   </button>
 
                   {priceOpen && (
                     <>
                       <div className="fixed inset-0 z-[1]" onClick={() => setPriceOpen(false)} />
-                      <div className="absolute left-0 top-full mt-2 z-[2] min-w-[210px] rounded-2xl border border-border/60 bg-popover p-1.5 shadow-luxe">
+                      <div className="absolute left-0 top-full mt-2 z-[2] min-w-[210px] rounded-2xl border border-border/60 bg-popover p-1.5 shadow-sm">
                         {PRICE_RANGES.map((range, i) => (
                           <button
                             key={range.label}
@@ -298,11 +297,11 @@ export default function ProductsPage() {
                             onClick={() => { setPriceRange(i); setPriceOpen(false) }}
                             className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors ${
                               priceRange === i
-                                ? "bg-[--leaf]/10 font-semibold text-[--leaf]"
-                                : "text-foreground/80 hover:text-[--leaf]"
+                                ? "bg-[#689c30]/10 font-semibold text-[#689c30]"
+                                : "text-foreground/80 hover:text-[#689c30]"
                             }`}
                           >
-                            {priceRange === i && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[--leaf]" />}
+                            {priceRange === i && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#689c30]" />}
                             {range.label}
                           </button>
                         ))}
@@ -316,17 +315,17 @@ export default function ProductsPage() {
                   <button
                     type="button"
                     onClick={() => { setSortOpen(v => !v); setPriceOpen(false) }}
-                    className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3.5 py-1.5 text-sm font-medium text-foreground/70 hover:border-[--leaf]/50 hover:text-[--leaf] transition"
+                    className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3.5 py-1.5 text-sm font-medium text-foreground/70 hover:border-[#689c30]/50 hover:text-[#689c30] transition"
                   >
                     <span className="hidden sm:inline">{SORT_OPTIONS.find(s => s.value === sortBy)?.label ?? "Sort"}</span>
                     <span className="sm:hidden">Sort</span>
-                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${sortOpen ? "rotate-180" : ""}`} aria-hidden />
+                    <ChevronDown className="h-3.5 w-3.5" aria-hidden />
                   </button>
 
                   {sortOpen && (
                     <>
                       <div className="fixed inset-0 z-[1]" onClick={() => setSortOpen(false)} />
-                      <div className="absolute right-0 top-full mt-2 z-[2] min-w-[210px] rounded-2xl border border-border/60 bg-popover p-1.5 shadow-luxe">
+                      <div className="absolute right-0 top-full mt-2 z-[2] min-w-[210px] rounded-2xl border border-border/60 bg-popover p-1.5 shadow-sm">
                         {SORT_OPTIONS.map(opt => (
                           <button
                             key={opt.value}
@@ -334,11 +333,11 @@ export default function ProductsPage() {
                             onClick={() => { setSortBy(opt.value); setSortOpen(false) }}
                             className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors ${
                               sortBy === opt.value
-                                ? "bg-[--leaf]/10 font-semibold text-[--leaf]"
-                                : "text-foreground/80 hover:text-[--leaf]"
+                                ? "bg-[#689c30]/10 font-semibold text-[#689c30]"
+                                : "text-foreground/80 hover:text-[#689c30]"
                             }`}
                           >
-                            {sortBy === opt.value && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[--leaf]" />}
+                            {sortBy === opt.value && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#689c30]" />}
                             {opt.label}
                           </button>
                         ))}
@@ -364,16 +363,16 @@ export default function ProductsPage() {
             {/* Active filter tags */}
             {activeFiltersCount > 0 && (
               <div className="flex flex-wrap gap-2 pb-3">
-                {effectiveCategory !== "All" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[--leaf]/20 bg-[--leaf]/10 px-3 py-1 text-xs font-medium text-[--leaf]">
-                    {effectiveCategory}
+                {activeCategory !== "All" && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#689c30]/20 bg-[#689c30]/10 px-3 py-1 text-xs font-medium text-[#689c30]">
+                    {activeCategory}
                     <button type="button" onClick={() => setActiveCategory("All")} aria-label="Remove category filter">
                       <X className="h-3 w-3" />
                     </button>
                   </span>
                 )}
                 {priceRange !== 0 && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[--leaf]/20 bg-[--leaf]/10 px-3 py-1 text-xs font-medium text-[--leaf]">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#689c30]/20 bg-[#689c30]/10 px-3 py-1 text-xs font-medium text-[#689c30]">
                     {PRICE_RANGES[priceRange].label}
                     <button type="button" onClick={() => setPriceRange(0)} aria-label="Remove price filter">
                       <X className="h-3 w-3" />
@@ -394,15 +393,18 @@ export default function ProductsPage() {
               Showing{" "}
               <span className="font-semibold text-foreground">{filtered.length}</span>
               {" "}product{filtered.length !== 1 ? "s" : ""}
-              {effectiveCategory !== "All" && (
-                <span className="text-[--moss]"> in {effectiveCategory}</span>
+              {activeCategory !== "All" && (
+                <span className="text-[#033927]"> in {activeCategory}</span>
+              )}
+              {searchQuery && (
+                <span className="text-[#033927]"> matching “{searchQuery}”</span>
               )}
             </p>
             {activeFiltersCount > 0 && (
               <button
                 type="button"
                 onClick={clearFilters}
-                className="text-xs text-muted-foreground hover:text-[--leaf] transition-colors underline underline-offset-2"
+                className="text-xs text-muted-foreground hover:text-[#689c30] transition-colors underline underline-offset-2"
               >
                 Clear all filters
               </button>
@@ -410,19 +412,24 @@ export default function ProductsPage() {
           </div>
 
           {/* Empty state */}
-          {filtered.length === 0 ? (
+          {productsLoading ? (
             <div className="flex flex-col items-center justify-center py-28 text-center">
-              <div className="grid h-20 w-20 place-items-center rounded-full bg-[--leaf]/8 mb-5">
-                <Leaf className="h-10 w-10 text-[--leaf]/40" strokeWidth={1.5} />
+              <Loader2 className="h-8 w-8 animate-spin text-[#689c30]" />
+              <p className="mt-3 text-sm text-muted-foreground">Loading OryCMS products…</p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-28 text-center">
+              <div className="grid h-20 w-20 place-items-center rounded-full bg-[#689c30]/8 mb-5">
+                <Leaf className="h-10 w-10 text-[#689c30]/40" strokeWidth={1.5} />
               </div>
-              <h3 className="font-display text-2xl">No products found</h3>
+              <h3 className="font-display text-2xl">No published products found</h3>
               <p className="mt-2 text-muted-foreground max-w-xs">
-                Try a different category or price range.
+                Publish products from OryCMS to show them on the storefront.
               </p>
               <button
                 type="button"
                 onClick={clearFilters}
-                className="mt-6 rounded-full bg-[--leaf] px-7 h-10 text-sm font-semibold text-white hover:bg-[--moss] transition"
+                className="mt-6 h-10 rounded-full bg-[#033927] px-7 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black"
               >
                 Clear Filters
               </button>
@@ -433,15 +440,15 @@ export default function ProductsPage() {
                 const price = formatCurrency(p.priceValue)
                 return (
                   <ProductCard
-                    key={p.name}
-                    href={productHref(p.name)}
+                    key={p.slug ?? p.name}
+                    href={productHref(p)}
                     name={p.name}
                     image={p.img}
                     images={p.images}
                     price={price}
                     originalPrice={comparePrice(p.priceValue)}
                     badge={p.badge}
-                    subtitle={`${p.category} solution for better crop outcomes`}
+                    subtitle={p.shortDescription || `${p.category} solution for better crop outcomes`}
                     rating={p.rating}
                     reviews={p.reviews}
                     imageSizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
@@ -456,5 +463,13 @@ export default function ProductsPage() {
 
       <SiteFooter />
     </div>
+  )
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProductsPageContent />
+    </Suspense>
   )
 }
