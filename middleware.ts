@@ -60,9 +60,9 @@ function isSafeFromPath(pathname: string) {
 }
 
 function isStorefrontProtectedPath(pathname: string) {
-  return pathname === "/account" || pathname.startsWith("/account/") || pathname === "/wishlist"
+  return pathname === "/checkout" || pathname === "/account" || pathname.startsWith("/account/") || pathname === "/wishlist"
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/api/orycms/:path*", "/account/:path*", "/wishlist", "/setup"],
+  matcher: ["/admin/:path*", "/api/orycms/:path*", "/account/:path*", "/checkout", "/wishlist", "/setup"],
 }

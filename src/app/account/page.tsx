@@ -56,7 +56,7 @@ interface WishlistItem {
   inStock: boolean
 }
 
-const MOCK_WISHLIST: WishlistItem[] = []
+const INITIAL_WISHLIST: WishlistItem[] = []
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 function fmt(n: number) {
@@ -610,7 +610,7 @@ function AddressInput({
 }
 
 function WishlistView() {
-  const [wishlist, setWishlist] = useState<WishlistItem[]>(MOCK_WISHLIST)
+  const [wishlist, setWishlist] = useState<WishlistItem[]>(INITIAL_WISHLIST)
 
   return (
     <div className="space-y-5">
@@ -776,7 +776,7 @@ export default function AccountPage() {
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { label: "Orders", value: orders.length },
-                  { label: "Wishlist", value: MOCK_WISHLIST.length },
+                  { label: "Wishlist", value: INITIAL_WISHLIST.length },
                 ].map(s => (
                   <div key={s.label} className="rounded-2xl border border-border/50 bg-card p-4 text-center">
                     <p className="font-display text-2xl text-[#033927]">{s.value}</p>

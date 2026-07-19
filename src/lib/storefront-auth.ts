@@ -12,6 +12,7 @@ const ACCESS_TTL_SECONDS = 15 * 60
 const REFRESH_TTL_SECONDS = 30 * 24 * 60 * 60
 const AUTH_SECRET = process.env.STOREFRONT_AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "dev-storefront-auth-secret-change-me"
 const rateHits = new Map<string, { count: number; resetAt: number }>()
+let schemaReady: Promise<void> | null = null
 
 export type StorefrontUserDTO = {
   avatar?: string | null
@@ -23,22 +24,34 @@ export type StorefrontUserDTO = {
   joinedAt: string
   lastName: string
   phone: string
+  status?: string
 }
 
 type UserRow = {
   avatar: string | null
   created_at: Date
   default_address: Prisma.JsonValue | null
+  deleted_at: Date | null
   email: string
   email_verified_at: Date | null
   first_name: string
   id: string
   last_name: string
+  last_login_at: Date | null
   password_hash: string
   phone: string | null
+  status: string
 }
 
 export async function ensureStorefrontAuthSchema() {
+  schemaReady ??= ensureStorefrontAuthSchemaOnce().catch((error) => {
+    schemaReady = null
+    throw error
+  })
+  return schemaReady
+}
+
+async function ensureStorefrontAuthSchemaOnce() {
   await orycmsPrisma.$executeRawUnsafe(`
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
     CREATE TABLE IF NOT EXISTS storefront_users (
@@ -51,9 +64,15 @@ export async function ensureStorefrontAuthSchema() {
       password_hash text NOT NULL,
       avatar text,
       default_address jsonb,
+      status text NOT NULL DEFAULT 'active',
+      last_login_at timestamptz,
+      deleted_at timestamptz,
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now()
     );
+    ALTER TABLE storefront_users ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active';
+    ALTER TABLE storefront_users ADD COLUMN IF NOT EXISTS last_login_at timestamptz;
+    ALTER TABLE storefront_users ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
     CREATE TABLE IF NOT EXISTS storefront_refresh_tokens (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id uuid NOT NULL,
@@ -185,7 +204,7 @@ export async function requireCsrf() {
   const headerStore = await headers()
   const cookieToken = cookieStore.get(CSRF_COOKIE)?.value
   const headerToken = headerStore.get("x-csrf-token")
-  if (!cookieToken || !headerToken || cookieToken !== headerToken) {
+  if (!safeEqual(cookieToken, headerToken)) {
     throw new Error("Security check failed. Refresh the page and try again.")
   }
 }
@@ -237,11 +256,18 @@ export async function authenticateUser(emailInput: string, password: string) {
   if (!validateEmail(email) || !password) throw new Error("Invalid email or password.")
 
   const [user] = await orycmsPrisma.$queryRaw<UserRow[]>`
-    SELECT * FROM storefront_users WHERE lower(email) = lower(${email}) LIMIT 1
+    SELECT * FROM storefront_users WHERE lower(email) = lower(${email}) AND deleted_at IS NULL LIMIT 1
   `
   if (!user || !(await bcrypt.compare(password, user.password_hash))) {
     throw new Error("Invalid email or password.")
   }
+  if (user.status !== "active") {
+    throw new Error(user.status === "blocked" ? "Your account is blocked. Contact support." : "Your account is inactive. Contact support.")
+  }
+
+  await orycmsPrisma.$executeRaw`
+    UPDATE storefront_users SET last_login_at = now(), updated_at = now() WHERE id = ${user.id}::uuid
+  `
 
   return toUserDTO(user)
 }
@@ -249,9 +275,9 @@ export async function authenticateUser(emailInput: string, password: string) {
 export async function getUserById(id: string) {
   await ensureStorefrontAuthSchema()
   const [user] = await orycmsPrisma.$queryRaw<UserRow[]>`
-    SELECT * FROM storefront_users WHERE id = ${id}::uuid LIMIT 1
+    SELECT * FROM storefront_users WHERE id = ${id}::uuid AND deleted_at IS NULL LIMIT 1
   `
-  return user ? toUserDTO(user) : null
+  return user?.status === "active" ? toUserDTO(user) : null
 }
 
 export async function updateUserProfile(userId: string, input: Partial<StorefrontUserDTO>) {
@@ -292,6 +318,7 @@ export async function createSessionCookies(userId: string) {
   const refreshHash = hash(refreshToken)
   const accessToken = signJwt({ sub: userId }, ACCESS_TTL_SECONDS)
   await ensureStorefrontAuthSchema()
+  await orycmsPrisma.$executeRaw`DELETE FROM storefront_refresh_tokens WHERE user_id = ${userId}::uuid`
   await orycmsPrisma.$executeRaw`
     INSERT INTO storefront_refresh_tokens (user_id, token_hash, expires_at)
     VALUES (${userId}::uuid, ${refreshHash}, ${new Date(Date.now() + REFRESH_TTL_SECONDS * 1000)})
@@ -307,7 +334,12 @@ export async function setAuthCookies(response: NextResponse, userId: string) {
   return response
 }
 
-export async function clearAuthCookies(response = NextResponse.json({ success: true, data: null })) {
+export function setAccessCookie(response: NextResponse, userId: string) {
+  response.cookies.set(ACCESS_COOKIE, signJwt({ sub: userId }, ACCESS_TTL_SECONDS), cookieOptions(true, ACCESS_TTL_SECONDS))
+  return response
+}
+
+export async function clearAuthCookies(response: NextResponse = NextResponse.json({ success: true, data: null })) {
   const cookieStore = await cookies()
   const refresh = cookieStore.get(REFRESH_COOKIE)?.value
   if (refresh) {
@@ -328,13 +360,35 @@ export async function currentUser() {
 
   const refresh = cookieStore.get(REFRESH_COOKIE)?.value
   if (!refresh) return null
-  await ensureStorefrontAuthSchema()
-  const [row] = await orycmsPrisma.$queryRaw<{ user_id: string }[]>`
-    SELECT user_id FROM storefront_refresh_tokens
-    WHERE token_hash = ${hash(refresh)} AND expires_at > now()
-    LIMIT 1
-  `
+  const row = await getRefreshSession(refresh)
   return row?.user_id ? getUserById(row.user_id) : null
+}
+
+export async function currentUserResponse() {
+  const response = NextResponse.json({ success: true, data: { user: null as StorefrontUserDTO | null } })
+  const cookieStore = await cookies()
+  const access = cookieStore.get(ACCESS_COOKIE)?.value
+  const accessPayload = access ? verifyJwt(access) : null
+  if (accessPayload?.sub) {
+    const user = await getUserById(accessPayload.sub)
+    response.headers.set("cache-control", "no-store")
+    return user ? NextResponse.json({ success: true, data: { user } }, { headers: response.headers }) : clearAuthCookies(response)
+  }
+
+  const refresh = cookieStore.get(REFRESH_COOKIE)?.value
+  if (!refresh) {
+    response.headers.set("cache-control", "no-store")
+    return response
+  }
+
+  const row = await getRefreshSession(refresh)
+  if (!row?.user_id) return clearAuthCookies(response)
+  const user = await getUserById(row.user_id)
+  if (!user) return clearAuthCookies(response)
+
+  const refreshed = NextResponse.json({ success: true, data: { user } })
+  refreshed.headers.set("cache-control", "no-store")
+  return setAccessCookie(refreshed, user.id)
 }
 
 export async function requireUser() {
@@ -384,9 +438,9 @@ export async function findUserByEmail(emailInput: string) {
   await ensureStorefrontAuthSchema()
   const email = emailInput.trim().toLowerCase()
   const [user] = await orycmsPrisma.$queryRaw<UserRow[]>`
-    SELECT * FROM storefront_users WHERE lower(email) = lower(${email}) LIMIT 1
+    SELECT * FROM storefront_users WHERE lower(email) = lower(${email}) AND deleted_at IS NULL LIMIT 1
   `
-  return user ? toUserDTO(user) : null
+  return user?.status === "active" ? toUserDTO(user) : null
 }
 
 export async function requestKey(prefix: string) {
@@ -408,10 +462,12 @@ export function toUserDTO(user: UserRow): StorefrontUserDTO {
     joinedAt: user.created_at.toISOString(),
     lastName: user.last_name,
     phone: user.phone ?? "",
+    status: user.status,
   }
 }
 
 function signJwt(payload: { sub: string }, ttlSeconds: number) {
+  assertAuthSecret()
   const header = { alg: "HS256", typ: "JWT" }
   const body = { ...payload, exp: Math.floor(Date.now() / 1000) + ttlSeconds }
   const encoded = `${base64url(JSON.stringify(header))}.${base64url(JSON.stringify(body))}`
@@ -419,6 +475,7 @@ function signJwt(payload: { sub: string }, ttlSeconds: number) {
 }
 
 function verifyJwt(token: string) {
+  assertAuthSecret()
   try {
     const [header, body, signature] = token.split(".")
     if (!header || !body || !signature) return null
@@ -438,6 +495,32 @@ function hmac(value: string) {
 
 function hash(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex")
+}
+
+async function getRefreshSession(refresh: string) {
+  await ensureStorefrontAuthSchema()
+  const [row] = await orycmsPrisma.$queryRaw<{ user_id: string }[]>`
+    SELECT t.user_id
+    FROM storefront_refresh_tokens t
+    JOIN storefront_users u ON u.id = t.user_id
+    WHERE t.token_hash = ${hash(refresh)}
+      AND t.expires_at > now()
+      AND u.status = 'active'
+      AND u.deleted_at IS NULL
+    LIMIT 1
+  `
+  return row ?? null
+}
+
+function safeEqual(left?: string | null, right?: string | null) {
+  if (!left || !right || left.length !== right.length) return false
+  return crypto.timingSafeEqual(Buffer.from(left), Buffer.from(right))
+}
+
+function assertAuthSecret() {
+  if (process.env.NODE_ENV === "production" && AUTH_SECRET === "dev-storefront-auth-secret-change-me") {
+    throw new Error("STOREFRONT_AUTH_SECRET is required in production.")
+  }
 }
 
 function randomToken(bytes = 32) {

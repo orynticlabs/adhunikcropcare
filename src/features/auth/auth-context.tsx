@@ -64,11 +64,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void bootstrap()
   }, [])
 
+  useEffect(() => {
+    function onStorage(event: StorageEvent) {
+      if (event.key !== "acc_auth_event") return
+      void bootstrap()
+    }
+
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [])
+
   async function bootstrap() {
     try {
       await getCsrf()
       const me = await fetchJson<{ user: AuthUser | null }>("/api/auth/me", { method: "GET" }, false)
       setUser(me?.user ?? null)
+    } catch {
+      setUser(null)
     } finally {
       setLoadingUser(false)
     }
@@ -80,6 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       method: "POST",
     })
     setUser(data.user)
+    notifyAuthTabs("login")
     pushToast("Signed in successfully.", "success")
   }
 
@@ -89,14 +102,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       method: "POST",
     })
     setUser(result.user)
+    notifyAuthTabs("signup")
     pushToast("Account created successfully.", "success")
     return { verifyToken: result.verifyToken }
   }
 
   async function logout() {
-    await authFetch("/api/auth/logout", { method: "POST" })
-    setUser(null)
-    pushToast("Signed out.", "success")
+    try {
+      await authFetch("/api/auth/logout", { method: "POST" })
+      pushToast("Signed out.", "success")
+    } finally {
+      setUser(null)
+      setCsrfToken("")
+      notifyAuthTabs("logout")
+    }
   }
 
   async function updateProfile(data: Partial<AuthUser>) {
@@ -162,6 +181,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           pushToast(retryError instanceof Error ? retryError.message : "Request failed.", "error")
           throw retryError
         }
+      }
+      if (error instanceof Error && error.message === "Authentication required.") {
+        setUser(null)
+        notifyAuthTabs("expired")
       }
       pushToast(error instanceof Error ? error.message : "Request failed.", "error")
       throw error
@@ -231,8 +254,8 @@ export function useAuth() {
 }
 
 async function fetchJson<T>(url: string, init: RequestInit = {}, throwOnError = true) {
-  const response = await fetch(url, { credentials: "include", ...init })
-  const json = (await response.json()) as {
+  const response = await fetch(url, { cache: "no-store", credentials: "include", ...init })
+  const json = (await response.json().catch(() => ({ success: false, error: { message: "Request failed." } }))) as {
     data?: T
     error?: { message: string }
     success: boolean
@@ -242,6 +265,14 @@ async function fetchJson<T>(url: string, init: RequestInit = {}, throwOnError = 
     return null as T
   }
   return json.data as T
+}
+
+function notifyAuthTabs(event: string) {
+  try {
+    localStorage.setItem("acc_auth_event", `${event}:${Date.now()}`)
+  } catch {
+    // Ignore private-mode storage failures.
+  }
 }
 
 function AuthToast({ toast }: { toast: Toast | null }) {

@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { ORYCMS_SESSION_COOKIE } from "@/lib/orycms/config"
+import { ensureOryCMSAdminUserSchema, touchOryCMSAdminLastLogin } from "@/lib/orycms/users"
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
 const SESSION_MAX_AGE = SESSION_TTL_MS / 1000
@@ -14,6 +15,7 @@ function hashToken(rawToken: string) {
 
 export async function POST(request: NextRequest) {
   try {
+    await ensureOryCMSAdminUserSchema()
     const { email = "", password = "" } = (await request.json()) as {
       email?: string
       password?: string
@@ -29,10 +31,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const user = await orycmsPrisma.oryCMSUser.findUnique({
-      where: { email: email.toLowerCase().trim() },
-      select: { email: true, id: true, passwordHash: true, role: { select: { name: true } }, roleId: true, status: true },
-    })
+    const [user] = await orycmsPrisma.$queryRaw<
+      { email: string; id: string; passwordHash: string; roleId: string | null; roleName: string | null; status: string }[]
+    >`
+      SELECT u.email, u.id, u."passwordHash", u."roleId", u.status, r.name AS "roleName"
+      FROM orycms_users u
+      LEFT JOIN orycms_roles r ON r.id = u."roleId"
+      WHERE lower(u.email) = lower(${email.toLowerCase().trim()}) AND u."deletedAt" IS NULL
+      LIMIT 1
+    `
     const valid = await bcrypt.compare(
       password,
       user?.passwordHash ?? "$2a$12$invalidhashfortimingprotection0000000000000000000000",
@@ -58,7 +65,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!user.roleId || !user.role?.name) {
+    if (!user.roleId || !user.roleName) {
       return NextResponse.json(
         {
           success: false,
@@ -81,12 +88,13 @@ export async function POST(request: NextRequest) {
       },
       select: { expiresAt: true, id: true },
     })
+    await touchOryCMSAdminLastLogin(user.id)
 
     const response = NextResponse.json({
       success: true,
       data: {
         email: user.email,
-        roleName: user.role.name,
+        roleName: user.roleName,
         session: { expiresAt: session.expiresAt, id: session.id },
         userId: user.id,
       },
