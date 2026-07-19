@@ -250,7 +250,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                     className={`rounded-2xl border px-4 py-3 text-left transition ${
                       activeOption === index
                         ? "border-[#033927] bg-[#033927] text-white"
-                        : "border-border bg-background hover:border-[#689c30]/60 hover:bg-[#689c30]/10"
+                        : "border-border bg-background text-foreground hover:border-[#689c30]/60 hover:bg-[#689c30]/10"
                     }`}
                   >
                     <span className="block text-sm font-semibold">{option.label}</span>
@@ -301,10 +301,10 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                 type="button"
                 onClick={addQuantityToCart}
                 disabled={activeOption === null}
-                className={`inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full px-6 text-sm font-bold text-white transition-colors ${
+                className={`inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full px-6 text-sm font-bold transition-colors ${
                   activeOption === null
-                    ? "cursor-not-allowed border border-[#d7e0da] bg-white text-[#203129]"
-                    : "bg-[#033927] hover:bg-[#689c30] hover:!text-black"
+                    ? "cursor-not-allowed border border-[#d7e0da] bg-white !text-[#203129]"
+                    : "bg-[#033927] text-white hover:bg-[#689c30] hover:!text-black"
                 }`}
               >
                 <ShoppingBag className={`h-4 w-4 ${activeOption === null ? "text-[#203129]" : ""}`} aria-hidden />

@@ -21,14 +21,15 @@ model OryCMSUser {
   status       String          @default("active")
   roleId       String?         @db.Uuid
   createdAt    DateTime        @default(now()) @db.Timestamptz(6)
-  updatedAt    DateTime        @updatedAt @db.Timestamptz(6)
+  updatedAt    DateTime        @default(now()) @updatedAt @db.Timestamptz(6)
   deletedAt    DateTime?       @db.Timestamptz(6)
   fullName     String?
   mobileNumber String?
   profilePhoto String?
+  username     String?
   emailVerified Boolean        @default(false)
   lastLoginAt  DateTime?       @db.Timestamptz(6)
-  role         OryCMSRole?     @relation(fields: [roleId], references: [id])
+  role         OryCMSRole?     @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   sessions     OryCMSSession[]
 
   @@index([status], map: "orycms_users_status_idx")
@@ -42,7 +43,7 @@ model OryCMSSession {
   tokenHash String     @unique
   expiresAt DateTime   @db.Timestamptz(6)
   createdAt DateTime   @default(now()) @db.Timestamptz(6)
-  user      OryCMSUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      OryCMSUser @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([userId], map: "orycms_sessions_user_id_idx")
   @@map("orycms_sessions")
@@ -86,7 +87,7 @@ model OryCMSProduct {
   metaTitle        String?  @map("meta_title")
   metaDescription  String?  @map("meta_description")
   createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt        DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   @@index([status], map: "orycms_products_status_idx")
@@ -106,13 +107,29 @@ model OryCMSCategory {
   metaTitle       String?   @map("meta_title")
   metaDescription String?   @map("meta_description")
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
+  parent          OryCMSCategory?  @relation("OryCMSCategoryHierarchy", fields: [parentId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  children        OryCMSCategory[] @relation("OryCMSCategoryHierarchy")
 
   @@index([parentId], map: "orycms_categories_parent_id_idx")
   @@index([status], map: "orycms_categories_status_idx")
   @@index([deletedAt], map: "orycms_categories_deleted_at_idx")
   @@map("orycms_categories")
+}
+
+model OryCMSInventoryEvent {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productId String?  @map("product_id") @db.Uuid
+  type      String
+  quantity  Int      @default(0)
+  reason    String?
+  updatedBy String?  @map("updated_by")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([productId], map: "orycms_inventory_events_product_id_idx")
+  @@index([createdAt], map: "orycms_inventory_events_created_at_idx")
+  @@map("orycms_inventory_events")
 }
 
 model StorefrontUser {
@@ -129,7 +146,7 @@ model StorefrontUser {
   lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz(6)
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@index([status], map: "storefront_users_status_idx")
   @@index([deletedAt], map: "storefront_users_deleted_at_idx")
@@ -237,7 +254,7 @@ model StorefrontEmailLog {
 model StorefrontEmailPreference {
   userId        String   @id @map("user_id") @db.Uuid
   disabledTypes String[] @default([]) @map("disabled_types")
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("storefront_email_preferences")
 }

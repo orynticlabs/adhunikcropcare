@@ -12,7 +12,6 @@ import Header from "@/components/layout/header"
 import AnnouncementBar from "@/components/layout/announcement-bar"
 import KnowledgeTabs from "@/components/home/knowledge-tabs"
 import FAQAccordion from "@/components/home/faq-accordion"
-import SmartAgriSection from "@/components/home/smart-agri-section"
 import { ProductCard } from "@/components/products/product-card"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import TestimonialsCarousel from "@/components/home/testimonials-carousel"
@@ -355,9 +354,6 @@ export default async function Home() {
             </div>
           </div>
         </section>
-
-        {/* ══ Smart Agriculture (client) ══════════════════════ */}
-        <SmartAgriSection />
 
         {/* ══ Certifications / Sustainability ═════════════════ */}
         <section id="certifications" className="relative py-12 sm:py-16">
