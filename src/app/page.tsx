@@ -250,7 +250,7 @@ export default async function Home() {
 
             <div className="mt-7 sm:mt-10 flex gap-4 sm:gap-5 overflow-x-auto pb-4 sm:pb-6 snap-x snap-mandatory scrollbar-none -mx-4 px-4">
               {products.length > 0 ? (
-                products.map((p) => {
+                products.map((p: any) => {
                   const price = p.salePrice ?? p.price
 
                   return (
