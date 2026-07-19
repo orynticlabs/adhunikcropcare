@@ -1,4 +1,4 @@
-# Adhunik Crop Care
+# Adhunik Crop Care Private Limited
 
 Next.js storefront for Adhunik Crop Care.
 
