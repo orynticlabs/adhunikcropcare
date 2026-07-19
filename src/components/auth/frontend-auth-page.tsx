@@ -28,7 +28,7 @@ export function FrontendAuthPage({ mode }: { mode: Mode }) {
 function AuthFlow({ mode }: { mode: Mode }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { forgotPassword, login, logout, resetPassword, signup, user, verifyEmail } = useAuth()
+  const { forgotPassword, loadingUser, login, logout, resetPassword, signup, user, verifyEmail } = useAuth()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -51,6 +51,19 @@ function AuthFlow({ mode }: { mode: Mode }) {
   }, [logout, mode, router])
 
   useEffect(() => {
+    if ((mode === "login" || mode === "signup") && requestedFrom === "/checkout") {
+      router.replace("/checkout")
+    }
+  }, [mode, requestedFrom, router])
+
+  useEffect(() => {
+    if (loadingUser || !user) return
+    if (mode === "login" || mode === "signup") {
+      router.replace(from)
+    }
+  }, [from, loadingUser, mode, router, user])
+
+  useEffect(() => {
     if (mode !== "verify" || !token) return
     setLoading(true)
     verifyEmail(token)
@@ -63,6 +76,22 @@ function AuthFlow({ mode }: { mode: Mode }) {
     return (
       <AuthShell>
         <AuthCard title="Signing out" subtitle="Closing your secure session..." />
+      </AuthShell>
+    )
+  }
+
+  if ((mode === "login" || mode === "signup") && requestedFrom === "/checkout") {
+    return (
+      <AuthShell>
+        <AuthCard title="Opening secure checkout" subtitle="Please sign in using the account popup..." />
+      </AuthShell>
+    )
+  }
+
+  if ((mode === "login" || mode === "signup") && (loadingUser || user)) {
+    return (
+      <AuthShell>
+        <AuthCard title="Checking session" subtitle="Redirecting you securely..." />
       </AuthShell>
     )
   }

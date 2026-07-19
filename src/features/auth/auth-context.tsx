@@ -147,13 +147,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       })
     } catch (error) {
+      if (error instanceof Error && error.message.includes("Security check failed")) {
+        const freshToken = await getCsrf(true)
+        try {
+          return await fetchJson<T>(url, {
+            ...init,
+            headers: {
+              "content-type": "application/json",
+              "x-csrf-token": freshToken,
+              ...(init.headers ?? {}),
+            },
+          })
+        } catch (retryError) {
+          pushToast(retryError instanceof Error ? retryError.message : "Request failed.", "error")
+          throw retryError
+        }
+      }
       pushToast(error instanceof Error ? error.message : "Request failed.", "error")
       throw error
     }
   }
 
-  async function getCsrf() {
-    if (csrfToken) return csrfToken
+  async function getCsrf(force = false) {
+    if (csrfToken && !force) return csrfToken
     const csrf = await fetchJson<{ csrfToken: string }>("/api/auth/csrf")
     setCsrfToken(csrf.csrfToken)
     return csrf.csrfToken

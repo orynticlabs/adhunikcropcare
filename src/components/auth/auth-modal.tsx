@@ -230,6 +230,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
   const [agree, setAgree] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [globalErr, setGlobalErr] = useState("")
 
   function validate() {
     const nextErrors: Record<string, string> = {}
@@ -246,6 +247,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
+    setGlobalErr("")
     if (!validate()) return
     setLoading(true)
 
@@ -258,6 +260,8 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
       } else if (result.verifyToken) {
         router.push(`/verify-email?token=${encodeURIComponent(result.verifyToken)}`)
       }
+    } catch (error) {
+      setGlobalErr(error instanceof Error ? error.message : "Could not create account. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -269,6 +273,12 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
         <h2 className="font-display text-3xl text-[#033927]">Create account</h2>
         <p className="mt-1 text-sm text-muted-foreground">Fill in your details to get started</p>
       </div>
+
+      {globalErr ? (
+        <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          {globalErr}
+        </div>
+      ) : null}
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -256,11 +256,18 @@ export async function getUserById(id: string) {
 
 export async function updateUserProfile(userId: string, input: Partial<StorefrontUserDTO>) {
   await ensureStorefrontAuthSchema()
-  const firstName = input.firstName?.trim()
-  const lastName = input.lastName?.trim()
-  const phone = input.phone ? normalizePhone(input.phone) : undefined
-  const avatar = input.avatar?.trim() || null
-  const defaultAddress = input.defaultAddress ?? null
+  const [current] = await orycmsPrisma.$queryRaw<UserRow[]>`
+    SELECT * FROM storefront_users WHERE id = ${userId}::uuid LIMIT 1
+  `
+  if (!current) throw new Error("User not found.")
+
+  const firstName = input.firstName?.trim() ?? current.first_name
+  const lastName = input.lastName?.trim() ?? current.last_name
+  const phone = input.phone === undefined ? current.phone : normalizePhone(input.phone)
+  const avatar = input.avatar === undefined ? current.avatar : input.avatar?.trim() || null
+  const defaultAddress = input.defaultAddress === undefined
+    ? current.default_address
+    : input.defaultAddress
 
   if (!firstName || !lastName) throw new Error("Name is required.")
   if (phone && phone.length < 10) throw new Error("Enter a valid mobile number.")

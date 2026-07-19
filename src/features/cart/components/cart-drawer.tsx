@@ -2,7 +2,6 @@
 
 import { useEffect } from "react"
 import Image from "next/image"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { CreditCard, Minus, Plus, ShieldCheck, ShoppingBag, Trash2, X } from "lucide-react"
 import { formatCurrency, useCart } from "@/features/cart/cart-context"
@@ -19,7 +18,7 @@ export default function CartDrawer() {
     removeItem,
     closeCart,
   } = useCart()
-  const { loadingUser, user } = useAuth()
+  const { loadingUser, openAuthModal, user } = useAuth()
 
   useEffect(() => {
     if (!isCartOpen) return
@@ -191,24 +190,25 @@ export default function CartDrawer() {
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
 
-                <Link
-                  href="/checkout"
-                  onClick={(event) => {
+                <button
+                  type="button"
+                  onClick={() => {
                     if (loadingUser) {
-                      event.preventDefault()
                       return
                     }
                     closeCart()
                     if (!user) {
-                      event.preventDefault()
-                      router.push("/login?from=/checkout")
+                      openAuthModal("signin", { redirectTo: "/checkout" })
+                      return
                     }
+                    router.push("/checkout")
                   }}
-                  className="group mt-2.5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#033927] bg-[#033927] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:border-[#689c30] hover:bg-[#689c30] hover:!text-black"
+                  disabled={loadingUser}
+                  className="group mt-2.5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border !border-[#033927] !bg-[#033927] px-6 text-sm font-semibold !text-white shadow-sm transition-colors hover:!border-[#689c30] hover:!bg-[#689c30] hover:!text-black disabled:cursor-wait disabled:opacity-100"
                 >
-                  <CreditCard className="h-4 w-4 text-white transition-colors group-hover:!text-black" aria-hidden />
+                  <CreditCard className="h-4 w-4 !text-white transition-colors group-hover:!text-black" aria-hidden />
                   {loadingUser ? "Checking..." : "Proceed to checkout"}
-                </Link>
+                </button>
 
                 <div className="mt-1 flex items-center justify-center gap-1.5 text-xs text-[#66756d]">
                   <ShieldCheck className="h-3.5 w-3.5 text-[#689c30]" aria-hidden />
@@ -229,7 +229,7 @@ export default function CartDrawer() {
             <button
               type="button"
               onClick={closeCart}
-              className="mt-7 inline-flex h-11 items-center justify-center rounded-full bg-[linear-gradient(135deg,#0d5a48_0%,#033927_100%)] px-6 text-sm font-medium text-white shadow-[0_18px_36px_rgba(3,57,39,0.14)] transition hover:brightness-105"
+              className="mt-7 inline-flex h-11 items-center justify-center rounded-full bg-[#033927] px-6 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#689c30] hover:!text-black"
             >
               Continue shopping
             </button>

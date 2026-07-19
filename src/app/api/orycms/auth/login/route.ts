@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     const user = await orycmsPrisma.oryCMSUser.findUnique({
       where: { email: email.toLowerCase().trim() },
-      select: { email: true, id: true, passwordHash: true, status: true },
+      select: { email: true, id: true, passwordHash: true, role: { select: { name: true } }, roleId: true, status: true },
     })
     const valid = await bcrypt.compare(
       password,
@@ -58,6 +58,19 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    if (!user.roleId || !user.role?.name) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "ADMIN_ROLE_REQUIRED",
+            message: "This account does not have admin access.",
+          },
+        },
+        { status: 403 },
+      )
+    }
+
     const rawToken = crypto.randomBytes(32).toString("hex")
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS)
     const session = await orycmsPrisma.oryCMSSession.create({
@@ -73,6 +86,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         email: user.email,
+        roleName: user.role.name,
         session: { expiresAt: session.expiresAt, id: session.id },
         userId: user.id,
       },

@@ -1,12 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   CheckCircle2, ChevronRight, CreditCard,
-  Leaf, Lock, Package, Phone, ShieldCheck, Tag,
+  Home, Leaf, Lock, MapPin, Package, Phone, Plus, ShieldCheck, Tag,
   Truck, X,
 } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
@@ -30,6 +30,17 @@ const COUPONS: Record<string, number> = {
   ORGANIC20: 20,
   SOIL15: 15,
   CROP10: 10,
+}
+
+type SavedAddress = {
+  address1: string
+  address2?: string
+  city: string
+  id: string
+  isDefault?: boolean
+  label: string
+  pincode: string
+  state: string
 }
 
 type PaymentMethod = "cash_on_delivery" | "razorpay"
@@ -114,7 +125,7 @@ function RazorpayLogo() {
 export default function CheckoutPage() {
   const router = useRouter()
   const { clearCart, items, subtotal, closeCart } = useCart()
-  const { loadingUser, user } = useAuth()
+  const { loadingUser, openAuthModal, updateProfile, user } = useAuth()
 
   /* form fields */
   const [firstName, setFirstName]   = useState(user?.firstName ?? "")
@@ -126,6 +137,10 @@ export default function CheckoutPage() {
   const [city,      setCity]        = useState("")
   const [state,     setState]       = useState("")
   const [pincode,   setPincode]     = useState("")
+  const [selectedAddressId, setSelectedAddressId] = useState("new")
+  const [saveAddress, setSaveAddress] = useState(true)
+  const [saveAsDefault, setSaveAsDefault] = useState(true)
+  const [addressLabel, setAddressLabel] = useState("Home")
   const [delivery,  setDelivery]    = useState<"standard" | "express">("standard")
   const [payment,   setPayment]     = useState<PaymentMethod>("cash_on_delivery")
   const [coupon,    setCoupon]      = useState("")
@@ -136,6 +151,8 @@ export default function CheckoutPage() {
   const [paymentErr, setPaymentErr] = useState("")
   const [toast, setToast] = useState("")
 
+  const savedAddresses = useMemo(() => readSavedAddresses(user?.defaultAddress), [user?.defaultAddress])
+
   /* derived totals */
   const shippingCost   = delivery === "express" ? 99 : subtotal >= 999 ? 0 : 49
   const discountAmount = applied ? Math.round(subtotal * applied.pct / 100) : 0
@@ -143,9 +160,9 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!loadingUser && !user) {
-      router.replace("/login?from=/checkout")
+      openAuthModal("signin", { redirectTo: "/checkout" })
     }
-  }, [loadingUser, router, user])
+  }, [loadingUser, user])
 
   useEffect(() => {
     if (!user) return
@@ -153,10 +170,43 @@ export default function CheckoutPage() {
     setLastName((value) => value || user.lastName)
     setEmail((value) => value || user.email)
     setPhone((value) => value || user.phone)
-    if (typeof user.defaultAddress?.line === "string") {
-      setAddress1((value) => value || String(user.defaultAddress?.line ?? ""))
-    }
   }, [user])
+
+  useEffect(() => {
+    if (!user || savedAddresses.length === 0) return
+    const defaultAddress = savedAddresses.find((address) => address.isDefault) ?? savedAddresses[0]
+    setSelectedAddressId((current) => (current === "new" ? defaultAddress.id : current))
+  }, [savedAddresses, user])
+
+  useEffect(() => {
+    if (selectedAddressId === "new") return
+    const selected = savedAddresses.find((address) => address.id === selectedAddressId)
+    if (!selected) return
+    applyAddress(selected)
+    setSaveAddress(false)
+    setSaveAsDefault(Boolean(selected.isDefault))
+    setAddressLabel(selected.label)
+  }, [savedAddresses, selectedAddressId])
+
+  function applyAddress(address: SavedAddress) {
+    setAddress1(address.address1)
+    setAddress2(address.address2 ?? "")
+    setCity(address.city)
+    setState(address.state)
+    setPincode(address.pincode)
+  }
+
+  function startNewAddress() {
+    setSelectedAddressId("new")
+    setAddress1("")
+    setAddress2("")
+    setCity("")
+    setState("")
+    setPincode("")
+    setAddressLabel("Home")
+    setSaveAddress(true)
+    setSaveAsDefault(savedAddresses.length === 0)
+  }
 
   /* coupon */
   function applyCoupon() {
@@ -189,12 +239,13 @@ export default function CheckoutPage() {
     if (placing) return
     setPaymentErr("")
     if (!user) {
-      router.push("/login?from=/checkout")
+      openAuthModal("signin", { redirectTo: "/checkout" })
       return
     }
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return }
     setPlacing(true)
     try {
+      if (saveAddress) await saveCheckoutAddress()
       const csrfToken = await getCsrfToken()
       const idempotencyKey = getCheckoutAttemptKey()
       const result = await postJson<{
@@ -254,6 +305,40 @@ export default function CheckoutPage() {
     }
   }
 
+  async function saveCheckoutAddress() {
+    if (!user) return
+    const nextAddress = currentAddress(addressLabel || "Home", saveAsDefault || savedAddresses.length === 0)
+    const otherAddresses = savedAddresses.filter((address) => address.id !== selectedAddressId)
+    const addresses = [
+      ...otherAddresses.map((address) => ({ ...address, isDefault: saveAsDefault ? false : address.isDefault })),
+      nextAddress,
+    ]
+    const defaultId = (saveAsDefault || addresses.length === 1) ? nextAddress.id : addresses.find((address) => address.isDefault)?.id ?? addresses[0].id
+    await updateProfile({
+      defaultAddress: { addresses: addresses.map((address) => ({ ...address, isDefault: address.id === defaultId })), defaultId },
+      avatar: user.avatar,
+      firstName,
+      lastName,
+      phone,
+    })
+    setSelectedAddressId(nextAddress.id)
+    setSaveAddress(false)
+    showToast("Address saved to your account.")
+  }
+
+  function currentAddress(label: string, isDefault: boolean): SavedAddress {
+    return {
+      address1: address1.trim(),
+      address2: address2.trim(),
+      city: city.trim(),
+      id: selectedAddressId !== "new" ? selectedAddressId : crypto.randomUUID(),
+      isDefault,
+      label: label.trim() || "Home",
+      pincode: pincode.trim(),
+      state,
+    }
+  }
+
   function showToast(message: string) {
     setToast(message)
     window.setTimeout(() => setToast((current) => (current === message ? "" : current)), 3600)
@@ -274,7 +359,7 @@ export default function CheckoutPage() {
         size: item.size,
       })),
       paymentMethod: payment,
-      shippingAddress: { address1, address2, city, pincode, state },
+      shippingAddress: { address1, address2, city, label: addressLabel, pincode, savedAddressId: selectedAddressId !== "new" ? selectedAddressId : null, state },
       shippingTotal: shippingCost,
       subtotal,
       total,
@@ -312,6 +397,12 @@ export default function CheckoutPage() {
     )
   }
 
+  const hasSavedAddresses = savedAddresses.length > 0
+  const contactStep = hasSavedAddresses ? 2 : 1
+  const addressStep = hasSavedAddresses ? 3 : 2
+  const deliveryStep = hasSavedAddresses ? 4 : 3
+  const paymentStep = hasSavedAddresses ? 5 : 4
+
   return (
     <div className="min-h-screen bg-background">
       <AnnouncementBar />
@@ -348,8 +439,61 @@ export default function CheckoutPage() {
             {/* ══ LEFT: form ══════════════════════════════════════════ */}
             <div className="space-y-5">
 
-              {/* Step 1 — Contact */}
-              <SectionCard title="Contact Information" step={1}>
+              {hasSavedAddresses ? (
+                <SectionCard title="Saved Addresses" step={1}>
+                  <div className="space-y-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {savedAddresses.map((address) => {
+                        const selected = selectedAddressId === address.id
+                        return (
+                          <button
+                            key={address.id}
+                            type="button"
+                            onClick={() => setSelectedAddressId(address.id)}
+                            className={`group rounded-2xl border p-4 text-left transition-colors ${
+                              selected
+                                ? "border-[#033927] bg-[#033927] text-white"
+                                : "border-border/60 bg-white text-black hover:border-[#689c30] hover:bg-[#689c30]/10"
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${selected ? "bg-white/10 text-[#689c30]" : "bg-[#689c30]/10 text-black"}`}>
+                                  <Home className="h-4 w-4" aria-hidden />
+                                </span>
+                                <div>
+                                  <p className="text-sm font-bold">{address.label}</p>
+                                  {address.isDefault ? (
+                                    <p className={`text-[11px] ${selected ? "text-white/70" : "text-[#033927]"}`}>Default address</p>
+                                  ) : null}
+                                </div>
+                              </div>
+                              {selected ? <CheckCircle2 className="h-4 w-4 text-[#689c30]" aria-hidden /> : null}
+                            </div>
+                            <p className={`mt-3 text-sm leading-6 ${selected ? "text-white/75" : "text-muted-foreground"}`}>
+                              {formatAddress(address)}
+                            </p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={startNewAddress}
+                      className="inline-flex h-10 items-center gap-2 rounded-full border border-border/70 bg-white px-4 text-sm font-semibold text-black transition hover:border-[#689c30] hover:bg-[#689c30]/10"
+                    >
+                      <Plus className="h-4 w-4" aria-hidden />
+                      Add new address
+                    </button>
+                    <p className="text-xs text-muted-foreground">
+                      Selected addresses are editable below before you place the order.
+                    </p>
+                  </div>
+                </SectionCard>
+              ) : null}
+
+              {/* Contact */}
+              <SectionCard title="Contact Information" step={contactStep}>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="First name" required error={errors.firstName}>
                     <input value={firstName} onChange={e => setFirstName(e.target.value)}
@@ -376,9 +520,38 @@ export default function CheckoutPage() {
                 </div>
               </SectionCard>
 
-              {/* Step 2 — Delivery Address */}
-              <SectionCard title="Delivery Address" step={2}>
+              {/* Delivery Address */}
+              <SectionCard title="Delivery Address" step={addressStep}>
                 <div className="grid gap-4">
+                  <div className="flex flex-col gap-4 rounded-2xl border border-border/50 bg-[#f6f8f5] p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[#689c30]/10 text-black">
+                        <MapPin className="h-5 w-5" aria-hidden />
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold">
+                          {selectedAddressId === "new" ? "Add a new delivery address" : "Edit selected delivery address"}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Changes here will be used for this order. Tick save if you want to keep it for later.
+                        </p>
+                      </div>
+                    </div>
+                    {hasSavedAddresses && selectedAddressId !== "new" ? (
+                      <button
+                        type="button"
+                        onClick={startNewAddress}
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-full bg-white px-4 text-xs font-semibold text-black ring-1 ring-border transition hover:ring-[#689c30]"
+                      >
+                        <Plus className="h-3.5 w-3.5" aria-hidden />
+                        Use new
+                      </button>
+                    ) : null}
+                  </div>
+                  <Field label="Address label" required>
+                    <input value={addressLabel} onChange={e => setAddressLabel(e.target.value)}
+                      className={inputCls()} placeholder="Home, Farm, Office" />
+                  </Field>
                   <Field label="Address line 1" required error={errors.address1}>
                     <input value={address1} onChange={e => setAddress1(e.target.value)}
                       className={inputCls(errors.address1)} placeholder="House / Flat / Street" />
@@ -405,11 +578,36 @@ export default function CheckoutPage() {
                         className={inputCls(errors.pincode)} placeholder="411001" />
                     </Field>
                   </div>
+                  <div className="flex flex-col gap-3 rounded-2xl border border-border/50 bg-white p-4">
+                    <label className="flex cursor-pointer items-start gap-3 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={saveAddress}
+                        onChange={(event) => setSaveAddress(event.target.checked)}
+                        className="mt-0.5 h-4 w-4 accent-[#033927]"
+                      />
+                      <span>
+                        <span className="font-semibold">Save this address to my account</span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">You can reuse it on future orders.</span>
+                      </span>
+                    </label>
+                    {saveAddress ? (
+                      <label className="flex cursor-pointer items-center gap-3 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={saveAsDefault}
+                          onChange={(event) => setSaveAsDefault(event.target.checked)}
+                          className="h-4 w-4 accent-[#033927]"
+                        />
+                        <span className="font-medium">Make this my default address</span>
+                      </label>
+                    ) : null}
+                  </div>
                 </div>
               </SectionCard>
 
-              {/* Step 3 — Delivery Method */}
-              <SectionCard title="Delivery Method" step={3}>
+              {/* Delivery Method */}
+              <SectionCard title="Delivery Method" step={deliveryStep}>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[
                     {
@@ -457,8 +655,8 @@ export default function CheckoutPage() {
                 </div>
               </SectionCard>
 
-              {/* Step 4 — Payment */}
-              <SectionCard title="Payment Method" step={4}>
+              {/* Payment */}
+              <SectionCard title="Payment Method" step={paymentStep}>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[
                     {
@@ -661,9 +859,9 @@ export default function CheckoutPage() {
               <div className="rounded-2xl border border-border/50 bg-white p-4 text-sm">
                 <p className="font-semibold">Need help?</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Call our farmer support line at <strong className="text-foreground">1800-200-CROP</strong> or email{" "}
-                  <a href="mailto:hello@adhunikcrop.in" className="text-[#033927] hover:text-[#689c30] hover:underline">
-                    hello@adhunikcrop.in
+                  Call our farmer support line at <strong className="text-foreground">+919205762766</strong> or email{" "}
+                  <a href="mailto:support@adhunikcropcare.com" className="text-[#033927] hover:text-[#689c30] hover:underline">
+                    support@adhunikcropcare.com
                   </a>
                 </p>
               </div>
@@ -768,4 +966,59 @@ async function openRazorpayCheckout(input: {
   })
   checkout.on("payment.failed", input.onFailure)
   checkout.open()
+}
+
+function readSavedAddresses(raw: unknown): SavedAddress[] {
+  if (!raw || typeof raw !== "object") return []
+  const value = raw as Record<string, unknown>
+  const defaultId = typeof value.defaultId === "string" ? value.defaultId : ""
+
+  if (Array.isArray(value.addresses)) {
+    return value.addresses
+      .map((item, index) => normalizeAddress(item, defaultId, index))
+      .filter((item): item is SavedAddress => Boolean(item))
+  }
+
+  if (typeof value.line === "string" && value.line.trim()) {
+    return [{
+      address1: value.line.trim(),
+      address2: "",
+      city: "",
+      id: "legacy-default",
+      isDefault: true,
+      label: "Default",
+      pincode: "",
+      state: "",
+    }]
+  }
+
+  return []
+}
+
+function normalizeAddress(item: unknown, defaultId: string, index: number): SavedAddress | null {
+  if (!item || typeof item !== "object") return null
+  const value = item as Record<string, unknown>
+  const address1 = text(value.address1)
+  if (!address1) return null
+  const id = text(value.id) || `address-${index + 1}`
+  return {
+    address1,
+    address2: text(value.address2),
+    city: text(value.city),
+    id,
+    isDefault: Boolean(value.isDefault) || id === defaultId,
+    label: text(value.label) || `Address ${index + 1}`,
+    pincode: text(value.pincode),
+    state: text(value.state),
+  }
+}
+
+function text(value: unknown) {
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function formatAddress(address: SavedAddress) {
+  return [address.address1, address.address2, address.city, address.state, address.pincode]
+    .filter(Boolean)
+    .join(", ")
 }

@@ -303,11 +303,11 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                 disabled={activeOption === null}
                 className={`inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full px-6 text-sm font-bold text-white transition-colors ${
                   activeOption === null
-                    ? "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+                    ? "cursor-not-allowed border border-[#d7e0da] bg-white text-[#203129]"
                     : "bg-[#033927] hover:bg-[#689c30] hover:!text-black"
                 }`}
               >
-                <ShoppingBag className="h-4 w-4" aria-hidden />
+                <ShoppingBag className={`h-4 w-4 ${activeOption === null ? "text-[#203129]" : ""}`} aria-hidden />
                 {activeOption === null ? "Select a pack size" : "Add to Cart"}
               </button>
             </div>

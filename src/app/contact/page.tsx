@@ -32,21 +32,21 @@ const CHANNELS = [
     title: "Crop guidance",
     copy: "Discuss crop stage, field condition, product selection, and application planning.",
     action: "Ask an agronomist",
-    href: "mailto:hello@adhunikcrop.in?subject=Crop%20Guidance",
+    href: "mailto:support@adhunikcropcare.com?subject=Crop%20Guidance",
   },
   {
     icon: Headphones,
     title: "Order support",
     copy: "Get assistance with product availability, an existing order, delivery, or account questions.",
     action: "Email support",
-    href: "mailto:hello@adhunikcrop.in?subject=Order%20Support",
+    href: "mailto:support@adhunikcropcare.com?subject=Order%20Support",
   },
   {
     icon: Users,
     title: "Business enquiries",
     copy: "Connect regarding dealership, distribution, wholesale, institutional, or partnership requirements.",
     action: "Start a conversation",
-    href: "mailto:hello@adhunikcrop.in?subject=Business%20Enquiry",
+    href: "mailto:support@adhunikcropcare.com?subject=Business%20Enquiry",
   },
 ]
 
@@ -138,7 +138,7 @@ export default function ContactPage() {
               <div className="mt-10 space-y-5">
                 {[
                   [Clock3, "Response window", "We aim to respond within one business day."],
-                  [Mail, "Email", "hello@adhunikcrop.in"],
+                  [Mail, "Email", "support@adhunikcropcare.com"],
                   [MapPin, "Service reach", "Supporting farmers and partners across India."],
                 ].map(([Icon, title, copy]) => {
                   const InfoIcon = Icon as typeof Leaf
@@ -222,13 +222,13 @@ export default function ContactPage() {
                   </h2>
                   <div className="mt-8 flex flex-wrap gap-3">
                     <a
-                      href="mailto:hello@adhunikcrop.in"
+                      href="mailto:support@adhunikcropcare.com"
                       className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-6 text-sm font-bold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black"
                     >
                       <Mail className="h-4 w-4" /> Email our team
                     </a>
                     <a
-                      href="mailto:hello@adhunikcrop.in?subject=Callback%20Request"
+                      href="mailto:support@adhunikcropcare.com?subject=Callback%20Request"
                       className="inline-flex h-12 items-center gap-2 rounded-full border border-[#17382d]/20 bg-white/40 px-6 text-sm font-bold text-[#17382d] hover:text-[#17382d]"
                     >
                       <MessageCircle className="h-4 w-4" /> Request a callback

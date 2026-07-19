@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
@@ -16,6 +16,7 @@ import AnnouncementBar from "@/components/layout/announcement-bar"
 import Header from "@/components/layout/header"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import SiteFooter from "@/components/layout/site-footer"
+import { DefaultMemojiAvatar } from "@/components/auth/default-memoji-avatar"
 
 /* ── Types ─────────────────────────────────────────────────────── */
 type Tab = "profile" | "orders" | "addresses" | "wishlist"
@@ -54,34 +55,6 @@ interface WishlistItem {
   img: string
   inStock: boolean
 }
-
-const MOCK_ADDRESSES: Address[] = [
-  {
-    id: "addr_1",
-    label: "Home",
-    name: "Ramesh Patel",
-    line1: "Plot 12, Sector 4, Vrindavan Colony",
-    city: "Pune",
-    state: "Maharashtra",
-    pincode: "411001",
-    phone: "9876543210",
-    isDefault: true,
-  },
-  {
-    id: "addr_2",
-    label: "Farm",
-    name: "Ramesh Patel",
-    line1: "Survey No. 78, Near Sangam Nagar",
-    line2: "Opposite Water Tank",
-    city: "Nashik",
-    state: "Maharashtra",
-    pincode: "422001",
-    phone: "9876543211",
-    isDefault: false,
-  },
-]
-
-const DEFAULT_MEMOJI = "/default-memoji.svg"
 
 const MOCK_WISHLIST: WishlistItem[] = []
 
@@ -122,10 +95,83 @@ function paymentLabel(method?: string) {
   return method === "razorpay" ? "Razorpay Online" : "Cash on Delivery"
 }
 
+function text(value: unknown) {
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function readAddresses(raw: unknown, user?: { firstName: string; lastName: string; phone: string } | null): Address[] {
+  if (!raw || typeof raw !== "object") return []
+  const value = raw as Record<string, unknown>
+  const defaultId = text(value.defaultId)
+
+  if (Array.isArray(value.addresses)) {
+    return value.addresses
+      .map((item, index) => normalizeAddress(item, defaultId, index, user))
+      .filter((item): item is Address => Boolean(item))
+  }
+
+  const line = text(value.line)
+  if (!line) return []
+  return [{
+    city: "",
+    id: "legacy-default",
+    isDefault: true,
+    label: "Default",
+    line1: line,
+    name: user ? `${user.firstName} ${user.lastName}`.trim() : "",
+    phone: user?.phone ?? "",
+    pincode: "",
+    state: "",
+  }]
+}
+
+function normalizeAddress(item: unknown, defaultId: string, index: number, user?: { firstName: string; lastName: string; phone: string } | null): Address | null {
+  if (!item || typeof item !== "object") return null
+  const value = item as Record<string, unknown>
+  const line1 = text(value.address1) || text(value.line1)
+  if (!line1) return null
+  const id = text(value.id) || `address-${index + 1}`
+  return {
+    city: text(value.city),
+    id,
+    isDefault: Boolean(value.isDefault) || id === defaultId,
+    label: text(value.label) || `Address ${index + 1}`,
+    line1,
+    line2: text(value.address2) || text(value.line2),
+    name: text(value.name) || (user ? `${user.firstName} ${user.lastName}`.trim() : ""),
+    phone: text(value.phone) || user?.phone || "",
+    pincode: text(value.pincode),
+    state: text(value.state),
+  }
+}
+
+function addressesJson(addresses: Address[]) {
+  const normalized = addresses.map((address) => ({
+    address1: address.line1,
+    address2: address.line2 ?? "",
+    city: address.city,
+    id: address.id,
+    isDefault: address.isDefault,
+    label: address.label,
+    name: address.name,
+    phone: address.phone,
+    pincode: address.pincode,
+    state: address.state,
+  }))
+  const defaultId = normalized.find((address) => address.isDefault)?.id ?? normalized[0]?.id ?? null
+  return { addresses: normalized.map((address) => ({ ...address, isDefault: address.id === defaultId })), defaultId }
+}
+
+function formatAddress(address?: Address) {
+  if (!address) return "Not set"
+  return [address.line1, address.line2, address.city, address.state, address.pincode].filter(Boolean).join(", ")
+}
+
 /* ── Sub-views ─────────────────────────────────────────────────── */
 function ProfileView({ onEdit }: { onEdit: () => void }) {
   const { user } = useAuth()
   if (!user) return null
+  const defaultAddress = readAddresses(user.defaultAddress, user).find((address) => address.isDefault)
   return (
     <div className="space-y-6">
       {/* Avatar + name */}
@@ -135,7 +181,7 @@ function ProfileView({ onEdit }: { onEdit: () => void }) {
             {user.avatar ? (
               <Image src={user.avatar} alt="" width={80} height={80} className="h-full w-full object-cover" />
             ) : (
-              <img src={DEFAULT_MEMOJI} alt="" className="h-full w-full object-cover" />
+              <DefaultMemojiAvatar seed={`${user.id}:${user.email}`} className="h-full w-full object-cover" />
             )}
           </div>
           <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#689c30] text-white shadow">
@@ -158,7 +204,7 @@ function ProfileView({ onEdit }: { onEdit: () => void }) {
           { icon: Phone,    label: "Phone",  value: `+91 ${user.phone}` },
           { icon: Calendar, label: "Joined", value: fmtDate(user.joinedAt) },
           { icon: ShieldCheck, label: "Account", value: user.emailVerified ? "Verified" : "Pending verification" },
-          { icon: MapPin, label: "Default Address", value: typeof user.defaultAddress?.line === "string" ? user.defaultAddress.line : "Not set" },
+          { icon: MapPin, label: "Default Address", value: formatAddress(defaultAddress) },
         ].map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-start gap-3 rounded-2xl border border-border/50 bg-card p-4">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#689c30]/10">
@@ -205,7 +251,6 @@ function EditProfileView({ onBack }: { onBack: () => void }) {
   const [lastName,  setLastName]  = useState(user?.lastName  ?? "")
   const [phone,     setPhone]     = useState(user?.phone     ?? "")
   const [avatar, setAvatar] = useState(user?.avatar ?? "")
-  const [defaultAddress, setDefaultAddress] = useState(typeof user?.defaultAddress?.line === "string" ? user.defaultAddress.line : "")
   const [saved,     setSaved]     = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -214,7 +259,7 @@ function EditProfileView({ onBack }: { onBack: () => void }) {
   async function save() {
     setSaving(true)
     try {
-      await updateProfile({ avatar, defaultAddress: { line: defaultAddress }, firstName, lastName, phone })
+      await updateProfile({ avatar, defaultAddress: user?.defaultAddress ?? null, firstName, lastName, phone })
       setSaved(true)
       setTimeout(() => { setSaved(false); onBack() }, 900)
     } finally {
@@ -252,10 +297,9 @@ function EditProfileView({ onBack }: { onBack: () => void }) {
             <input value={phone} maxLength={10} onChange={e => setPhone(e.target.value.replace(/\D/g, ""))} className={`${inputCls} flex-1`} />
           </div>
         </div>
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <label className="text-sm font-medium text-foreground/80">Default address</label>
-          <textarea value={defaultAddress} onChange={e => setDefaultAddress(e.target.value)} className={`${inputCls} min-h-24 py-3`} placeholder="Village, district, state, PIN" />
-        </div>
+        <p className="sm:col-span-2 rounded-2xl border border-[#689c30]/20 bg-[#689c30]/8 p-4 text-sm text-muted-foreground">
+          Manage delivery addresses from the Addresses tab so checkout and your profile stay synced.
+        </p>
       </div>
       <button
         onClick={save}
@@ -351,33 +395,141 @@ function OrdersView({ loading, orders }: { loading: boolean; orders: Order[] }) 
 }
 
 function AddressesView() {
-  const [addresses, setAddresses] = useState<Address[]>(MOCK_ADDRESSES)
+  const { user, updateProfile } = useAuth()
+  const savedAddresses = useMemo(() => readAddresses(user?.defaultAddress, user), [user])
+  const emptyForm = useMemo<Address>(() => ({
+    city: "",
+    id: "",
+    isDefault: savedAddresses.length === 0,
+    label: "Home",
+    line1: "",
+    line2: "",
+    name: user ? `${user.firstName} ${user.lastName}`.trim() : "",
+    phone: user?.phone ?? "",
+    pincode: "",
+    state: "",
+  }), [savedAddresses.length, user])
+  const [editing, setEditing] = useState<Address | null>(null)
+  const [error, setError] = useState("")
+  const [saving, setSaving] = useState(false)
 
-  function removeAddress(id: string) {
-    setAddresses(prev => prev.filter(a => a.id !== id))
+  useEffect(() => {
+    if (editing) return
+    setError("")
+  }, [editing])
+
+  async function persist(nextAddresses: Address[]) {
+    if (!user) return
+    const normalized = nextAddresses.length > 0 && !nextAddresses.some((address) => address.isDefault)
+      ? nextAddresses.map((address, index) => ({ ...address, isDefault: index === 0 }))
+      : nextAddresses
+    await updateProfile({
+      avatar: user.avatar,
+      defaultAddress: addressesJson(normalized),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+    })
   }
 
-  function setDefault(id: string) {
-    setAddresses(prev => prev.map(a => ({ ...a, isDefault: a.id === id })))
+  async function removeAddress(id: string) {
+    if (!window.confirm("Delete this saved address?")) return
+    await persist(savedAddresses.filter((address) => address.id !== id))
+  }
+
+  async function setDefault(id: string) {
+    await persist(savedAddresses.map((address) => ({ ...address, isDefault: address.id === id })))
+  }
+
+  async function saveAddress() {
+    if (!editing) return
+    const nextAddress = {
+      ...editing,
+      city: editing.city.trim(),
+      id: editing.id || `addr-${Date.now()}`,
+      label: editing.label.trim() || "Address",
+      line1: editing.line1.trim(),
+      line2: editing.line2?.trim() ?? "",
+      name: editing.name.trim(),
+      phone: editing.phone.replace(/\D/g, "").slice(0, 10),
+      pincode: editing.pincode.replace(/\D/g, "").slice(0, 6),
+      state: editing.state.trim(),
+    }
+    if (!nextAddress.name || !nextAddress.line1 || !nextAddress.city || !nextAddress.state || !/^\d{6}$/.test(nextAddress.pincode) || !/^\d{10}$/.test(nextAddress.phone)) {
+      setError("Add name, full address, city, state, valid 6-digit pincode, and 10-digit phone.")
+      return
+    }
+    setSaving(true)
+    setError("")
+    try {
+      const otherAddresses = savedAddresses.filter((address) => address.id !== nextAddress.id)
+      const shouldDefault = nextAddress.isDefault || otherAddresses.length === 0
+      await persist([
+        ...otherAddresses.map((address) => ({ ...address, isDefault: shouldDefault ? false : address.isDefault })),
+        { ...nextAddress, isDefault: shouldDefault },
+      ])
+      setEditing(null)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h3 className="font-display text-2xl">Saved Addresses</h3>
-        <button className="flex h-9 items-center gap-2 rounded-full bg-[#033927] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black">
+        <button
+          onClick={() => setEditing(emptyForm)}
+          className="flex h-9 items-center gap-2 rounded-full bg-[#033927] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black"
+        >
           <Plus className="h-3.5 w-3.5" /> Add New
         </button>
       </div>
 
-      {addresses.length === 0 && (
+      {editing && (
+        <div className="rounded-2xl border border-[#689c30]/30 bg-[#689c30]/5 p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h4 className="font-display text-xl">{editing.id ? "Edit Address" : "Add Address"}</h4>
+            <button onClick={() => setEditing(null)} className="text-sm font-semibold text-muted-foreground hover:text-[#689c30]">Cancel</button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <AddressInput label="Label" value={editing.label} onChange={(label) => setEditing({ ...editing, label })} />
+            <AddressInput label="Full name" value={editing.name} onChange={(name) => setEditing({ ...editing, name })} />
+            <AddressInput label="Mobile number" value={editing.phone} maxLength={10} onChange={(phone) => setEditing({ ...editing, phone: phone.replace(/\D/g, "") })} />
+            <AddressInput label="Pincode" value={editing.pincode} maxLength={6} onChange={(pincode) => setEditing({ ...editing, pincode: pincode.replace(/\D/g, "") })} />
+            <AddressInput label="Address line 1" value={editing.line1} onChange={(line1) => setEditing({ ...editing, line1 })} className="sm:col-span-2" />
+            <AddressInput label="Address line 2" value={editing.line2 ?? ""} onChange={(line2) => setEditing({ ...editing, line2 })} className="sm:col-span-2" />
+            <AddressInput label="City" value={editing.city} onChange={(city) => setEditing({ ...editing, city })} />
+            <AddressInput label="State" value={editing.state} onChange={(state) => setEditing({ ...editing, state })} />
+          </div>
+          <label className="mt-4 flex items-center gap-3 text-sm font-semibold">
+            <input
+              checked={editing.isDefault}
+              onChange={(event) => setEditing({ ...editing, isDefault: event.target.checked })}
+              type="checkbox"
+              className="h-4 w-4 accent-[#033927]"
+            />
+            Make this my default address
+          </label>
+          {error ? <p className="mt-3 text-sm font-semibold text-destructive">{error}</p> : null}
+          <button
+            onClick={saveAddress}
+            disabled={saving}
+            className="mt-5 flex h-11 items-center gap-2 rounded-full bg-[#033927] px-6 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving ? "Saving..." : "Save Address"}
+          </button>
+        </div>
+      )}
+
+      {savedAddresses.length === 0 && !editing && (
         <div className="flex flex-col items-center gap-3 py-12 text-center">
           <MapPin className="h-12 w-12 text-muted-foreground/30" strokeWidth={1} />
           <p className="text-muted-foreground">No saved addresses yet.</p>
         </div>
       )}
 
-      {addresses.map(addr => (
+      {savedAddresses.map(addr => (
         <div
           key={addr.id}
           className={`rounded-2xl border p-5 transition-all ${
@@ -396,7 +548,7 @@ function AddressesView() {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <button className="text-xs font-medium text-[#689c30] hover:underline">Edit</button>
+              <button onClick={() => setEditing(addr)} className="text-xs font-medium text-[#689c30] hover:underline">Edit</button>
               <button
                 onClick={() => removeAddress(addr.id)}
                 className="text-muted-foreground hover:text-destructive transition"
@@ -428,6 +580,32 @@ function AddressesView() {
         </div>
       ))}
     </div>
+  )
+}
+
+function AddressInput({
+  className = "",
+  label,
+  maxLength,
+  onChange,
+  value,
+}: {
+  className?: string
+  label: string
+  maxLength?: number
+  onChange: (value: string) => void
+  value: string
+}) {
+  return (
+    <label className={`flex flex-col gap-1.5 ${className}`}>
+      <span className="text-sm font-medium text-foreground/80">{label}</span>
+      <input
+        value={value}
+        maxLength={maxLength}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-11 w-full rounded-xl border border-border/60 bg-background px-4 text-sm outline-none transition focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15"
+      />
+    </label>
   )
 }
 
@@ -559,7 +737,11 @@ export default function AccountPage() {
               <div className="rounded-2xl border border-border/50 bg-card p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#689c30]/15 font-display text-lg font-bold text-[#689c30]">
-                    <img src={user.avatar || DEFAULT_MEMOJI} alt="" className="h-full w-full rounded-xl object-cover" />
+                    {user.avatar ? (
+                      <Image src={user.avatar} alt="" width={48} height={48} className="h-full w-full rounded-xl object-cover" />
+                    ) : (
+                      <DefaultMemojiAvatar seed={`${user.id}:${user.email}`} className="h-full w-full rounded-xl object-cover" />
+                    )}
                   </div>
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{user.firstName} {user.lastName}</p>
@@ -610,9 +792,9 @@ export default function AccountPage() {
                   <span className="text-sm font-semibold">Need help?</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Call <strong className="text-foreground">1800-200-CROP</strong> or email{" "}
-                  <a href="mailto:hello@adhunikcrop.in" className="text-[#689c30] hover:underline">
-                    hello@adhunikcrop.in
+                  Call <strong className="text-foreground">+919205762766</strong> or email{" "}
+                  <a href="mailto:support@adhunikcropcare.com" className="text-[#689c30] hover:underline">
+                    support@adhunikcropcare.com
                   </a>
                 </p>
               </div>

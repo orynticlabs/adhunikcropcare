@@ -1,5 +1,5 @@
-import OryCMSAdminPage from "@/components/orycms/admin-page"
+import { redirect } from "next/navigation"
 
 export default function AdminPage() {
-  return <OryCMSAdminPage />
+  redirect("/admin/dashboard")
 }

@@ -25,14 +25,20 @@ export async function requireOryCMSUser(request: NextRequest) {
         select: {
           email: true,
           id: true,
+          role: { select: { name: true } },
+          roleId: true,
         },
       },
     },
   })
 
-  if (!session) {
+  if (!session?.user.roleId || !session.user.role?.name) {
     throw new Response("Session expired or invalid.", { status: 401 })
   }
 
-  return session.user
+  return {
+    email: session.user.email,
+    id: session.user.id,
+    roleName: session.user.role.name,
+  }
 }

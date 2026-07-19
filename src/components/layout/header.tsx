@@ -6,6 +6,7 @@ import Image from "next/image"
 import Link from "next/link"
 import CartIcon from "@/features/cart/components/cart-icon"
 import SearchBox from "@/components/search/search-box"
+import { DefaultMemojiAvatar } from "@/components/auth/default-memoji-avatar"
 import { useCart } from "@/features/cart/cart-context"
 import { useAuth } from "@/features/auth/auth-context"
 
@@ -35,8 +36,6 @@ const MORE_LINKS = [
   { label: "Blogs",               href: "/blog"                },
   { label: "Contact Us",          href: "/contact"             },
 ]
-
-const DEFAULT_MEMOJI = "/default-memoji.svg"
 
 export default function Header() {
   const accountRef = useRef<HTMLDivElement | null>(null)
@@ -139,7 +138,7 @@ export default function Header() {
                       {user.avatar ? (
                         <Image src={user.avatar} alt="" width={28} height={28} className="h-full w-full object-cover" />
                       ) : (
-                        <img src={DEFAULT_MEMOJI} alt="" className="h-full w-full object-cover" />
+                        <DefaultMemojiAvatar seed={`${user.id}:${user.email}`} className="h-full w-full object-cover" />
                       )}
                     </span>
                   </button>

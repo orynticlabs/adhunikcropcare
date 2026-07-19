@@ -121,6 +121,7 @@ function DashboardShell({
   section: string
 }) {
   const router = useRouter()
+  const pathname = usePathname()
   const { loaded, user, roleName } = useOryCMSSession()
   const headerActionsRef = useRef<HTMLDivElement>(null)
   const [collapsed, setCollapsed] = useState(false)
@@ -130,8 +131,10 @@ function DashboardShell({
   const [profileOpen, setProfileOpen] = useState(false)
 
   useEffect(() => {
-    if (loaded && !user) router.replace("/login?from=/admin")
-  }, [loaded, router, user])
+    if (!loaded || (user && roleName)) return
+    const from = pathname?.startsWith("/admin") ? pathname : "/admin/dashboard"
+    router.replace(`/admin/login?from=${encodeURIComponent(from)}`)
+  }, [loaded, pathname, roleName, router, user])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -165,7 +168,7 @@ function DashboardShell({
 
   async function logout() {
     await fetch("/api/orycms/auth/logout", { method: "POST" })
-    router.replace("/login")
+    router.replace("/admin")
   }
 
   if (!loaded) {
@@ -253,7 +256,7 @@ function DashboardShell({
                 className="grid h-8 w-8 place-items-center rounded-full border border-border bg-gradient-to-br from-chart-3 to-chart-4 text-[11px] font-semibold text-white shadow-xs transition-opacity hover:opacity-90"
                 aria-label="Profile"
               >
-                {user.email.slice(0, 2).toUpperCase()}
+                <img src="/orycms/img/favicon.png" alt="" className="h-5 w-5 object-contain" />
               </button>
 
               <ProfileDropdown
@@ -781,7 +784,7 @@ function OryCMSSidebar({ collapsed }: { collapsed: boolean }) {
     >
       <div className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2.5 border-b border-border/70 bg-sidebar px-4">
         <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-surface">
-          <span className="text-[13px] font-semibold">O</span>
+          <img src="/orycms/img/favicon.png" alt="" className="h-5 w-5 object-contain" />
         </div>
         {!collapsed && (
           <div className="min-w-0">
@@ -1095,10 +1098,15 @@ function ProfileDropdown({
           : "pointer-events-none -translate-y-1 opacity-0",
       )}
     >
-      <div className="border-b border-border bg-[#f8fafc] p-4">
-        <div className="text-[12.5px] font-semibold">{email}</div>
-        <div className="mt-0.5 text-[11px] text-muted-foreground">
-          {roleName} · OryCMS
+      <div className="flex items-center gap-3 border-b border-border bg-[#f8fafc] p-4">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-white">
+          <img src="/orycms/img/favicon.png" alt="" className="h-5 w-5 object-contain" />
+        </div>
+        <div className="min-w-0">
+          <div className="truncate text-[12.5px] font-semibold">{email}</div>
+          <div className="mt-0.5 text-[11px] text-muted-foreground">
+            {roleName} · OryCMS
+          </div>
         </div>
       </div>
       <div className="bg-white p-1.5">

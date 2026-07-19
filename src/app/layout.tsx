@@ -1,7 +1,5 @@
 import type { Metadata } from "next"
-import { AuthModal } from "@/components/auth/auth-modal"
-import { CartProvider } from "@/features/cart/cart-context"
-import { AuthProvider } from "@/features/auth/auth-context"
+import { AppProviders } from "@/components/app-providers"
 import "./globals.css"
 
 export const metadata: Metadata = {
@@ -32,12 +30,7 @@ export default function RootLayout({
       className="h-full antialiased [--font-fraunces:Georgia,serif] [--font-geist-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] [--font-inter:Inter,ui-sans-serif,system-ui,sans-serif]"
     >
       <body className="min-h-full">
-        <AuthProvider>
-          <CartProvider>
-            {children}
-            <AuthModal />
-          </CartProvider>
-        </AuthProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   )

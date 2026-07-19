@@ -14,7 +14,7 @@ const FAQS = [
   },
   {
     q: "Can I become a wholesale partner?",
-    a: "Absolutely. We have a dedicated wholesale and dealer programme. Contact our B2B team at wholesale@adhunikcrop.in or call 1800-200-CROP for a personalised quote.",
+    a: "Absolutely. We have a dedicated wholesale and dealer programme. Contact our B2B team at wholesale@adhunikcrop.in or call +919205762766 for a personalised quote.",
   },
   {
     q: "What about international export?",
