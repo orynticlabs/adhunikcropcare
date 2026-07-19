@@ -12,7 +12,6 @@ const ACCESS_TTL_SECONDS = 15 * 60
 const REFRESH_TTL_SECONDS = 30 * 24 * 60 * 60
 const AUTH_SECRET = process.env.STOREFRONT_AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "dev-storefront-auth-secret-change-me"
 const rateHits = new Map<string, { count: number; resetAt: number }>()
-let schemaReady: Promise<void> | null = null
 
 export type StorefrontUserDTO = {
   avatar?: string | null
@@ -44,132 +43,7 @@ type UserRow = {
 }
 
 export async function ensureStorefrontAuthSchema() {
-  schemaReady ??= ensureStorefrontAuthSchemaOnce().catch((error) => {
-    schemaReady = null
-    throw error
-  })
-  return schemaReady
-}
-
-async function ensureStorefrontAuthSchemaOnce() {
-  await orycmsPrisma.$executeRawUnsafe(`
-    CREATE EXTENSION IF NOT EXISTS pgcrypto;
-    CREATE TABLE IF NOT EXISTS storefront_users (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      first_name text NOT NULL,
-      last_name text NOT NULL,
-      email text NOT NULL UNIQUE,
-      email_verified_at timestamptz,
-      phone text,
-      password_hash text NOT NULL,
-      avatar text,
-      default_address jsonb,
-      status text NOT NULL DEFAULT 'active',
-      last_login_at timestamptz,
-      deleted_at timestamptz,
-      created_at timestamptz NOT NULL DEFAULT now(),
-      updated_at timestamptz NOT NULL DEFAULT now()
-    );
-    ALTER TABLE storefront_users ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active';
-    ALTER TABLE storefront_users ADD COLUMN IF NOT EXISTS last_login_at timestamptz;
-    ALTER TABLE storefront_users ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
-    CREATE TABLE IF NOT EXISTS storefront_refresh_tokens (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id uuid NOT NULL,
-      token_hash text NOT NULL UNIQUE,
-      expires_at timestamptz NOT NULL,
-      created_at timestamptz NOT NULL DEFAULT now()
-    );
-    CREATE TABLE IF NOT EXISTS storefront_auth_tokens (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id uuid NOT NULL,
-      token_hash text NOT NULL UNIQUE,
-      type text NOT NULL,
-      expires_at timestamptz NOT NULL,
-      used_at timestamptz,
-      created_at timestamptz NOT NULL DEFAULT now()
-    );
-    CREATE TABLE IF NOT EXISTS storefront_orders (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id uuid NOT NULL,
-      number text NOT NULL UNIQUE,
-      status text NOT NULL DEFAULT 'processing',
-      payment_status text NOT NULL DEFAULT 'pending',
-      payment_method text NOT NULL DEFAULT 'cash_on_delivery',
-      razorpay_order_id text,
-      razorpay_payment_id text,
-      razorpay_signature text,
-      contact jsonb,
-      shipping_address jsonb,
-      delivery_method text,
-      subtotal numeric(12,2) NOT NULL DEFAULT 0,
-      shipping_total numeric(12,2) NOT NULL DEFAULT 0,
-      discount_total numeric(12,2) NOT NULL DEFAULT 0,
-      invoice_number text,
-      refund_status text NOT NULL DEFAULT 'none',
-      cancelled_at timestamptz,
-      reservation_expires_at timestamptz,
-      stock_released_at timestamptz,
-      payment_timeline jsonb NOT NULL DEFAULT '[]'::jsonb,
-      tracking text,
-      invoice_url text,
-      items jsonb NOT NULL DEFAULT '[]'::jsonb,
-      total numeric(12,2) NOT NULL DEFAULT 0,
-      created_at timestamptz NOT NULL DEFAULT now()
-    );
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS payment_method text NOT NULL DEFAULT 'cash_on_delivery';
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS razorpay_order_id text;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS razorpay_payment_id text;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS razorpay_signature text;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS contact jsonb;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS shipping_address jsonb;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS delivery_method text;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS subtotal numeric(12,2) NOT NULL DEFAULT 0;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS shipping_total numeric(12,2) NOT NULL DEFAULT 0;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS discount_total numeric(12,2) NOT NULL DEFAULT 0;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS invoice_number text;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS refund_status text NOT NULL DEFAULT 'none';
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS cancelled_at timestamptz;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS reservation_expires_at timestamptz;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS stock_released_at timestamptz;
-    ALTER TABLE storefront_orders ADD COLUMN IF NOT EXISTS payment_timeline jsonb NOT NULL DEFAULT '[]'::jsonb;
-    CREATE TABLE IF NOT EXISTS storefront_payment_transactions (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      order_id uuid NOT NULL,
-      user_id uuid,
-      provider text NOT NULL DEFAULT 'razorpay',
-      event text NOT NULL,
-      status text NOT NULL,
-      amount numeric(12,2),
-      razorpay_order_id text,
-      razorpay_payment_id text,
-      razorpay_refund_id text,
-      raw_payload jsonb,
-      created_at timestamptz NOT NULL DEFAULT now()
-    );
-    CREATE TABLE IF NOT EXISTS storefront_idempotency_keys (
-      key text PRIMARY KEY,
-      user_id uuid NOT NULL,
-      endpoint text NOT NULL,
-      order_id uuid,
-      response jsonb,
-      created_at timestamptz NOT NULL DEFAULT now()
-    );
-    CREATE TABLE IF NOT EXISTS storefront_email_logs (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      order_id uuid NOT NULL,
-      type text NOT NULL,
-      recipient text NOT NULL,
-      provider_id text,
-      status text NOT NULL,
-      created_at timestamptz NOT NULL DEFAULT now(),
-      UNIQUE(order_id, type)
-    );
-    CREATE INDEX IF NOT EXISTS storefront_refresh_tokens_user_id_idx ON storefront_refresh_tokens (user_id);
-    CREATE INDEX IF NOT EXISTS storefront_auth_tokens_user_id_idx ON storefront_auth_tokens (user_id);
-    CREATE INDEX IF NOT EXISTS storefront_orders_user_id_idx ON storefront_orders (user_id);
-    CREATE INDEX IF NOT EXISTS storefront_payment_transactions_order_id_idx ON storefront_payment_transactions (order_id);
-  `)
+  // Database structure is managed by Prisma migrations.
 }
 
 export function jsonError(message: string, status = 400, code = "AUTH_ERROR") {
@@ -260,6 +134,9 @@ export async function authenticateUser(emailInput: string, password: string) {
   `
   if (!user || !(await bcrypt.compare(password, user.password_hash))) {
     throw new Error("Invalid email or password.")
+  }
+  if (!user.email_verified_at) {
+    throw new Error("Confirm your email before signing in. Please check your inbox for the verification link.")
   }
   if (user.status !== "active") {
     throw new Error(user.status === "blocked" ? "Your account is blocked. Contact support." : "Your account is inactive. Contact support.")
@@ -356,12 +233,17 @@ export async function currentUser() {
   const cookieStore = await cookies()
   const access = cookieStore.get(ACCESS_COOKIE)?.value
   const accessPayload = access ? verifyJwt(access) : null
-  if (accessPayload?.sub) return getUserById(accessPayload.sub)
+  if (accessPayload?.sub) {
+    const user = await getUserById(accessPayload.sub)
+    return user?.emailVerified ? user : null
+  }
 
   const refresh = cookieStore.get(REFRESH_COOKIE)?.value
   if (!refresh) return null
   const row = await getRefreshSession(refresh)
-  return row?.user_id ? getUserById(row.user_id) : null
+  if (!row?.user_id) return null
+  const user = await getUserById(row.user_id)
+  return user?.emailVerified ? user : null
 }
 
 export async function currentUserResponse() {
@@ -372,7 +254,7 @@ export async function currentUserResponse() {
   if (accessPayload?.sub) {
     const user = await getUserById(accessPayload.sub)
     response.headers.set("cache-control", "no-store")
-    return user ? NextResponse.json({ success: true, data: { user } }, { headers: response.headers }) : clearAuthCookies(response)
+    return user?.emailVerified ? NextResponse.json({ success: true, data: { user } }, { headers: response.headers }) : clearAuthCookies(response)
   }
 
   const refresh = cookieStore.get(REFRESH_COOKIE)?.value
@@ -384,7 +266,7 @@ export async function currentUserResponse() {
   const row = await getRefreshSession(refresh)
   if (!row?.user_id) return clearAuthCookies(response)
   const user = await getUserById(row.user_id)
-  if (!user) return clearAuthCookies(response)
+  if (!user?.emailVerified) return clearAuthCookies(response)
 
   const refreshed = NextResponse.json({ success: true, data: { user } })
   refreshed.headers.set("cache-control", "no-store")
@@ -407,6 +289,16 @@ export async function createAuthToken(userId: string, type: "reset_password" | "
   return token
 }
 
+export async function createFreshEmailVerificationToken(userId: string) {
+  await ensureStorefrontAuthSchema()
+  await orycmsPrisma.$executeRaw`
+    UPDATE storefront_auth_tokens
+    SET used_at = now()
+    WHERE user_id = ${userId}::uuid AND type = 'verify_email' AND used_at IS NULL
+  `
+  return createAuthToken(userId, "verify_email", 24 * 60 * 60)
+}
+
 export async function consumeAuthToken(token: string, type: "reset_password" | "verify_email") {
   await ensureStorefrontAuthSchema()
   const [row] = await orycmsPrisma.$queryRaw<{ id: string; user_id: string }[]>`
@@ -417,6 +309,57 @@ export async function consumeAuthToken(token: string, type: "reset_password" | "
   if (!row) throw new Error("Invalid or expired token.")
   await orycmsPrisma.$executeRaw`UPDATE storefront_auth_tokens SET used_at = now() WHERE id = ${row.id}::uuid`
   return row.user_id
+}
+
+export async function verifyStorefrontEmail(token: string) {
+  await ensureStorefrontAuthSchema()
+  if (!token) throw new Error("Invalid or expired verification link.")
+
+  return orycmsPrisma.$transaction(async (transaction) => {
+    const [row] = await transaction.$queryRaw<{
+      deleted_at: Date | null
+      email_verified_at: Date | null
+      expires_at: Date
+      id: string
+      status: string
+      used_at: Date | null
+      user_id: string
+    }[]>`
+      SELECT t.id, t.user_id, t.expires_at, t.used_at,
+             u.email_verified_at, u.status, u.deleted_at
+      FROM storefront_auth_tokens t
+      JOIN storefront_users u ON u.id = t.user_id
+      WHERE t.token_hash = ${hash(token)} AND t.type = 'verify_email'
+      LIMIT 1
+    `
+
+    if (!row || row.status !== "active" || row.deleted_at) throw new Error("Invalid verification link.")
+    if (row.email_verified_at) {
+      return { status: "already_verified" as const, userId: row.user_id }
+    }
+    if (new Date(row.expires_at).getTime() <= Date.now()) throw new Error("Verification link has expired. Request a new verification email.")
+
+    const claimed = await transaction.$executeRaw`
+      UPDATE storefront_auth_tokens
+      SET used_at = now()
+      WHERE id = ${row.id}::uuid AND used_at IS NULL AND expires_at > now()
+    `
+
+    if (claimed !== 1) {
+      const [user] = await transaction.$queryRaw<{ email_verified_at: Date | null }[]>`
+        SELECT email_verified_at FROM storefront_users WHERE id = ${row.user_id}::uuid LIMIT 1
+      `
+      if (user?.email_verified_at) return { status: "already_verified" as const, userId: row.user_id }
+      throw new Error("Verification link is no longer valid. Request a new verification email.")
+    }
+
+    await transaction.$executeRaw`
+      UPDATE storefront_users
+      SET email_verified_at = now(), updated_at = now()
+      WHERE id = ${row.user_id}::uuid AND status = 'active' AND deleted_at IS NULL
+    `
+    return { status: "verified" as const, userId: row.user_id }
+  })
 }
 
 export async function setVerified(userId: string) {
@@ -507,6 +450,7 @@ async function getRefreshSession(refresh: string) {
       AND t.expires_at > now()
       AND u.status = 'active'
       AND u.deleted_at IS NULL
+      AND u.email_verified_at IS NOT NULL
     LIMIT 1
   `
   return row ?? null

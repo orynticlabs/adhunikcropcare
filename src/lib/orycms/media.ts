@@ -227,21 +227,5 @@ function cleanMediaName(value: string | undefined) {
 }
 
 async function ensureOryCMSMediaSchema() {
-  await orycmsPrisma.$executeRawUnsafe(`
-    CREATE EXTENSION IF NOT EXISTS pgcrypto;
-    CREATE TABLE IF NOT EXISTS orycms_media_assets (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      asset_id text NOT NULL UNIQUE,
-      public_id text NOT NULL UNIQUE,
-      secure_url text NOT NULL,
-      width integer,
-      height integer,
-      format text NOT NULL,
-      bytes integer NOT NULL,
-      created_at timestamptz NOT NULL,
-      original_filename text,
-      resource_type text NOT NULL DEFAULT 'image'
-    );
-    CREATE INDEX IF NOT EXISTS orycms_media_assets_created_at_idx ON orycms_media_assets (created_at);
-  `)
+  // Database structure is managed by Prisma migrations.
 }

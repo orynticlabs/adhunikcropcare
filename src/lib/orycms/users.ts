@@ -81,36 +81,8 @@ export async function ensureOryCMSAdminUserSchema() {
 }
 
 async function ensureOryCMSAdminUserSchemaOnce() {
-  await orycmsPrisma.$executeRawUnsafe(`
-    CREATE EXTENSION IF NOT EXISTS pgcrypto;
-    CREATE TABLE IF NOT EXISTS orycms_roles (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      name text NOT NULL UNIQUE
-    );
-    CREATE TABLE IF NOT EXISTS orycms_users (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      email text NOT NULL UNIQUE,
-      "passwordHash" text NOT NULL,
-      status text NOT NULL DEFAULT 'active',
-      "roleId" uuid REFERENCES orycms_roles(id),
-      "createdAt" timestamptz NOT NULL DEFAULT now()
-    );
-    ALTER TABLE orycms_users ADD COLUMN IF NOT EXISTS "fullName" text;
-    ALTER TABLE orycms_users ADD COLUMN IF NOT EXISTS "mobileNumber" text;
-    ALTER TABLE orycms_users ADD COLUMN IF NOT EXISTS "profilePhoto" text;
-    ALTER TABLE orycms_users ADD COLUMN IF NOT EXISTS username text;
-    ALTER TABLE orycms_users ADD COLUMN IF NOT EXISTS "emailVerified" boolean NOT NULL DEFAULT false;
-    ALTER TABLE orycms_users ADD COLUMN IF NOT EXISTS "lastLoginAt" timestamptz;
-    ALTER TABLE orycms_users ADD COLUMN IF NOT EXISTS "deletedAt" timestamptz;
-    ALTER TABLE orycms_users ADD COLUMN IF NOT EXISTS "updatedAt" timestamptz NOT NULL DEFAULT now();
-    CREATE INDEX IF NOT EXISTS orycms_users_deleted_at_idx ON orycms_users ("deletedAt");
-    CREATE INDEX IF NOT EXISTS orycms_users_status_idx ON orycms_users (status);
-    CREATE UNIQUE INDEX IF NOT EXISTS orycms_users_username_active_idx ON orycms_users (lower(username)) WHERE username IS NOT NULL AND "deletedAt" IS NULL;
-  `)
-
-  for (const role of ADMIN_ROLES) {
-    await ensureRole(role)
-  }
+  // Database structure is managed by Prisma migrations. Role upserts remain
+  // idempotent application seed data and do not alter the admin login flow.
 }
 
 export async function touchOryCMSAdminLastLogin(userId: string) {

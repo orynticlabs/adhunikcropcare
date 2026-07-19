@@ -8,13 +8,15 @@
   "scripts": {
     "check:node": "node scripts/check-node-version.mjs",
     "predev": "npm run check:node",
-    "dev": "next dev --webpack",
+    "dev": "npm run clean && next dev --webpack",
     "prebuild": "npm run check:node",
-    "build": "next build --webpack",
+    "build": "npm run clean && npm run prisma:migrate && prisma generate && next build --webpack",
+    "clean": "node -e \"require('node:fs').rmSync('.next',{recursive:true,force:true})\"",
     "prestart": "npm run check:node",
     "start": "next start",
     "lint": "eslint",
     "prisma:generate": "prisma generate",
+    "prisma:migrate": "node scripts/prisma-migrate-deploy.mjs",
     "prisma:push": "prisma db push"
   },
   "dependencies": {
@@ -25,6 +27,7 @@
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@sentry/nextjs": "^10.63.0",
+    "@types/nodemailer": "^8.0.1",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -33,6 +36,7 @@
     "lucide-react": "^1.23.0",
     "next": "16.2.10",
     "next-auth": "^4.24.14",
+    "nodemailer": "^7.0.13",
     "pg": "^8.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",

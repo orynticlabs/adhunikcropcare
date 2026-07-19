@@ -1,6 +1,7 @@
 import crypto from "crypto"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { ensureStorefrontAuthSchema, normalizePhone, validateEmail } from "@/lib/storefront-auth"
+import { sendAdminEmail, sendEmail } from "@/lib/email/mailer"
 
 export type StorefrontPaymentMethod = "cash_on_delivery" | "razorpay"
 
@@ -214,6 +215,8 @@ export async function cancelOrder(userId: string, orderId: string) {
     RETURNING *
   `
   await recordTransaction(order.id, userId, "order.cancelled", order.payment_status, Number(order.total), { rawPayload: { refundStatus } })
+  await sendOrderEventEmail(updated, "orderCancelled").catch((error) => console.error("Cancellation email failed", error))
+  if (refundStatus === "pending") await sendOrderEventEmail(updated, "refundUpdate").catch((error) => console.error("Refund email failed", error))
   return serializeOrder(updated)
 }
 
@@ -266,6 +269,7 @@ export async function handleRazorpayWebhook(rawBody: string, signature: string |
         RETURNING *
       `
       await recordTransaction(updated.id, updated.user_id ?? null, "refund.processed", "processed", Number(refund.amount ?? 0) / 100, { razorpayPaymentId: refund.payment_id, razorpayRefundId: refund.id, rawPayload: event })
+      await sendOrderEventEmail(updated, "refundUpdate").catch((error) => console.error("Refund email failed", error))
     }
   }
 }
@@ -449,6 +453,10 @@ async function sendOrderConfirmationEmail(order: StorefrontOrderRow) {
     SELECT id FROM storefront_email_logs WHERE order_id = ${order.id}::uuid AND type = 'order_confirmation' LIMIT 1
   `
   if (existing) return
+  await Promise.all([
+    sendOrderEventEmail(order, "orderPlaced"),
+    sendAdminEmail({ firstName: contact?.firstName, orderNumber: order.number, template: "orderPlaced", total: Number(order.total), unsubscribeUrl: "" }),
+  ]).catch((error) => console.error("Order SMTP email failed", error))
   let status = "skipped"
   let providerId: string | null = null
   if (process.env.RESEND_API_KEY && process.env.ORDER_EMAIL_FROM) {
@@ -471,6 +479,21 @@ async function sendOrderConfirmationEmail(order: StorefrontOrderRow) {
     VALUES (${order.id}::uuid, 'order_confirmation', ${recipient}, ${providerId}, ${status})
     ON CONFLICT (order_id, type) DO NOTHING
   `
+}
+
+async function sendOrderEventEmail(order: StorefrontOrderRow, template: "orderPlaced" | "orderCancelled" | "refundUpdate") {
+  const contact = order.contact as { email?: string; firstName?: string } | null
+  if (!contact?.email) return { skipped: true }
+  return sendEmail({
+    firstName: contact.firstName,
+    orderNumber: order.number,
+    refundStatus: order.refund_status,
+    template,
+    to: contact.email,
+    total: Number(order.total),
+    unsubscribeUrl: "",
+    userId: order.user_id,
+  })
 }
 
 async function getIdempotencyResponse(userId: string, endpoint: string, key: string) {

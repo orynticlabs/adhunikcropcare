@@ -250,24 +250,5 @@ function normalizeImage(value: Prisma.JsonValue | null) {
 }
 
 async function ensureOryCMSCategoriesSchema() {
-  await orycmsPrisma.$executeRawUnsafe(`
-    CREATE EXTENSION IF NOT EXISTS pgcrypto;
-    CREATE TABLE IF NOT EXISTS orycms_categories (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      name text NOT NULL,
-      slug text NOT NULL UNIQUE,
-      parent_id uuid REFERENCES orycms_categories(id) ON DELETE SET NULL,
-      image jsonb,
-      display_order integer NOT NULL DEFAULT 0,
-      status text NOT NULL DEFAULT 'active',
-      meta_title text,
-      meta_description text,
-      created_at timestamptz NOT NULL DEFAULT now(),
-      updated_at timestamptz NOT NULL DEFAULT now(),
-      deleted_at timestamptz
-    );
-    CREATE INDEX IF NOT EXISTS orycms_categories_parent_id_idx ON orycms_categories (parent_id);
-    CREATE INDEX IF NOT EXISTS orycms_categories_status_idx ON orycms_categories (status);
-    CREATE INDEX IF NOT EXISTS orycms_categories_deleted_at_idx ON orycms_categories (deleted_at);
-  `)
+  // Database structure is managed by Prisma migrations.
 }
