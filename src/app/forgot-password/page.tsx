@@ -1,5 +1,5 @@
-import { FrontendAuthPage } from "@/components/auth/frontend-auth-page"
+import { redirect } from "next/navigation"
 
 export default function ForgotPasswordPage() {
-  return <FrontendAuthPage mode="forgot" />
+  redirect("/?auth=forgot")
 }

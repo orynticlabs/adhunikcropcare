@@ -21,9 +21,18 @@ model OryCMSUser {
   status       String          @default("active")
   roleId       String?         @db.Uuid
   createdAt    DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt    DateTime        @updatedAt @db.Timestamptz(6)
+  deletedAt    DateTime?       @db.Timestamptz(6)
+  fullName     String?
+  mobileNumber String?
+  profilePhoto String?
+  emailVerified Boolean        @default(false)
+  lastLoginAt  DateTime?       @db.Timestamptz(6)
   role         OryCMSRole?     @relation(fields: [roleId], references: [id])
   sessions     OryCMSSession[]
 
+  @@index([status], map: "orycms_users_status_idx")
+  @@index([deletedAt], map: "orycms_users_deleted_at_idx")
   @@map("orycms_users")
 }
 
@@ -116,9 +125,14 @@ model StorefrontUser {
   passwordHash    String    @map("password_hash")
   avatar          String?
   defaultAddress  Json?     @map("default_address")
+  status          String    @default("active")
+  lastLoginAt     DateTime? @map("last_login_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  @@index([status], map: "storefront_users_status_idx")
+  @@index([deletedAt], map: "storefront_users_deleted_at_idx")
   @@map("storefront_users")
 }
 
@@ -218,4 +232,12 @@ model StorefrontEmailLog {
 
   @@unique([orderId, type])
   @@map("storefront_email_logs")
+}
+
+model StorefrontEmailPreference {
+  userId        String   @id @map("user_id") @db.Uuid
+  disabledTypes String[] @default([]) @map("disabled_types")
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("storefront_email_preferences")
 }

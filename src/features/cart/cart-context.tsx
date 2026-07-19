@@ -166,6 +166,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           },
         ]
       })
+      void notifyProductEmail(product.name)
     }
 
     setAnimKey((k) => k + 1)
@@ -222,6 +223,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       {children}
     </CartContext.Provider>
   )
+}
+
+async function notifyProductEmail(productName: string) {
+  try {
+    const csrfResponse = await fetch("/api/auth/csrf", { method: "GET" })
+    const csrfJson = await csrfResponse.json() as { data?: { csrfToken?: string } }
+    const csrfToken = csrfJson.data?.csrfToken
+    if (!csrfToken) return
+    await fetch("/api/email/product-event", {
+      body: JSON.stringify({ productName, type: "cart" }),
+      headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
+      method: "POST",
+    })
+  } catch {
+    // Adding to cart is never blocked by an optional email notification.
+  }
 }
 
 export function useCart() {

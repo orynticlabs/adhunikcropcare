@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
   ArrowRight,
   CheckCircle2,
@@ -68,15 +68,27 @@ function PasswordStrength({ password }: { password: string }) {
   )
 }
 
-function SignInForm({ onSwitch }: { onSwitch: () => void }) {
+function SignInForm({ onForgot, onSwitch }: { onForgot: () => void; onSwitch: () => void }) {
   const router = useRouter()
-  const { closeAuthModal, consumeAuthRedirectPath, login } = useAuth()
+  const { closeAuthModal, consumeAuthRedirectPath, login, resendVerification } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [globalErr, setGlobalErr] = useState("")
+  const [resending, setResending] = useState(false)
+
+  async function resend() {
+    setResending(true)
+    try {
+      setGlobalErr(await resendVerification(email))
+    } catch (error) {
+      setGlobalErr(error instanceof Error ? error.message : "Could not resend the confirmation email.")
+    } finally {
+      setResending(false)
+    }
+  }
 
   function validate() {
     const nextErrors: Record<string, string> = {}
@@ -99,8 +111,8 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
       if (redirectPath) {
         router.push(redirectPath)
       }
-    } catch {
-      setGlobalErr("Invalid credentials. Please try again.")
+    } catch (error) {
+      setGlobalErr(error instanceof Error ? error.message : "Could not sign in. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -114,8 +126,11 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
       </div>
 
       {globalErr ? (
-        <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          {globalErr}
+        <div className="mb-5 space-y-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <p>{globalErr}</p>
+          {globalErr.includes("Confirm your email") ? (
+            <button type="button" onClick={resend} disabled={resending} className="font-semibold text-[#689c30] hover:underline disabled:opacity-60">{resending ? "Sending..." : "Resend verification email"}</button>
+          ) : null}
         </div>
       ) : null}
 
@@ -143,9 +158,9 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
             <label className="text-sm font-medium text-foreground/80">
               Password <span className="text-red-500">*</span>
             </label>
-            <Link href="/forgot-password" className="text-xs text-[#689c30] hover:underline">
+            <button type="button" onClick={onForgot} className="text-xs text-[#689c30] hover:underline">
               Forgot password?
-            </Link>
+            </button>
           </div>
           <div className="relative">
             <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -197,6 +212,54 @@ function SignInForm({ onSwitch }: { onSwitch: () => void }) {
   )
 }
 
+function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
+  const { forgotPassword } = useAuth()
+  const [email, setEmail] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState("")
+  const [error, setError] = useState("")
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
+    setError("")
+    setMessage("")
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      setError("Enter a valid email address.")
+      return
+    }
+    setLoading(true)
+    try {
+      setMessage(await forgotPassword(email))
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Could not request a password reset.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="mb-7">
+        <h2 className="font-display text-3xl text-[#033927]">Forgot password</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Enter your customer email and we will send a secure reset link.</p>
+      </div>
+      {message ? <div className="mb-5 rounded-xl border border-[#689c30]/25 bg-[#689c30]/10 px-4 py-3 text-sm text-[#033927]">{message}</div> : null}
+      {error ? <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div> : null}
+      <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm font-medium text-foreground/80">Email address <span className="text-red-500">*</span></label>
+          <div className="relative">
+            <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={`${inputCls(error)} pl-10`} placeholder="you@example.com" autoComplete="email" />
+          </div>
+        </div>
+        <button type="submit" disabled={loading} className={authSubmitButtonCls}>{loading ? "Sending..." : "Send reset link"}</button>
+      </form>
+      <button type="button" onClick={onBack} className="mt-6 text-sm font-semibold text-[#689c30] hover:underline">Back to sign in</button>
+    </>
+  )
+}
+
 function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
   const router = useRouter()
   const { closeAuthModal, consumeAuthRedirectPath, signup } = useAuth()
@@ -234,13 +297,9 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
 
     try {
       const result = await signup({ firstName, lastName, email, phone, password })
-      const redirectPath = consumeAuthRedirectPath()
+      consumeAuthRedirectPath()
       closeAuthModal()
-      if (redirectPath) {
-        router.push(redirectPath)
-      } else if (result.verifyToken) {
-        router.push(`/verify-email?token=${encodeURIComponent(result.verifyToken)}`)
-      }
+      router.push(`/verify-email?sent=1&email=${encodeURIComponent(result.email)}`)
     } catch (error) {
       setGlobalErr(error instanceof Error ? error.message : "Could not create account. Please try again.")
     } finally {
@@ -442,7 +501,31 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
 }
 
 export function AuthModal() {
-  const { authView, closeAuthModal, isAuthModalOpen, setAuthView } = useAuth()
+  const pathname = usePathname()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const handledAuthRequest = useRef<string | null>(null)
+  const { authView, closeAuthModal, isAuthModalOpen, openAuthModal, setAuthView } = useAuth()
+
+  useEffect(() => {
+    const requestedView = searchParams.get("auth")
+    if (requestedView !== "signin" && requestedView !== "signup" && requestedView !== "forgot") {
+      handledAuthRequest.current = null
+      return
+    }
+    const requestKey = searchParams.toString()
+    if (handledAuthRequest.current === requestKey) return
+    handledAuthRequest.current = requestKey
+    const requestedFrom = searchParams.get("from")
+    const redirectTo = requestedFrom?.startsWith("/") && !requestedFrom.startsWith("//") ? requestedFrom : undefined
+    openAuthModal(requestedView, { redirectTo })
+
+    const nextParams = new URLSearchParams(searchParams.toString())
+    nextParams.delete("auth")
+    nextParams.delete("from")
+    const nextQuery = nextParams.toString()
+    router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false })
+  }, [openAuthModal, pathname, router, searchParams])
 
   useEffect(() => {
     if (!isAuthModalOpen) {
@@ -470,10 +553,11 @@ export function AuthModal() {
     return null
   }
 
-  const isSignIn = authView === "signin"
+  const isSignIn = authView !== "signup"
+  const dialogLabel = authView === "forgot" ? "Forgot password" : authView === "signin" ? "Sign in" : "Create account"
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-label={isSignIn ? "Sign in" : "Create account"}>
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true" aria-label={dialogLabel}>
       <button
         type="button"
         className="absolute inset-0 bg-[rgba(3,32,22,0.52)] backdrop-blur-[2px]"
@@ -517,7 +601,7 @@ export function AuthModal() {
         />
 
         <div className="max-h-[92vh] overflow-y-auto bg-card px-5 py-6 sm:px-8 sm:py-8 lg:px-10 lg:py-10">
-          <div className="mb-6 flex items-center rounded-full bg-muted/45 p-1">
+          {authView !== "forgot" ? <div className="mb-6 flex items-center rounded-full bg-muted/45 p-1">
             {([
               { id: "signin", label: "Sign in" },
               { id: "signup", label: "Create account" },
@@ -535,13 +619,13 @@ export function AuthModal() {
                 {tab.label}
               </button>
             ))}
-          </div>
+          </div> : null}
 
-          {isSignIn ? (
-            <SignInForm onSwitch={() => setAuthView("signup")} />
-          ) : (
+          {authView === "signin" ? (
+            <SignInForm onForgot={() => setAuthView("forgot")} onSwitch={() => setAuthView("signup")} />
+          ) : authView === "signup" ? (
             <SignUpForm onSwitch={() => setAuthView("signin")} />
-          )}
+          ) : <ForgotPasswordForm onBack={() => setAuthView("signin")} />}
         </div>
       </div>
     </div>

@@ -396,35 +396,5 @@ export function ensureProductImages(product: OryCMSProductDTO) {
 }
 
 export async function ensureOryCMSProductsSchema() {
-  await orycmsPrisma.$executeRawUnsafe(`
-    CREATE EXTENSION IF NOT EXISTS pgcrypto;
-    CREATE TABLE IF NOT EXISTS orycms_products (
-      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-      name text NOT NULL,
-      slug text NOT NULL UNIQUE,
-      short_description text NOT NULL,
-      full_description text,
-      category text NOT NULL,
-      brand text,
-      sku text NOT NULL UNIQUE,
-      price numeric(12,2) NOT NULL,
-      sale_price numeric(12,2),
-      pack_sizes jsonb NOT NULL DEFAULT '[]'::jsonb,
-      stock_quantity integer NOT NULL,
-      unit text NOT NULL,
-      status text NOT NULL DEFAULT 'draft',
-      featured boolean NOT NULL DEFAULT false,
-      images jsonb NOT NULL DEFAULT '[]'::jsonb,
-      tags jsonb NOT NULL DEFAULT '[]'::jsonb,
-      meta_title text,
-      meta_description text,
-      created_at timestamptz NOT NULL DEFAULT now(),
-      updated_at timestamptz NOT NULL DEFAULT now(),
-      deleted_at timestamptz
-    );
-    ALTER TABLE orycms_products ADD COLUMN IF NOT EXISTS deleted_at timestamptz;
-    CREATE INDEX IF NOT EXISTS orycms_products_status_idx ON orycms_products (status);
-    CREATE INDEX IF NOT EXISTS orycms_products_category_idx ON orycms_products (category);
-    CREATE INDEX IF NOT EXISTS orycms_products_deleted_at_idx ON orycms_products (deleted_at);
-  `)
+  // Database structure is managed by Prisma migrations.
 }

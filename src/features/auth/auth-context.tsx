@@ -21,12 +21,13 @@ interface AuthCtx {
   isAuthModalOpen: boolean
   loadingUser: boolean
   login: (email: string, password: string) => Promise<void>
-  signup: (data: SignupData) => Promise<{ verifyToken?: string | null }>
+  signup: (data: SignupData) => Promise<{ email: string }>
   logout: () => Promise<void>
   updateProfile: (data: Partial<AuthUser>) => Promise<void>
-  forgotPassword: (email: string) => Promise<{ resetToken?: string | null }>
+  forgotPassword: (email: string) => Promise<string>
   resetPassword: (token: string, password: string) => Promise<void>
-  verifyEmail: (token: string) => Promise<void>
+  resendVerification: (email: string) => Promise<string>
+  verifyEmail: (token: string) => Promise<"already_verified" | "verified">
   openAuthModal: (view?: AuthView, options?: AuthModalOptions) => void
   closeAuthModal: () => void
   setAuthView: (view: AuthView) => void
@@ -41,7 +42,7 @@ export interface SignupData {
   phone: string
 }
 
-export type AuthView = "signin" | "signup"
+export type AuthView = "forgot" | "signin" | "signup"
 
 type AuthModalOptions = {
   redirectTo?: string
@@ -97,14 +98,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function signup(data: SignupData) {
-    const result = await authFetch<{ user: AuthUser; verifyToken?: string | null }>("/api/auth/signup", {
+    const result = await authFetch<{ email: string }>("/api/auth/signup", {
       body: JSON.stringify(data),
       method: "POST",
     })
-    setUser(result.user)
-    notifyAuthTabs("signup")
-    pushToast("Account created successfully.", "success")
-    return { verifyToken: result.verifyToken }
+    pushToast("Account created. Check your email to confirm it before signing in.", "success")
+    return result
   }
 
   async function logout() {
@@ -128,12 +127,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function forgotPassword(email: string) {
-    const result = await authFetch<{ resetToken?: string | null }>("/api/auth/forgot-password", {
+    const result = await authFetch<{ message: string }>("/api/auth/forgot-password", {
       body: JSON.stringify({ email }),
       method: "POST",
     })
-    pushToast("If the email exists, a reset link has been prepared.", "success")
-    return result
+    pushToast(result.message, "success")
+    return result.message
   }
 
   async function resetPassword(token: string, password: string) {
@@ -145,13 +144,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function verifyEmail(token: string) {
-    await authFetch("/api/auth/verify-email", {
+    const result = await authFetch<{ status: "already_verified" | "verified" }>("/api/auth/verify-email", {
       body: JSON.stringify({ token }),
       method: "POST",
     })
-    pushToast("Email verified.", "success")
-    const me = await fetchJson<{ user: AuthUser | null }>("/api/auth/me")
-    setUser(me.user)
+    pushToast(result.status === "already_verified" ? "Email was already verified." : "Email verified successfully.", "success")
+    return result.status
+  }
+
+  async function resendVerification(email: string) {
+    const result = await authFetch<{ message: string }>("/api/auth/resend-verification", {
+      body: JSON.stringify({ email }),
+      method: "POST",
+    })
+    pushToast(result.message, "success")
+    return result.message
   }
 
   async function authFetch<T = unknown>(url: string, init: RequestInit = {}) {
@@ -233,6 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         openAuthModal,
+        resendVerification,
         resetPassword,
         setAuthView,
         signup,

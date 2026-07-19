@@ -11,6 +11,9 @@ import CartDrawer from "@/features/cart/components/cart-drawer"
 import { useAuth } from "@/features/auth/auth-context"
 
 type Mode = "login" | "signup" | "forgot" | "reset" | "verify" | "logout"
+type VerificationStatus = "already_verified" | "verified"
+
+const verificationRequests = new Map<string, Promise<VerificationStatus>>()
 
 const inputCls =
   "h-11 w-full rounded-xl border border-border/60 bg-background px-4 text-sm outline-none transition focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15"
@@ -28,8 +31,9 @@ export function FrontendAuthPage({ mode }: { mode: Mode }) {
 function AuthFlow({ mode }: { mode: Mode }) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { forgotPassword, loadingUser, login, logout, resetPassword, signup, user, verifyEmail } = useAuth()
-  const [loading, setLoading] = useState(false)
+  const token = searchParams.get("token") ?? ""
+  const { forgotPassword, loadingUser, login, logout, resendVerification, resetPassword, signup, user, verifyEmail } = useAuth()
+  const [loading, setLoading] = useState(mode === "verify" && Boolean(token))
   const [message, setMessage] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [form, setForm] = useState({
@@ -40,10 +44,25 @@ function AuthFlow({ mode }: { mode: Mode }) {
     password: "",
     phone: "",
   })
-  const token = searchParams.get("token") ?? ""
   const requestedFrom = safePath(searchParams.get("from"))
   const from = requestedFrom ?? "/account"
   const fromQuery = requestedFrom ? `?from=${encodeURIComponent(requestedFrom)}` : ""
+  const pendingEmail = searchParams.get("email") ?? form.email
+
+  async function resend() {
+    if (!pendingEmail) {
+      setMessage("Enter your email address first.")
+      return
+    }
+    setLoading(true)
+    try {
+      setMessage(await resendVerification(pendingEmail))
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not resend the confirmation email.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (mode !== "logout") return
@@ -65,9 +84,13 @@ function AuthFlow({ mode }: { mode: Mode }) {
 
   useEffect(() => {
     if (mode !== "verify" || !token) return
-    setLoading(true)
-    verifyEmail(token)
-      .then(() => setMessage("Email verified successfully."))
+    let request = verificationRequests.get(token)
+    if (!request) {
+      request = verifyEmail(token)
+      verificationRequests.set(token, request)
+    }
+    request
+      .then((status) => setMessage(status === "already_verified" ? "This email address is already verified. You can sign in." : "Email verified successfully. You can now sign in."))
       .catch((error) => setMessage(error instanceof Error ? error.message : "Verification failed."))
       .finally(() => setLoading(false))
   }, [mode, token, verifyEmail])
@@ -108,17 +131,10 @@ function AuthFlow({ mode }: { mode: Mode }) {
       if (mode === "signup") {
         if (form.password !== form.confirm) throw new Error("Passwords do not match.")
         const result = await signup(form)
-        if (requestedFrom) {
-          router.push(requestedFrom)
-        } else if (result.verifyToken) {
-          setMessage(`/verify-email?token=${encodeURIComponent(result.verifyToken)}`)
-        } else {
-          router.push(from)
-        }
+        router.push(`/verify-email?sent=1&email=${encodeURIComponent(result.email)}`)
       }
       if (mode === "forgot") {
-        const result = await forgotPassword(form.email)
-        setMessage(result.resetToken ? `/reset-password?token=${encodeURIComponent(result.resetToken)}` : "If this email exists, reset instructions are ready.")
+        setMessage(await forgotPassword(form.email))
       }
       if (mode === "reset") {
         if (!token) throw new Error("Reset token is missing.")
@@ -151,8 +167,11 @@ function AuthFlow({ mode }: { mode: Mode }) {
       <AuthCard title={title} subtitle={subtitle}>
         {mode === "verify" ? (
           <div className="space-y-5">
-            <StatusMessage message={message || (loading ? "Verifying..." : token ? "Ready." : "Verification token is missing.")} />
-            <Link href="/account" className={buttonCls}>Continue to account <ArrowRight className="h-4 w-4" /></Link>
+            <StatusMessage message={message || (loading ? "Verifying..." : searchParams.get("sent") === "1" ? `We sent a confirmation link to ${searchParams.get("email") ?? "your email address"}. Check your inbox before signing in.` : token ? "Ready." : "Verification link is missing or invalid.")} />
+            {(searchParams.get("sent") === "1" || /expired|no longer valid/i.test(message)) && pendingEmail ? (
+              <button type="button" onClick={resend} disabled={loading} className={buttonCls}>{loading ? "Sending..." : "Resend verification email"}</button>
+            ) : null}
+            <Link href="/?auth=signin" className={buttonCls}>Continue to sign in <ArrowRight className="h-4 w-4" /></Link>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-4">
@@ -186,6 +205,10 @@ function AuthFlow({ mode }: { mode: Mode }) {
             ) : null}
 
             {message ? <StatusMessage message={message} /> : null}
+
+            {mode === "login" && message.includes("Confirm your email") ? (
+              <button type="button" onClick={resend} disabled={loading} className="text-sm font-semibold text-[#689c30] hover:underline disabled:opacity-60">Resend verification email</button>
+            ) : null}
 
             <button type="submit" disabled={loading} className={buttonCls}>
               {loading ? "Please wait..." : mode === "signup" ? "Create Account" : mode === "forgot" ? "Create reset link" : mode === "reset" ? "Save new password" : "Sign In"}
