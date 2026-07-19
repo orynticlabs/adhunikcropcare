@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, KeyRound, Lock, Mail, Shield, ShieldCheck } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff, KeyRound, Lock, Mail, Shield, ShieldCheck } from "lucide-react"
 import { OryCMSSessionProvider, useOryCMSSession } from "../../../orycms/hooks"
 
 const trustSignals = [
@@ -42,6 +42,7 @@ function LoginForm() {
   const [step, setStep] = useState<Step>("login")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -203,14 +204,24 @@ function LoginForm() {
                       Forgot password?
                     </button>
                   </span>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none transition focus:border-chart-3 focus:ring-2 focus:ring-chart-3/15"
-                    placeholder="Enter your password"
-                    autoComplete="current-password"
-                  />
+                  <span className="relative block">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      className="h-10 w-full rounded-lg border border-border bg-background px-3 pr-10 text-sm outline-none transition focus:border-chart-3 focus:ring-2 focus:ring-chart-3/15"
+                      placeholder="Enter your password"
+                      autoComplete="current-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((value) => !value)}
+                      className="absolute right-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </span>
                 </label>
 
                 {error ? (

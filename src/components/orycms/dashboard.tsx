@@ -60,6 +60,44 @@ type MenuItem = {
   children?: MenuChild[]
 }
 
+type OryCMSNotification = {
+  body: string
+  id: string
+  kind: "order" | "customer" | "admin-user" | "system"
+  read: boolean
+  time: string
+  timestamp: string
+  title: string
+}
+
+type OryCMSHeaderProfile = {
+  email: string
+  fullName: string
+  profilePhoto: string | null
+}
+
+type OryCMSDashboardData = {
+  admin: { email: string; name: string }
+  generatedAt: string
+  inventory: { healthScore: number; inStock: number; lowStock: number; outOfStock: number; status: string }
+  kpis: {
+    averageOrderValue: number
+    conversionRate: number | null
+    pendingFulfillment: number
+    revenueToday: number
+    revenueTrend: number | null
+    totalOrders: number
+    visitors: number | null
+  }
+  latestOrders: { customerName: string; id: string; number: string; paymentStatus: string; status: string; total: number }[]
+  lowStockAlerts: { id: string; name: string; sku: string; stock_quantity: number }[]
+  orderStatuses: Record<string, number>
+  range: { from: string; key: string; label: string; to: string }
+  recentCustomers: { email: string; id: string; joinedAt: string; name: string }[]
+  revenueChart: { label: string; previous: number; value: number }[]
+  topProducts: { name: string; revenue: number; sku: string; sold: number }[]
+}
+
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Analytics: LineChart,
   Categories: Tags,
@@ -128,13 +166,65 @@ function DashboardShell({
   const [searchOpen, setSearchOpen] = useState(false)
   const [insightsOpen, setInsightsOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [notifications, setNotifications] = useState<OryCMSNotification[]>([])
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [headerProfile, setHeaderProfile] = useState<OryCMSHeaderProfile | null>(null)
 
   useEffect(() => {
     if (!loaded || (user && roleName)) return
     const from = pathname?.startsWith("/admin") ? pathname : "/admin/dashboard"
     router.replace(`/admin/login?from=${encodeURIComponent(from)}`)
   }, [loaded, pathname, roleName, router, user])
+
+  useEffect(() => {
+    if (!user || !roleName) return
+
+    let cancelled = false
+    async function loadNotifications() {
+      setNotificationsLoading(true)
+      try {
+        const response = await fetch("/api/orycms/notifications", { cache: "no-store" })
+        const json = await response.json()
+        if (!cancelled && response.ok && json.success) {
+          setNotifications(Array.isArray(json.data) ? json.data : [])
+        }
+      } finally {
+        if (!cancelled) setNotificationsLoading(false)
+      }
+    }
+
+    void loadNotifications()
+    const interval = window.setInterval(loadNotifications, 8000)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [roleName, user])
+
+  useEffect(() => {
+    if (!user || !roleName) return
+
+    let cancelled = false
+    async function loadProfile() {
+      try {
+        const response = await fetch("/api/orycms/profile", { cache: "no-store" })
+        const json = await response.json()
+        if (!cancelled && response.ok && json.success) {
+          setHeaderProfile(json.data)
+        }
+      } catch {
+        if (!cancelled) setHeaderProfile(null)
+      }
+    }
+
+    void loadProfile()
+    window.addEventListener("orycms-profile-updated", loadProfile)
+    return () => {
+      cancelled = true
+      window.removeEventListener("orycms-profile-updated", loadProfile)
+    }
+  }, [roleName, user])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -236,9 +326,15 @@ function DashboardShell({
                 }`}
               >
                 <Bell className="h-4 w-4" />
-                <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-destructive" />
+                {notifications.length ? (
+                  <span className="absolute -right-0.5 -top-0.5 grid min-h-4 min-w-4 place-items-center rounded-full bg-destructive px-1 text-[9px] font-semibold leading-none text-white">
+                    {Math.min(notifications.length, 9)}
+                  </span>
+                ) : null}
               </button>
               <NotificationsPanel
+                loading={notificationsLoading}
+                notifications={notifications}
                 open={notificationsOpen}
                 onClose={() => setNotificationsOpen(false)}
               />
@@ -256,14 +352,20 @@ function DashboardShell({
                 className="grid h-8 w-8 place-items-center rounded-full border border-border bg-gradient-to-br from-chart-3 to-chart-4 text-[11px] font-semibold text-white shadow-xs transition-opacity hover:opacity-90"
                 aria-label="Profile"
               >
-                <img src="/orycms/img/favicon.png" alt="" className="h-5 w-5 object-contain" />
+                {headerProfile?.profilePhoto ? (
+                  <img src={headerProfile.profilePhoto} alt="" className="h-full w-full rounded-full object-cover" />
+                ) : (
+                  <img src="/orycms/img/favicon.png" alt="" className="h-5 w-5 object-contain" />
+                )}
               </button>
 
               <ProfileDropdown
-                email={user.email}
+                displayName={headerProfile?.fullName}
+                email={headerProfile?.email ?? user.email}
                 onClose={() => setProfileOpen(false)}
                 onLogout={logout}
                 open={profileOpen}
+                profilePhoto={headerProfile?.profilePhoto ?? null}
                 roleName={roleName ?? "Owner"}
               />
             </div>
@@ -286,73 +388,138 @@ function DashboardShell({
 }
 
 function OryCMSOverview() {
-  const metrics = [
+  const [data, setData] = useState<OryCMSDashboardData | null>(null)
+  const [error, setError] = useState("")
+  const [fromDate, setFromDate] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [range, setRange] = useState("7d")
+  const [toDate, setToDate] = useState("")
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadDashboard(showLoader = false) {
+      if (showLoader) setLoading(true)
+      try {
+        const params = new URLSearchParams({ range })
+        if (range === "custom") {
+          if (fromDate) params.set("from", fromDate)
+          if (toDate) params.set("to", toDate)
+        }
+        const response = await fetch(`/api/orycms/dashboard?${params.toString()}`, { cache: "no-store" })
+        const json = await response.json()
+        if (!cancelled && response.ok && json.success) {
+          setData(json.data)
+          setError("")
+        } else if (!cancelled) {
+          setError(json.error?.message ?? "Failed to load dashboard.")
+        }
+      } catch {
+        if (!cancelled) setError("Dashboard data unavailable.")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    function onOrdersUpdated() {
+      void loadDashboard(false)
+    }
+
+    void loadDashboard(true)
+    const interval = window.setInterval(() => void loadDashboard(false), 10000)
+    window.addEventListener("orycms-orders-updated", onOrdersUpdated)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+      window.removeEventListener("orycms-orders-updated", onOrdersUpdated)
+    }
+  }, [fromDate, range, toDate])
+
+  const now = new Date()
+  const metrics = data ? [
     {
+      delta: data.kpis.revenueTrend,
+      foot: data.kpis.revenueTrend === null ? "No previous period revenue yet" : `vs previous ${data.range.label} period`,
       label: "Revenue today",
-      value: formatCurrency(14283),
-      delta: 12.4,
-      foot: `vs. ${formatCurrency(12712)} yesterday`,
+      value: formatCurrency(data.kpis.revenueToday),
     },
-    { label: "Orders", value: "312", delta: 8.1, foot: "42 pending fulfillment" },
-    { label: "Conversion rate", value: "3.28%", delta: -0.6, foot: "of 48,210 visitors" },
     {
-      label: "Avg. order value",
-      value: formatCurrency(92.4),
-      delta: 4.2,
-      foot: "AOV up over 7 days",
+      delta: null,
+      foot: `${data.kpis.pendingFulfillment} pending fulfillment`,
+      label: "Total orders",
+      value: data.kpis.totalOrders.toLocaleString("en-IN"),
     },
-  ]
+    {
+      delta: null,
+      foot: data.kpis.visitors === null ? "Visitor tracking not configured" : `of ${data.kpis.visitors.toLocaleString("en-IN")} visitors`,
+      label: "Conversion rate",
+      value: data.kpis.conversionRate === null ? "—" : `${data.kpis.conversionRate.toFixed(2)}%`,
+    },
+    {
+      delta: null,
+      foot: "Paid + COD orders in selected range",
+      label: "Avg. order value",
+      value: formatCurrency(data.kpis.averageOrderValue),
+    },
+  ] : []
 
   return (
     <section className="mx-auto max-w-[1400px] space-y-5 px-6 py-6 lg:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="text-[12px] text-muted-foreground">Saturday, July 18</div>
+          <div className="text-[12px] text-muted-foreground">
+            {now.toLocaleString("en-IN", { dateStyle: "full", timeStyle: "short" })}
+          </div>
           <h1 className="mt-1 text-[26px] font-semibold leading-tight tracking-tight">
-            Good evening, Tushar <span className="inline-block">👋</span>
+            {greeting(now)}, {data?.admin.name ?? "Admin"} <span className="inline-block">👋</span>
           </h1>
           <p className="mt-1 text-[13.5px] text-muted-foreground">
-            Sales are pacing <span className="font-medium text-success">14.2% ahead</span> of last
-            week. Two products need restocking.
+            {loading ? "Loading live dashboard…" : data ? `Live database snapshot refreshed ${new Date(data.generatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}.` : "No dashboard data loaded."}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium transition-colors hover:border-border-strong">
-            Export report
-          </button>
-          <button className="h-9 rounded-lg bg-foreground px-3 text-[12.5px] font-medium text-background transition-opacity hover:opacity-90">
+          <Link href="/admin/products/new" className="h-9 rounded-lg bg-foreground px-3 pt-2 text-[12.5px] font-medium text-background transition-opacity hover:opacity-90">
             New product
-          </button>
+          </Link>
         </div>
       </div>
 
+      {error ? (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[13px] text-destructive">
+          {error}
+        </div>
+      ) : null}
+
       <OverviewCard className="overflow-hidden">
-        <div className="grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
-          {metrics.map((metric) => (
+        {loading && !data ? (
+          <div className="grid h-32 place-items-center text-sm text-muted-foreground">Loading live KPIs…</div>
+        ) : (
+          <div className="grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+            {metrics.map((metric) => (
             <div key={metric.label} className="p-5">
               <div className="text-[12px] text-muted-foreground">{metric.label}</div>
               <div className="mt-1.5 flex items-baseline gap-2">
                 <div className="num text-[24px] font-semibold tracking-tight">{metric.value}</div>
-                <MetricDelta value={metric.delta} />
+                {typeof metric.delta === "number" ? <MetricDelta value={metric.delta} /> : null}
               </div>
               <div className="mt-1 text-[11.5px] text-muted-foreground">{metric.foot}</div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </OverviewCard>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.8fr)]">
-        <RevenueOverview />
+        <RevenueOverview chart={data?.revenueChart ?? []} fromDate={fromDate} range={range} setFromDate={setFromDate} setRange={setRange} setToDate={setToDate} toDate={toDate} total={data ? data.revenueChart.reduce((sum, item) => sum + item.value, 0) : 0} trend={data?.kpis.revenueTrend ?? null} />
         <div className="space-y-5">
-          <OrdersPipeline />
-          <InventoryHealth />
+          <OrdersPipeline statuses={data?.orderStatuses ?? {}} />
+          <InventoryHealth inventory={data?.inventory} />
         </div>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.4fr)_minmax(300px,0.8fr)]">
-        <TopProducts />
-        <RecentOrders />
-        <SalesFunnel />
+        <TopProducts products={data?.topProducts ?? []} />
+        <RecentOrders orders={data?.latestOrders ?? []} />
+        <AlertsAndCustomers alerts={data?.lowStockAlerts ?? []} customers={data?.recentCustomers ?? []} />
       </div>
     </section>
   )
@@ -385,17 +552,28 @@ function MetricDelta({ value }: { value: number }) {
   )
 }
 
-function RevenueOverview() {
-  const bars = [
-    { label: "Mon", value: 4200, previous: 3800 },
-    { label: "Tue", value: 5100, previous: 4400 },
-    { label: "Wed", value: 4800, previous: 4600 },
-    { label: "Thu", value: 6200, previous: 5100 },
-    { label: "Fri", value: 7400, previous: 5800 },
-    { label: "Sat", value: 8900, previous: 6900 },
-    { label: "Sun", value: 7800, previous: 6200 },
-  ]
-  const max = Math.max(...bars.flatMap((bar) => [bar.value, bar.previous]))
+function RevenueOverview({
+  chart,
+  fromDate,
+  range,
+  setFromDate,
+  setRange,
+  setToDate,
+  toDate,
+  total,
+  trend,
+}: {
+  chart: OryCMSDashboardData["revenueChart"]
+  fromDate: string
+  range: string
+  setFromDate: (value: string) => void
+  setRange: (range: string) => void
+  setToDate: (value: string) => void
+  toDate: string
+  total: number
+  trend: number | null
+}) {
+  const max = Math.max(1, ...chart.flatMap((bar) => [bar.value, bar.previous]))
 
   return (
     <OverviewCard className="p-5">
@@ -404,33 +582,43 @@ function RevenueOverview() {
           <div className="text-[12px] text-muted-foreground">Revenue</div>
           <div className="mt-1 flex items-baseline gap-2">
             <div className="num text-[22px] font-semibold tracking-tight">
-              {formatCurrency(74392.1)}
+              {formatCurrency(total)}
             </div>
-            <MetricDelta value={14.2} />
+            {typeof trend === "number" ? <MetricDelta value={trend} /> : null}
           </div>
           <div className="mt-0.5 text-[11.5px] text-muted-foreground">
-            Compared to {formatCurrency(65148)} previous period
+            Compared with previous selected period
           </div>
         </div>
-        <div className="inline-flex rounded-md border border-border bg-surface-muted p-0.5 text-[12px]">
-          {["1D", "7D", "1M", "1Y"].map((range) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-md border border-border bg-surface-muted p-0.5 text-[12px]">
+          {["1d", "7d", "1m", "1y", "custom"].map((item) => (
             <button
-              key={range}
+              key={item}
+              type="button"
+              onClick={() => setRange(item)}
               className={cn(
                 "h-6 rounded-[5px] px-2.5 transition-colors",
-                range === "7D"
+                item === range
                   ? "bg-surface font-medium text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {range}
+              {item === "custom" ? "Custom" : item.toUpperCase()}
             </button>
           ))}
+          </div>
+          {range === "custom" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="h-7 rounded-md border border-border bg-surface px-2 text-[12px] outline-none" />
+              <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="h-7 rounded-md border border-border bg-surface px-2 text-[12px] outline-none" />
+            </div>
+          ) : null}
         </div>
       </div>
 
       <div className="mt-6 flex h-[240px] items-end gap-3 border-b border-border/70 pb-5">
-        {bars.map((bar) => (
+        {chart.length ? chart.map((bar) => (
           <div key={bar.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
             <div className="flex h-48 w-full items-end justify-center gap-1.5 rounded-lg bg-surface-muted/70 p-2">
               <div
@@ -446,7 +634,11 @@ function RevenueOverview() {
             </div>
             <div className="text-[11px] text-muted-foreground">{bar.label}</div>
           </div>
-        ))}
+        )) : (
+          <div className="grid h-48 flex-1 place-items-center rounded-lg border border-dashed border-border text-sm text-muted-foreground">
+            No paid/COD orders in this period.
+          </div>
+        )}
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-4 text-[11.5px] text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
@@ -466,12 +658,17 @@ function RevenueOverview() {
   )
 }
 
-function OrdersPipeline() {
+function OrdersPipeline({ statuses }: { statuses: Record<string, number> }) {
   const rows = [
-    { icon: Clock, label: "Active", value: 128, tint: "bg-warning/10 text-warning" },
-    { icon: Truck, label: "Shipping", value: 74, tint: "bg-info/10 text-info" },
-    { icon: CheckCircle2, label: "Delivered", value: 892, tint: "bg-success/10 text-success" },
-    { icon: ArrowDownRight, label: "Refunds", value: 6, tint: "bg-destructive/10 text-destructive" },
+    { icon: Clock, key: "pending", label: "Pending", tint: "bg-warning/10 text-warning" },
+    { icon: CheckCircle2, key: "confirmed", label: "Confirmed", tint: "bg-info/10 text-info" },
+    { icon: Boxes, key: "processing", label: "Processing", tint: "bg-warning/10 text-warning" },
+    { icon: Package, key: "packed", label: "Packed", tint: "bg-muted text-muted-foreground" },
+    { icon: Truck, key: "shipped", label: "Shipped", tint: "bg-info/10 text-info" },
+    { icon: Truck, key: "out_for_delivery", label: "Out for delivery", tint: "bg-info/10 text-info" },
+    { icon: CheckCircle2, key: "delivered", label: "Delivered", tint: "bg-success/10 text-success" },
+    { icon: ArrowDownRight, key: "cancelled", label: "Cancelled", tint: "bg-destructive/10 text-destructive" },
+    { icon: ArrowDownRight, key: "refunded", label: "Refunded", tint: "bg-destructive/10 text-destructive" },
   ]
 
   return (
@@ -492,12 +689,12 @@ function OrdersPipeline() {
           const Icon = row.icon
 
           return (
-            <div key={row.label} className="flex items-center gap-3 py-1.5">
+            <div key={row.key} className="flex items-center gap-3 py-1.5">
               <div className={cn("grid h-7 w-7 place-items-center rounded-md", row.tint)}>
                 <Icon className="h-3.5 w-3.5" />
               </div>
               <div className="text-[13px]">{row.label}</div>
-              <div className="num ml-auto text-[14px] font-semibold tabular-nums">{row.value}</div>
+              <div className="num ml-auto text-[14px] font-semibold tabular-nums">{statuses[row.key] ?? 0}</div>
             </div>
           )
         })}
@@ -506,7 +703,8 @@ function OrdersPipeline() {
   )
 }
 
-function InventoryHealth() {
+function InventoryHealth({ inventory }: { inventory?: OryCMSDashboardData["inventory"] }) {
+  const score = inventory?.healthScore ?? 0
   return (
     <OverviewCard className="p-5">
       <div className="flex items-center justify-between">
@@ -514,7 +712,9 @@ function InventoryHealth() {
           <div className="text-[13.5px] font-semibold">Inventory health</div>
           <div className="mt-0.5 text-[11.5px] text-muted-foreground">All warehouses</div>
         </div>
-        <span className="text-[11.5px] font-medium text-success">Healthy</span>
+        <span className={cn("text-[11.5px] font-medium", score >= 80 ? "text-success" : score >= 50 ? "text-warning" : "text-destructive")}>
+          {inventory?.status ?? "No stock data"}
+        </span>
       </div>
       <div className="mt-4 flex items-center gap-4">
         <div className="relative h-[86px] w-[86px]">
@@ -526,23 +726,23 @@ function InventoryHealth() {
               r="15.5"
               fill="none"
               stroke="var(--color-foreground)"
-              strokeDasharray="81.8 97.4"
+              strokeDasharray={`${(score / 100) * 97.4} 97.4`}
               strokeLinecap="round"
               strokeWidth="3"
             />
           </svg>
           <div className="absolute inset-0 grid place-items-center text-center">
             <div>
-              <div className="num text-[18px] font-semibold leading-none">84</div>
+              <div className="num text-[18px] font-semibold leading-none">{score}</div>
               <div className="text-[9.5px] uppercase tracking-wider text-muted-foreground">score</div>
             </div>
           </div>
         </div>
         <div className="flex-1 space-y-1.5 text-[12.5px]">
           {[
-            ["In stock", "1,284", "text-foreground"],
-            ["Low stock", "12", "text-warning"],
-            ["Out of stock", "3", "text-destructive"],
+            ["In stock", String(inventory?.inStock ?? 0), "text-foreground"],
+            ["Low stock", String(inventory?.lowStock ?? 0), "text-warning"],
+            ["Out of stock", String(inventory?.outOfStock ?? 0), "text-destructive"],
           ].map(([label, value, tone]) => (
             <div key={label} className="flex justify-between">
               <span className="text-muted-foreground">{label}</span>
@@ -555,28 +755,22 @@ function InventoryHealth() {
   )
 }
 
-function TopProducts() {
-  const products = [
-    { name: "Linen Crewneck Tee", sku: "LT-01", sold: 428, revenue: 12840, trend: 12.4 },
-    { name: "Canvas Everyday Tote", sku: "CT-04", sold: 361, revenue: 9748, trend: 8.1 },
-    { name: "Ceramic Mug — Sand", sku: "CM-11", sold: 289, revenue: 5202, trend: -3.2 },
-    { name: "Merino Beanie", sku: "MB-02", sold: 214, revenue: 4708, trend: 5.6 },
-  ]
-  const max = Math.max(...products.map((product) => product.revenue))
+function TopProducts({ products }: { products: OryCMSDashboardData["topProducts"] }) {
+  const max = Math.max(1, ...products.map((product) => product.revenue))
 
   return (
     <OverviewCard>
       <div className="flex items-center justify-between p-5 pb-3">
         <div>
           <div className="text-[13.5px] font-semibold">Top products</div>
-          <div className="mt-0.5 text-[11.5px] text-muted-foreground">By revenue · last 7 days</div>
+          <div className="mt-0.5 text-[11.5px] text-muted-foreground">By revenue · selected range</div>
         </div>
         <Link href="/admin/products" className="text-[11.5px] text-muted-foreground hover:text-foreground">
           View all →
         </Link>
       </div>
       <div className="space-y-2 px-3 pb-3">
-        {products.map((product, index) => (
+        {products.length ? products.map((product, index) => (
           <div
             key={product.sku}
             className="rounded-lg border border-border bg-surface-muted/35 p-3 transition-colors hover:bg-accent/40"
@@ -593,7 +787,6 @@ function TopProducts() {
                       {product.sku}
                     </div>
                   </div>
-                  <MetricDelta value={product.trend} />
                 </div>
                 <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
                   <div
@@ -614,21 +807,15 @@ function TopProducts() {
               </div>
             </div>
           </div>
-        ))}
+        )) : (
+          <EmptyBlock message="No product sales in this period." />
+        )}
       </div>
     </OverviewCard>
   )
 }
 
-function RecentOrders() {
-  const orders = [
-    ["#4021", "Amelia Watson", "paid", "processing", formatCurrency(248)],
-    ["#4020", "Noah Bennett", "paid", "shipped", formatCurrency(89.5)],
-    ["#4019", "Priya Shah", "pending", "unfulfilled", formatCurrency(512.4)],
-    ["#4018", "Marc Dubois", "paid", "delivered", formatCurrency(164)],
-    ["#4017", "Ines García", "refunded", "returned", formatCurrency(328.9)],
-  ]
-
+function RecentOrders({ orders }: { orders: OryCMSDashboardData["latestOrders"] }) {
   return (
     <OverviewCard className="overflow-hidden">
       <div className="flex items-center justify-between border-b border-border bg-surface-muted px-5 py-4">
@@ -641,19 +828,21 @@ function RecentOrders() {
         </Link>
       </div>
       <div className="divide-y divide-border">
-        {orders.map(([id, customer, payment, shipping, total]) => (
-          <div key={id} className="grid grid-cols-[80px_1fr_auto] items-center gap-3 px-5 py-3 text-[12.5px]">
-            <div className="font-mono text-muted-foreground">{id}</div>
+        {orders.length ? orders.map((order) => (
+          <div key={order.id} className="grid grid-cols-[90px_1fr_auto] items-center gap-3 px-5 py-3 text-[12.5px]">
+            <div className="font-mono text-muted-foreground">{order.number}</div>
             <div className="min-w-0">
-              <div className="truncate font-medium">{customer}</div>
+              <div className="truncate font-medium">{order.customerName}</div>
               <div className="mt-1 flex flex-wrap gap-1.5">
-                <StatusPill label={payment} tone={payment === "paid" ? "success" : payment === "pending" ? "warning" : "danger"} />
-                <StatusPill label={shipping} tone={shipping === "delivered" ? "success" : shipping === "shipped" ? "info" : shipping === "processing" ? "warning" : "muted"} />
+                <StatusPill label={label(order.paymentStatus)} tone={order.paymentStatus === "paid" ? "success" : order.paymentStatus.includes("pending") ? "warning" : "danger"} />
+                <StatusPill label={label(order.status)} tone={order.status === "delivered" ? "success" : order.status === "shipped" || order.status === "out_for_delivery" ? "info" : order.status === "processing" ? "warning" : order.status === "cancelled" || order.status === "refunded" ? "danger" : "muted"} />
               </div>
             </div>
-            <div className="num font-semibold">{total}</div>
+            <div className="num font-semibold">{formatCurrency(order.total)}</div>
           </div>
-        ))}
+        )) : (
+          <div className="p-5"><EmptyBlock message="No orders found yet." /></div>
+        )}
       </div>
     </OverviewCard>
   )
@@ -682,44 +871,76 @@ function StatusPill({
   )
 }
 
-function SalesFunnel() {
-  const funnel = [
-    { label: "Visitors", value: 48210, pct: 100 },
-    { label: "Add to Cart", value: 12384, pct: 25.7 },
-    { label: "Checkout", value: 5842, pct: 12.1 },
-    { label: "Purchase", value: 3126, pct: 6.5 },
-  ]
-
+function AlertsAndCustomers({
+  alerts,
+  customers,
+}: {
+  alerts: OryCMSDashboardData["lowStockAlerts"]
+  customers: OryCMSDashboardData["recentCustomers"]
+}) {
   return (
     <OverviewCard className="p-5">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-[13.5px] font-semibold">Sales funnel</div>
-          <div className="mt-0.5 text-[11.5px] text-muted-foreground">Last 7 days</div>
+          <div className="text-[13.5px] font-semibold">Live alerts</div>
+          <div className="mt-0.5 text-[11.5px] text-muted-foreground">Low stock and new customers</div>
         </div>
-        <span className="text-[11.5px] text-muted-foreground">Conv. 6.5%</span>
       </div>
-      <div className="mt-4 space-y-3">
-        {funnel.map((step, index) => (
-          <div key={step.label}>
-            <div className="flex items-center justify-between text-[12.5px]">
-              <span className="text-muted-foreground">{step.label}</span>
-              <span className="num font-medium tabular-nums">
-                {step.value.toLocaleString()}{" "}
-                <span className="font-normal text-muted-foreground">· {step.pct}%</span>
-              </span>
-            </div>
-            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
-              <div
-                className="h-full rounded-full bg-foreground"
-                style={{ opacity: 1 - index * 0.15, width: `${step.pct}%` }}
-              />
-            </div>
+      <div className="mt-4 space-y-4">
+        <div>
+          <div className="mb-2 text-[12px] font-medium text-muted-foreground">Low-stock alerts</div>
+          <div className="space-y-2">
+            {alerts.length ? alerts.map((product) => (
+              <div key={product.id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-muted/35 px-3 py-2 text-[12.5px]">
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{product.name}</div>
+                  <div className="font-mono text-[11px] text-muted-foreground">{product.sku}</div>
+                </div>
+                <span className={cn("num font-semibold", product.stock_quantity <= 0 ? "text-destructive" : "text-warning")}>
+                  {product.stock_quantity}
+                </span>
+              </div>
+            )) : <EmptyBlock message="No low-stock products." />}
           </div>
-        ))}
+        </div>
+        <div>
+          <div className="mb-2 text-[12px] font-medium text-muted-foreground">Recent customers</div>
+          <div className="space-y-2">
+            {customers.length ? customers.map((customer) => (
+              <div key={customer.id} className="rounded-lg border border-border bg-surface-muted/35 px-3 py-2 text-[12.5px]">
+                <div className="truncate font-medium">{customer.name}</div>
+                <div className="truncate text-[11px] text-muted-foreground">{customer.email}</div>
+                <div className="mt-1 text-[10.5px] text-muted-foreground">{dateTime(customer.joinedAt)}</div>
+              </div>
+            )) : <EmptyBlock message="No registered customers yet." />}
+          </div>
+        </div>
       </div>
     </OverviewCard>
   )
+}
+
+function EmptyBlock({ message }: { message: string }) {
+  return (
+    <div className="grid min-h-24 place-items-center rounded-lg border border-dashed border-border bg-surface-muted/25 px-3 py-4 text-center text-[12.5px] text-muted-foreground">
+      {message}
+    </div>
+  )
+}
+
+function greeting(now: Date) {
+  const hour = now.getHours()
+  if (hour < 12) return "Good morning"
+  if (hour < 17) return "Good afternoon"
+  return "Good evening"
+}
+
+function dateTime(value: string) {
+  return new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
+}
+
+function label(value: string) {
+  return value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 function sectionHref(section: string) {
@@ -746,6 +967,7 @@ function OryCMSFooter() {
 
 function OryCMSSidebar({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname()
+  const [copilotOpen, setCopilotOpen] = useState(false)
   const [open, setOpen] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
@@ -829,12 +1051,82 @@ function OryCMSSidebar({ collapsed }: { collapsed: boolean }) {
           <p className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground">
             Ask questions across orders, inventory, and customers.
           </p>
-          <button className="mt-2 h-7 w-full rounded-md bg-foreground text-[11.5px] font-medium text-background transition-opacity hover:opacity-90">
+          <button
+            type="button"
+            onClick={() => setCopilotOpen(true)}
+            className="mt-2 h-7 w-full rounded-md bg-foreground text-[11.5px] font-medium text-background transition-opacity hover:opacity-90"
+          >
             Try Copilot
           </button>
         </div>
       )}
+      <CopilotComingSoonModal open={copilotOpen} onClose={() => setCopilotOpen(false)} />
     </aside>
+  )
+}
+
+function CopilotComingSoonModal({
+  onClose,
+  open,
+}: {
+  onClose: () => void
+  open: boolean
+}) {
+  useEffect(() => {
+    if (!open) return
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose()
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [onClose, open])
+
+  if (!open) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] grid place-items-center bg-background/85 px-4 py-6 opacity-100 backdrop-blur-sm transition-opacity duration-200"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="copilot-coming-soon-title"
+    >
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        aria-label="Close Copilot announcement"
+        onClick={onClose}
+      />
+      <div className="relative w-full max-w-md scale-100 rounded-2xl border border-border bg-white p-6 text-center text-foreground shadow-[0_24px_80px_rgba(15,23,42,0.22)] transition-transform duration-200 ease-out">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[var(--orycms-color-primary)]/10 text-2xl">
+          🚀
+        </div>
+        <h2 id="copilot-coming-soon-title" className="mt-4 text-xl font-semibold tracking-tight">
+          Coming Soon
+        </h2>
+        <p className="mt-3 text-[13.5px] leading-6 text-muted-foreground">
+          AI Copilot is currently under development and will be launched soon by{" "}
+          <span className="font-semibold text-foreground">OrynticLabs Private Limited</span>.
+        </p>
+        <p className="mt-4 text-[13.5px] leading-6 text-muted-foreground">
+          For early access, demos, or enterprise inquiries, please contact:
+        </p>
+        <a
+          href="mailto:sales@orynticlabs.com"
+          className="mt-1 inline-flex font-semibold text-[var(--orycms-color-primary)] hover:underline"
+        >
+          sales@orynticlabs.com
+        </a>
+        <button
+          type="button"
+          onClick={onClose}
+          className="mt-6 h-10 w-full rounded-lg bg-foreground text-[13px] font-semibold text-background transition-colors hover:bg-[var(--orycms-color-primary)] hover:text-white"
+        >
+          OK
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -1031,6 +1323,43 @@ function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void })
 }
 
 function InsightsPanel({ open }: { open: boolean }) {
+  const [data, setData] = useState<{
+    cards?: Record<string, number | null>
+    generatedAt?: string
+    insights?: Record<string, unknown>
+    recommendations?: { action: string; detail: string; priority: "High" | "Medium" | "Low"; title: string }[]
+  } | null>(null)
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function loadInsights() {
+      try {
+        const response = await fetch("/api/orycms/analytics/insights?range=30d", { cache: "no-store" })
+        const json = await response.json()
+        if (!cancelled && response.ok && json.success) {
+          setData(json.data)
+          setError("")
+        }
+      } catch {
+        if (!cancelled) setError("Live insights unavailable.")
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void loadInsights()
+    const interval = window.setInterval(loadInsights, 15000)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [])
+
+  const lowStock = Array.isArray(data?.insights?.lowStockProducts) ? data.insights.lowStockProducts.length : 0
+  const outOfStock = Array.isArray(data?.insights?.outOfStockProducts) ? data.insights.outOfStockProducts.length : 0
+
   return (
     <aside
       className={`hidden shrink-0 overflow-hidden transition-[width] duration-300 ease-out lg:block ${
@@ -1044,31 +1373,67 @@ function InsightsPanel({ open }: { open: boolean }) {
             AI Insights
           </div>
           <p className="mt-1 text-[11.5px] text-muted-foreground">
-            Workspace signals and OryCMS setup notes
+            Live sales, stock, and customer signals
           </p>
         </div>
         <div className="space-y-3 bg-surface p-4">
-          <Insight
-            title="Setup status"
-            body="Neon schema and first owner are handled by /admin/setup once."
-          />
-          <Insight
-            title="Admin security"
-            body="Protected admin routes require the OryCMS session cookie."
-          />
-          <Insight
-            title="Content API"
-            body="OryCMS API is mounted under /api/orycms from orycms.config.ts."
-          />
+          {loading ? <Insight title="Loading live insights" body="Reading real orders, products, customers, and stock data…" /> : null}
+          {error ? <Insight title="Insights unavailable" body={error} tone="warning" /> : null}
+          {data ? (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <MiniInsight label="Revenue" value={formatCurrency(Number(data.cards?.totalRevenue ?? 0))} />
+                <MiniInsight label="Orders today" value={String(data.cards?.ordersToday ?? 0)} />
+                <MiniInsight label="AOV" value={formatCurrency(Number(data.cards?.averageOrderValue ?? 0))} />
+                <MiniInsight label="Products sold" value={String(data.cards?.productsSold ?? 0)} />
+              </div>
+              <Insight
+                title={outOfStock ? "Critical stock alert" : lowStock ? "Low stock warning" : "Business health stable"}
+                body={
+                  outOfStock
+                    ? `${outOfStock} products are out of stock. Restock before promotion.`
+                    : lowStock
+                      ? `${lowStock} products are running low based on live inventory.`
+                      : "No urgent sales or inventory issue detected in the last 30 days."
+                }
+                tone={outOfStock ? "danger" : lowStock ? "warning" : "success"}
+              />
+              {(data.recommendations ?? []).slice(0, 4).map((rec) => (
+                <Insight
+                  key={`${rec.title}-${rec.detail}`}
+                  title={rec.title}
+                  body={`${rec.detail} ${rec.action}`}
+                  tone={rec.priority === "High" ? "danger" : rec.priority === "Medium" ? "warning" : "success"}
+                />
+              ))}
+              <div className="rounded-xl border border-border bg-surface-muted p-3 text-[11.5px] leading-5 text-muted-foreground">
+                Updated {data.generatedAt ? new Date(data.generatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "now"} · Auto-refresh every 15s
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
     </aside>
   )
 }
 
-function Insight({ title, body }: { title: string; body: string }) {
+function MiniInsight({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4 shadow-xs">
+    <div className="rounded-xl border border-border bg-surface p-3 shadow-xs">
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className="mt-1 truncate text-[13px] font-semibold">{value}</div>
+    </div>
+  )
+}
+
+function Insight({ body, title, tone = "default" }: { body: string; title: string; tone?: "danger" | "default" | "success" | "warning" }) {
+  return (
+    <div className={cn(
+      "rounded-xl border border-border bg-surface p-4 shadow-xs",
+      tone === "danger" && "border-destructive/30 bg-destructive/5",
+      tone === "warning" && "border-warning/30 bg-warning/5",
+      tone === "success" && "border-success/30 bg-success/5",
+    )}>
       <div className="text-[12.5px] font-semibold">{title}</div>
       <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">{body}</p>
     </div>
@@ -1076,16 +1441,20 @@ function Insight({ title, body }: { title: string; body: string }) {
 }
 
 function ProfileDropdown({
+  displayName,
   email,
   onClose,
   onLogout,
   open,
+  profilePhoto,
   roleName,
 }: {
+  displayName?: string
   email: string
   onClose: () => void
   onLogout: () => void
   open: boolean
+  profilePhoto: string | null
   roleName: string
 }) {
   return (
@@ -1099,26 +1468,31 @@ function ProfileDropdown({
       )}
     >
       <div className="flex items-center gap-3 border-b border-border bg-[#f8fafc] p-4">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border bg-white">
-          <img src="/orycms/img/favicon.png" alt="" className="h-5 w-5 object-contain" />
+        <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-white">
+          {profilePhoto ? (
+            <img src={profilePhoto} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <img src="/orycms/img/favicon.png" alt="" className="h-5 w-5 object-contain" />
+          )}
         </div>
         <div className="min-w-0">
-          <div className="truncate text-[12.5px] font-semibold">{email}</div>
+          <div className="truncate text-[12.5px] font-semibold">{displayName || email}</div>
+          {displayName ? <div className="truncate text-[11px] text-muted-foreground">{email}</div> : null}
           <div className="mt-0.5 text-[11px] text-muted-foreground">
             {roleName} · OryCMS
           </div>
         </div>
       </div>
       <div className="bg-white p-1.5">
-        <button
-          type="button"
+        <Link
+          href="/admin/profile"
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[12.5px] transition-colors hover:bg-accent hover:text-accent-foreground"
           onClick={onClose}
           role="menuitem"
         >
           <User className="h-4 w-4" />
           Profile
-        </button>
+        </Link>
         <button
           type="button"
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-[12.5px] transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -1143,33 +1517,16 @@ function ProfileDropdown({
 }
 
 function NotificationsPanel({
+  loading,
+  notifications,
   open,
   onClose,
 }: {
+  loading: boolean
+  notifications: OryCMSNotification[]
   open: boolean
   onClose: () => void
 }) {
-  const notifications = [
-    {
-      title: "Database connected",
-      body: "OryCMS is using your Neon connection string.",
-      time: "now",
-      tone: "bg-success/10 text-success",
-    },
-    {
-      title: "First-run setup",
-      body: "Create the owner account once from /admin/setup.",
-      time: "setup",
-      tone: "bg-info/10 text-info",
-    },
-    {
-      title: "Admin protected",
-      body: "Dashboard access is gated by the OryCMS session cookie.",
-      time: "auth",
-      tone: "bg-warning/10 text-warning",
-    },
-  ]
-
   return (
     <div
       role="dialog"
@@ -1194,20 +1551,30 @@ function NotificationsPanel({
           </button>
         </div>
         <div className="mt-0.5 text-[11.5px] text-muted-foreground">
-          OryCMS setup and admin runtime updates
+          Live order, customer, and admin activity
         </div>
       </div>
-      <div className="space-y-2 bg-white p-3">
+      <div className="max-h-[420px] space-y-2 overflow-y-auto bg-white p-3">
+        {loading && notifications.length === 0 ? (
+          <div className="rounded-lg border border-border bg-white p-4 text-center text-[12px] text-muted-foreground">
+            Loading live notifications…
+          </div>
+        ) : null}
+        {!loading && notifications.length === 0 ? (
+          <div className="rounded-lg border border-border bg-white p-4 text-center text-[12px] text-muted-foreground">
+            No recent order or customer activity.
+          </div>
+        ) : null}
         {notifications.map((notification) => (
           <div
-            key={notification.title}
+            key={notification.id}
             className="rounded-lg border border-border bg-white p-3 transition-colors hover:bg-accent/30"
           >
             <div className="flex items-start gap-3">
               <div
-                className={`mt-0.5 grid h-8 w-8 place-items-center rounded-md ${notification.tone}`}
+                className={cn("mt-0.5 grid h-8 w-8 place-items-center rounded-md", notificationTone(notification.kind))}
               >
-                <Bell className="h-4 w-4" />
+                <NotificationIcon kind={notification.kind} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
@@ -1226,4 +1593,18 @@ function NotificationsPanel({
       </div>
     </div>
   )
+}
+
+function NotificationIcon({ kind }: { kind: OryCMSNotification["kind"] }) {
+  if (kind === "order") return <Receipt className="h-4 w-4" />
+  if (kind === "customer") return <Users className="h-4 w-4" />
+  if (kind === "admin-user") return <UserCog className="h-4 w-4" />
+  return <Bell className="h-4 w-4" />
+}
+
+function notificationTone(kind: OryCMSNotification["kind"]) {
+  if (kind === "order") return "bg-success/10 text-success"
+  if (kind === "customer") return "bg-info/10 text-info"
+  if (kind === "admin-user") return "bg-warning/10 text-warning"
+  return "bg-muted text-muted-foreground"
 }

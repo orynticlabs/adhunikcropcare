@@ -395,7 +395,7 @@ export function ensureProductImages(product: OryCMSProductDTO) {
   return product.images.length ? product.images : [{ name: product.name, url: image }]
 }
 
-async function ensureOryCMSProductsSchema() {
+export async function ensureOryCMSProductsSchema() {
   await orycmsPrisma.$executeRawUnsafe(`
     CREATE EXTENSION IF NOT EXISTS pgcrypto;
     CREATE TABLE IF NOT EXISTS orycms_products (
