@@ -167,7 +167,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                   }`}
                   aria-label={`Show product image ${index + 1}`}
                 >
-                  <Image src={image.src} alt={image.alt} fill sizes="96px" className="object-contain p-2" />
+                  <Image src={image.src} alt={image.alt} fill sizes="96px" className="object-contain" />
                 </button>
               ))}
             </div>
@@ -182,7 +182,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                 fill
                 priority
                 sizes="(max-width: 1023px) 100vw, 52vw"
-                className="object-contain p-5"
+                className="object-contain"
               />
               {selected && (
                 <div className="absolute left-5 top-5 rounded-full bg-[#033927] px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white">
@@ -235,25 +235,25 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
             </div>
 
             <div className="mt-6">
-              <div className="text-sm font-semibold">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold">
                 Pack size
                 {activeOption === null && (
-                  <span className="ml-2 text-xs font-normal text-amber-600">— please select a size</span>
+                  <span className="text-xs font-normal text-amber-600">— please select a size</span>
                 )}
               </div>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+              <div className="mt-3 grid grid-cols-3 gap-3">
                 {product.options.map((option, index) => (
                   <button
                     key={option.label}
                     type="button"
                     onClick={() => setActiveOption(index)}
-                    className={`rounded-2xl border px-4 py-3 text-left transition ${
+                    className={`min-h-[4.5rem] w-full rounded-2xl border px-4 py-3 text-left transition ${
                       activeOption === index
                         ? "border-[#033927] bg-[#033927] text-white"
                         : "border-border bg-background text-foreground hover:border-[#689c30]/60 hover:bg-[#689c30]/10"
                     }`}
                   >
-                    <span className="block text-sm font-semibold">{option.label}</span>
+                    <span className="block break-words text-sm font-semibold leading-tight">{option.label}</span>
                     <span className={`mt-1 block text-xs ${activeOption === index ? "text-white/75" : "text-muted-foreground"}`}>
                       {option.price}
                     </span>
@@ -276,21 +276,21 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               )}
             </div>
 
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <div className="inline-flex h-12 items-center rounded-full border border-border bg-background p-1">
+            <div className="mt-7 flex flex-row gap-2 sm:gap-3">
+              <div className="inline-flex h-14 items-center rounded-full border border-border bg-background p-1 sm:h-12">
                 <button
                   type="button"
                   onClick={() => setQuantity((value) => Math.max(1, value - 1))}
-                  className="grid h-10 w-10 place-items-center rounded-full text-black transition-colors hover:bg-[#689c30] hover:!text-black"
+                  className="grid h-12 w-12 place-items-center rounded-full text-black transition-colors hover:bg-[#689c30] hover:!text-black sm:h-10 sm:w-10"
                   aria-label="Decrease quantity"
                 >
                   <Minus className="h-4 w-4" aria-hidden />
                 </button>
-                <span className="min-w-12 text-center text-sm font-bold">{quantity}</span>
+                <span className="min-w-10 text-center text-sm font-bold sm:min-w-12">{quantity}</span>
                 <button
                   type="button"
                   onClick={() => setQuantity((value) => Math.min(12, value + 1))}
-                  className="grid h-10 w-10 place-items-center rounded-full text-black transition-colors hover:bg-[#689c30] hover:!text-black"
+                  className="grid h-12 w-12 place-items-center rounded-full text-black transition-colors hover:bg-[#689c30] hover:!text-black sm:h-10 sm:w-10"
                   aria-label="Increase quantity"
                 >
                   <Plus className="h-4 w-4" aria-hidden />
@@ -301,13 +301,13 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                 type="button"
                 onClick={addQuantityToCart}
                 disabled={activeOption === null}
-                className={`inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-full px-6 text-sm font-bold transition-colors ${
+                className={`inline-flex h-14 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full px-2 text-xs font-bold transition-colors sm:h-12 sm:gap-2 sm:px-6 sm:text-sm ${
                   activeOption === null
                     ? "cursor-not-allowed border border-[#d7e0da] bg-white !text-[#203129]"
                     : "bg-[#033927] text-white hover:bg-[#689c30] hover:!text-black"
                 }`}
               >
-                <ShoppingBag className={`h-4 w-4 ${activeOption === null ? "text-[#203129]" : ""}`} aria-hidden />
+                <ShoppingBag className={`h-5 w-5 sm:h-4 sm:w-4 ${activeOption === null ? "text-[#203129]" : ""}`} aria-hidden />
                 {activeOption === null ? "Select a pack size" : "Add to Cart"}
               </button>
             </div>

@@ -28,7 +28,7 @@ export default function IrrigationPage() {
             <div>
               <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.2em] text-[#718179]"><Link href="/">Home</Link><ChevronRight className="h-3.5 w-3.5" /><span className="text-[#16826d]">Irrigation Solutions</span></nav>
               <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#bed7d0] bg-white/55 px-4 py-2 text-xs font-bold uppercase tracking-[.18em]"><Droplet className="h-4 w-4 text-[#16826d]" />Designed around every drop</div>
-              <h1 className="mt-7 font-display text-6xl leading-[.9] sm:text-8xl lg:text-[7rem]">Water should move<span className="block italic text-[#16826d]">with purpose.</span></h1>
+              <h1 className="mt-7 font-display text-5xl leading-[.92] sm:text-8xl lg:text-[7rem]">Water should move<span className="block italic text-[#16826d]">with purpose.</span></h1>
               <p className="mt-7 max-w-xl text-lg leading-8 text-[#5d7069]">Efficient irrigation connects source, pressure, filtration, timing, delivery, and the root zone into one dependable system.</p>
               <div className="mt-9 flex flex-wrap gap-3"><a href="#water-flow" className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">Follow the flow <ArrowDown className="h-4 w-4" /></a><Link href="/contact" className="inline-flex h-12 items-center rounded-full bg-[#033927] px-7 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">Plan a system</Link></div>
             </div>

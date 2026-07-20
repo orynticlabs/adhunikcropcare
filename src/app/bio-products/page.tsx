@@ -28,7 +28,7 @@ export default function BioProductsPage() {
             <div>
               <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.2em] text-white/50"><Link href="/">Home</Link><ChevronRight className="h-3.5 w-3.5" /><span className="text-[#bdd879]">Bio Products</span></nav>
               <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-xs font-bold uppercase tracking-[.18em]"><FlaskConical className="h-4 w-4 text-[#e9c46a]" />The living laboratory</div>
-              <h1 className="mt-7 font-display text-6xl leading-[.9] sm:text-8xl lg:text-[7rem]">Tiny organisms.<span className="block text-[#bdd879]">Field-scale impact.</span></h1>
+              <h1 className="mt-7 font-display text-5xl leading-[.92] sm:text-8xl lg:text-[7rem]">Tiny organisms.<span className="block text-[#bdd879]">Field-scale impact.</span></h1>
               <p className="mt-7 max-w-xl text-lg leading-8 text-white/65">Beneficial microbes work where chemistry, roots, moisture, and living soil meet—helping build a more active nutrient environment.</p>
               <div className="mt-9 flex gap-3"><a href="#cultures" className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">Enter the lab <ArrowRight className="h-4 w-4" /></a><Link href="/contact" className="inline-flex h-12 items-center rounded-full bg-[#033927] px-7 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">Get guidance</Link></div>
             </div>

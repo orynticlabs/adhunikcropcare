@@ -514,39 +514,39 @@ export function OryCMSProductForm({ id }: { id?: string }) {
     }
   }
 
-  async function uploadImages(fileList: FileList | File[]) {
-    for (const file of Array.from(fileList)) {
-      const validationError = validateImageFile(file)
+  async function uploadImage(file?: File) {
+    if (!file) return
 
-      if (validationError) {
-        showToast(`${file.name}: ${validationError}`, "error")
-        continue
+    const validationError = validateImageFile(file)
+
+    if (validationError) {
+      showToast(`${file.name}: ${validationError}`, "error")
+      return
+    }
+
+    try {
+      const asset = await uploadProductImage(file, file.name, setUploadProgress)
+      const image = {
+        id: asset.id,
+        name: asset.original_filename ?? file.name,
+        url: asset.secure_url,
       }
 
-      try {
-        const asset = await uploadProductImage(file, file.name, setUploadProgress)
-        const image = {
-          id: asset.id,
-          name: asset.original_filename ?? file.name,
-          url: asset.secure_url,
-        }
-
-        setMeta((current) => ({
-          ...current,
-          media: [image, ...current.media.filter((item) => item.url !== image.url)],
-        }))
-        setProduct((current) => ({
-          ...current,
-          images: current.images.some((item) => item.url === image.url)
-            ? current.images
-            : [...current.images, image],
-        }))
-        showToast(`${file.name} uploaded and selected.`, "success")
-      } catch (error) {
-        showToast(error instanceof Error ? error.message : "Upload failed.", "error")
-      } finally {
-        setUploadProgress(null)
-      }
+      setMeta((current) => ({
+        ...current,
+        media: [image, ...current.media.filter((item) => item.url !== image.url)],
+      }))
+      setProduct((current) => ({
+        ...current,
+        images: current.images.some((item) => item.url === image.url)
+          ? current.images
+          : [...current.images, image],
+      }))
+      showToast(`${file.name} uploaded and selected.`, "success")
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Upload failed.", "error")
+    } finally {
+      setUploadProgress(null)
     }
   }
 
@@ -755,11 +755,10 @@ export function OryCMSProductForm({ id }: { id?: string }) {
             <input
               ref={fileInputRef}
               type="file"
-              multiple
               accept=".jpg,.jpeg,.png,.webp,.svg,.gif,image/jpeg,image/png,image/webp,image/svg+xml,image/gif"
               className="hidden"
               onChange={(event) => {
-                void uploadImages(event.target.files ?? [])
+                void uploadImage(event.target.files?.[0])
                 event.target.value = ""
               }}
             />

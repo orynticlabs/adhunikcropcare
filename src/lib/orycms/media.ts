@@ -123,17 +123,34 @@ export async function uploadOryCMSMedia(file: File, options: UploadOptions = {})
     throw new Error("Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.")
   }
 
-  const folder = process.env.CLOUDINARY_ORYCMS_FOLDER ?? "orycms/media"
+  const folder = (process.env.CLOUDINARY_ORYCMS_FOLDER ?? "orycms/media").replace(/^\/+|\/+$/g, "")
   const mediaName = cleanMediaName(options.mediaName) || file.name
+  const contentHash = crypto
+    .createHash("sha256")
+    .update(Buffer.from(await file.arrayBuffer()))
+    .digest("hex")
+  const publicId = `${folder}/${contentHash}`
+  const existingAsset = await orycmsPrisma.oryCMSMediaAsset.findUnique({ where: { publicId } })
+
+  if (existingAsset) {
+    return toMediaDTO(existingAsset)
+  }
+
   const timestamp = Math.round(Date.now() / 1000).toString()
-  const signature = signCloudinaryParams({ folder, timestamp }, apiSecret)
+  const uploadParams = {
+    folder,
+    overwrite: "false",
+    public_id: contentHash,
+    timestamp,
+    unique_filename: "false",
+  }
+  const signature = signCloudinaryParams(uploadParams, apiSecret)
   const form = new FormData()
 
   form.append("api_key", apiKey)
   form.append("file", file)
-  form.append("folder", folder)
+  Object.entries(uploadParams).forEach(([key, value]) => form.append(key, value))
   form.append("signature", signature)
-  form.append("timestamp", timestamp)
 
   const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
     body: form,
@@ -183,6 +200,55 @@ export async function deleteOryCMSMedia(id: string) {
 
   await deleteCloudinaryAsset(asset.publicId)
   await orycmsPrisma.oryCMSMediaAsset.delete({ where: { id } })
+}
+
+export async function deleteOryCMSMediaIfUnreferenced(reference: { id?: string; url?: string }) {
+  const validId = reference.id && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reference.id)
+    ? reference.id
+    : undefined
+  const asset = validId
+    ? await orycmsPrisma.oryCMSMediaAsset.findUnique({ where: { id: validId } })
+    : reference.url
+      ? await orycmsPrisma.oryCMSMediaAsset.findFirst({ where: { secureUrl: reference.url } })
+      : null
+
+  if (!asset || await isMediaAssetReferenced(asset.id, asset.secureUrl)) return false
+
+  await deleteCloudinaryAsset(asset.publicId)
+  await orycmsPrisma.oryCMSMediaAsset.delete({ where: { id: asset.id } })
+  return true
+}
+
+async function isMediaAssetReferenced(id: string, url: string) {
+  const [products, categories, profile] = await Promise.all([
+    orycmsPrisma.oryCMSProduct.findMany({
+      select: { images: true },
+      where: { deletedAt: null },
+    }),
+    orycmsPrisma.oryCMSCategory.findMany({
+      select: { image: true },
+      where: { deletedAt: null },
+    }),
+    orycmsPrisma.oryCMSUser.findFirst({
+      select: { id: true },
+      where: { deletedAt: null, profilePhoto: url },
+    }),
+  ])
+
+  return Boolean(
+    profile
+    || products.some((product) => jsonContainsMedia(product.images, id, url))
+    || categories.some((category) => jsonContainsMedia(category.image, id, url)),
+  )
+}
+
+function jsonContainsMedia(value: unknown, id: string, url: string): boolean {
+  if (Array.isArray(value)) return value.some((item) => jsonContainsMedia(item, id, url))
+  if (!value || typeof value !== "object") return false
+
+  const item = value as Record<string, unknown>
+  if (item.id === id || item.url === url || item.secure_url === url) return true
+  return Object.values(item).some((nested) => jsonContainsMedia(nested, id, url))
 }
 
 async function deleteCloudinaryAsset(publicId: string) {

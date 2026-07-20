@@ -68,7 +68,7 @@ export default function CropSuccessStories() {
     const updateSlots = () => {
       const viewport = window.innerWidth
       if (viewport < 640) {
-        setVisibleSlots(3)
+        setVisibleSlots(1)
       } else if (viewport < 1024) {
         setVisibleSlots(4)
       } else {
@@ -81,7 +81,7 @@ export default function CropSuccessStories() {
     return () => window.removeEventListener("resize", updateSlots)
   }, [])
 
-  const activeSlot = Math.max(1, Math.floor((visibleSlots - 1) / 2))
+  const activeSlot = visibleSlots === 1 ? 0 : Math.max(1, Math.floor((visibleSlots - 1) / 2))
   const visibleStories = useMemo(() => {
     return Array.from({ length: visibleSlots }, (_, slotIndex) => {
       const storyIndex = (active - activeSlot + slotIndex + total) % total

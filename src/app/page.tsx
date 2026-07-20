@@ -82,15 +82,13 @@ export default async function Home() {
         {/* ══ Hero ═══════════════════════════════════════════ */}
         <section id="home" className="relative isolate overflow-hidden pt-32 pb-10 sm:pt-48 sm:pb-14">
           {/* Background farm image */}
-          <div className="absolute inset-0 -z-10">
-            <Image
-              src="/hero-field-Dp98Y55X.jpg"
-              alt="Lush organic farmland"
-              fill
-              className="object-cover scale-110"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/30 to-background" />
+          <div className="absolute inset-0 -z-10"> 
+            <Image 
+            src="/hero-field-Dp98Y55X.jpg" 
+            alt="Lush organic farmland" 
+            fill className="object-cover scale-110" 
+            priority /> 
+            <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/30 to-background" /> 
           </div>
 
           {/* Decorative blobs */}
@@ -111,7 +109,7 @@ export default async function Home() {
               {/* Heading */}
               <h1 className="text-balance font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-7xl">
                 Cultivating{" "}
-                <span className="text-gradient-nature italic">tomorrow&apos;s</span>{" "}
+                <span className="text-white italic">tomorrow&apos;s</span>{" "}
                 harvest,
                 <br className="hidden sm:block" /> rooted in nature.
               </h1>
@@ -247,9 +245,9 @@ export default async function Home() {
               </div>
             </div>
 
-            <div className="mt-7 sm:mt-10 flex gap-4 sm:gap-5 overflow-x-auto pb-4 sm:pb-6 snap-x snap-mandatory scrollbar-none -mx-4 px-4">
+            <div className="mx-0 sm:-mx-4 mt-7 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-5 scrollbar-none sm:mt-10 sm:gap-5 sm:pb-6">
               {products.length > 0 ? (
-                products.map((p: any) => {
+                products.map((p) => {
                   const price = p.salePrice ?? p.price
 
                   return (
@@ -266,8 +264,8 @@ export default async function Home() {
                       subtitle={p.shortDescription}
                       reviews={120}
                       rating={4.8}
-                      className="min-w-[240px] flex-shrink-0 snap-start sm:min-w-[300px] lg:min-w-[320px]"
-                      imageSizes="(max-width: 640px) 70vw, (max-width: 1024px) 42vw, 320px"
+                      className="w-[calc(100vw-4rem)] max-w-[280px] basis-[calc(100vw-4rem)] flex-shrink-0 snap-start sm:w-[320px] sm:max-w-none sm:basis-[320px] lg:w-[340px] lg:basis-[340px]"
+                      imageSizes="(max-width: 640px) 75vw, (max-width: 1024px) 45vw, 340px"
                     />
                   )
                 })

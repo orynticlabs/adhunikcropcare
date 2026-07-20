@@ -53,15 +53,15 @@ export function ProductCard({
 
   return (
     <article
-      className={`group overflow-hidden rounded-2xl border border-[#e2e7df] bg-white shadow-sm transition-colors duration-200 hover:border-[#b9cdb3] hover:shadow-md ${className}`}
+      className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-[#e2e7df] bg-white shadow-sm transition-colors duration-200 hover:border-[#b9cdb3] hover:shadow-md ${className}`}
     >
-      <Link href={href} className="relative block aspect-square overflow-hidden bg-white" aria-label={`View ${name}`}>
+      <Link href={href} className="relative block aspect-square shrink-0 overflow-hidden bg-white" aria-label={`View ${name}`}>
         <Image
           src={gallery[0] ?? image}
           alt={name}
           fill
           sizes={imageSizes}
-          className="object-contain object-center p-4"
+          className="object-contain object-center"
         />
 
         {overlayLabel ? (
@@ -87,38 +87,38 @@ export function ProductCard({
         ) : null}
       </Link>
 
-      <div className="space-y-4 px-4 pb-4 pt-5 sm:px-5 sm:pb-5">
-        <div className="space-y-1.5">
+      <div className="flex flex-1 flex-col px-3 pb-3 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
+        <div className="min-h-[2.75rem] sm:min-h-[3.3rem]">
           <Link
             href={href}
-            className="block font-display text-[1.55rem] leading-[1.05] tracking-[-0.02em] text-[#171717] transition-colors group-hover:text-[#171717]"
+            className="block font-display text-xl leading-[1.1] tracking-[-0.02em] text-[#171717] transition-colors group-hover:text-[#171717] sm:text-[1.55rem] sm:leading-[1.05]"
           >
             <span className="line-clamp-2">{name}</span>
           </Link>
         </div>
 
-        <div className="space-y-3.5">
-          <p className="line-clamp-2 pr-2 text-[0.98rem] leading-5 text-[#66584a]">
+        <div className="mt-3 flex flex-1 flex-col sm:mt-4">
+          <p className="line-clamp-2 min-h-10 text-sm leading-5 text-[#66584a] sm:pr-2 sm:text-[0.98rem]">
             {supportingLine}
           </p>
 
-          <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="mt-3 flex items-end justify-between gap-2 sm:mt-4 sm:gap-3">
             <div className="min-w-0 flex-1">
-              <div className="font-sans text-[1.65rem] font-semibold leading-none text-[#171717]">
+              <div className="font-sans text-xl font-semibold leading-none text-[#171717] sm:text-[1.65rem]">
                 {price}
               </div>
-              {originalPrice ? (
-                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <div className="mt-1.5 min-h-5">
+                {originalPrice ? (
                   <span className="text-sm font-medium text-[#908272] line-through decoration-[#b8a48f] decoration-[1.5px]">
                     {originalPrice}
                   </span>
-                </div>
-              ) : null}
+                ) : null}
+              </div>
             </div>
 
             <Link
               href={href}
-              className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-[#033927] px-4.5 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black"
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#033927] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black sm:h-10 sm:px-4.5 sm:text-sm"
             >
               View Product
             </Link>

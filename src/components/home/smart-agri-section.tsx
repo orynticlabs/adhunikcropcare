@@ -37,7 +37,7 @@ export default function SmartAgriSection() {
   return (
     <section id="smart-agriculture" className="relative py-12 sm:py-16">
       <div className="mx-auto max-w-6xl px-4">
-        <div className="relative overflow-hidden rounded-[2.5rem] border border-border/40 bg-gradient-to-br from-[#033927] via-[#033927] to-[#3d2b1f]/80 p-10 sm:p-16 text-cream shadow-luxe">
+        <div className="relative overflow-hidden rounded-[2rem] border border-border/40 bg-gradient-to-br from-[#033927] via-[#033927] to-[#3d2b1f]/80 p-6 text-cream shadow-luxe sm:rounded-[2.5rem] sm:p-16">
           {/* Decorative blobs */}
           <div className="absolute -top-20 -right-20 h-80 w-80 rounded-full bg-[#e9c46a]/30 blur-3xl animate-blob pointer-events-none" />
           <div
@@ -76,7 +76,7 @@ export default function SmartAgriSection() {
             </div>
 
             {/* Right — analytics card */}
-            <div className="rounded-3xl border border-cream/15 bg-cream/10 p-6 backdrop-blur-xl">
+            <div className="rounded-3xl border border-cream/15 bg-cream/10 p-4 backdrop-blur-xl sm:p-6">
               <div className="text-sm text-cream/70 uppercase tracking-wider">
                 {crop} field · Pune, MH
               </div>

@@ -181,7 +181,7 @@ function ProductsPageContent() {
       <main>
 
         {/* ══ Hero Banner ═══════════════════════════════════════════ */}
-        <div className="relative h-[320px] sm:h-[420px] lg:h-[540px] overflow-hidden">
+        <div className="relative h-[430px] overflow-hidden sm:h-[500px] lg:h-[540px]">
           <Image
             src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1800&q=90"
             alt="Adhunik Crop Care — golden farmland at sunset"
@@ -196,8 +196,8 @@ function ProductsPageContent() {
           <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-background/30" />
 
           {/* Content — bottom-left aligned */}
-          <div className="absolute inset-x-0 bottom-0 pb-8 sm:pb-12 lg:pb-16">
-            <div className="mx-auto max-w-7xl px-4">
+          <div className="absolute inset-0 flex flex-col items-start justify-end pb-8 pt-[6.5rem] text-left sm:pb-12 sm:pt-28 lg:pb-16">
+            <div className="mx-auto w-full max-w-7xl px-4">
 
               {/* Breadcrumb */}
               <nav className="mb-3 sm:mb-5 flex items-center gap-1.5 text-xs sm:text-sm text-white/65">
@@ -237,7 +237,7 @@ function ProductsPageContent() {
         </div>
 
         {/* ══ Filter Section ════════════════════════════════════════ */}
-        <div className="sticky top-[5.5rem] z-30 bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm">
+        <div className="sticky top-[6.5rem] z-30 border-b border-border/50 bg-background/95 shadow-sm backdrop-blur-md sm:top-28">
           <div className="mx-auto max-w-7xl px-3 sm:px-4">
 
             {/* Single row: pills scroll inside their own div; controls stay pinned */}
@@ -289,7 +289,7 @@ function ProductsPageContent() {
                   {priceOpen && (
                     <>
                       <div className="fixed inset-0 z-[1]" onClick={() => setPriceOpen(false)} />
-                      <div className="absolute left-0 top-full mt-2 z-[2] min-w-[210px] rounded-2xl border border-border/60 bg-popover p-1.5 shadow-sm">
+                      <div className="absolute right-0 top-full mt-2 z-[2] min-w-[210px] rounded-2xl border border-border/60 bg-popover p-1.5 shadow-sm">
                         {PRICE_RANGES.map((range, i) => (
                           <button
                             key={range.label}
@@ -435,7 +435,7 @@ function ProductsPageContent() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
               {filtered.map(p => {
                 const price = formatCurrency(p.priceValue)
                 return (

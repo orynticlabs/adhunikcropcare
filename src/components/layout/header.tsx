@@ -10,41 +10,36 @@ import { DefaultMemojiAvatar } from "@/components/auth/default-memoji-avatar"
 import { useCart } from "@/features/cart/cart-context"
 import { useAuth } from "@/features/auth/auth-context"
 
-const MAIN_LINKS = [
-  { label: "Products",         href: "/products"         },
-  { label: "Crop Fertilizers", href: "/crop-fertilizers" },
-  { label: "Organic Range",    href: "/organic-range"    },
-  { label: "Marketplace",      href: "#marketplace"      },
-]
-
-const NAV_LINKS = [
+const FIXED_NAV_LINKS = [
   { label: "Home", href: "/" },
-  ...MAIN_LINKS.slice(0, 4),
 ]
 
-const MORE_LINKS = [
-  { label: "About Us",            href: "/about"               },
-  ...MAIN_LINKS.slice(4),
-  { label: "Bio Products",        href: "/bio-products"        },
-  { label: "Soil Care",           href: "/soil-care"           },
-  { label: "Irrigation Solutions",href: "/irrigation-solutions"},
-  { label: "Pest Management",     href: "#pest-management"     },
-  { label: "Farmer Services",     href: "#farmer-services"     },
-  { label: "Wholesale",           href: "#wholesale"           },
-  { label: "Certifications",      href: "/certifications"      },
-  { label: "Knowledge Center",    href: "#knowledge-center"    },
-  { label: "Blogs",               href: "/blog"                },
-  { label: "Contact Us",          href: "/contact"             },
-]
+const MAX_VISIBLE_NAV_LINKS = 5
+
+type StorefrontCategory = {
+  id: string
+  name: string
+  slug: string
+}
 
 export default function Header() {
   const accountRef = useRef<HTMLDivElement | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [categories, setCategories] = useState<StorefrontCategory[]>([])
   const [mobileOpen, setMobileOpen] = useState(false)
   const { openCart } = useCart()
   const { logout, openAuthModal, user } = useAuth()
 
   /* lock body scroll while drawer is open */
+  useEffect(() => {
+    fetch("/api/categories")
+      .then((response) => response.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data)) setCategories(json.data)
+      })
+      .catch(() => undefined)
+  }, [])
+
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : ""
     return () => { document.body.style.overflow = "" }
@@ -69,6 +64,16 @@ export default function Header() {
 
   function closeMenu() { setMobileOpen(false) }
 
+  const categoryLinks = categories.map((category) => ({
+    href: `/products?q=${encodeURIComponent(category.name)}`,
+    label: category.name,
+  }))
+  const allNavbarLinks = [...FIXED_NAV_LINKS, ...categoryLinks]
+  const hasOverflowLinks = allNavbarLinks.length > MAX_VISIBLE_NAV_LINKS
+  const directLinkLimit = hasOverflowLinks ? MAX_VISIBLE_NAV_LINKS - 1 : MAX_VISIBLE_NAV_LINKS
+  const navbarLinks = allNavbarLinks.slice(0, directLinkLimit)
+  const overflowCategoryLinks = allNavbarLinks.slice(directLinkLimit)
+
   return (
     <>
       {/* ── Sticky top bar ─────────────────────────────────── */}
@@ -90,7 +95,7 @@ export default function Header() {
 
             {/* Desktop nav */}
             <nav className="hidden lg:flex items-center gap-1">
-              {NAV_LINKS.map((l) => (
+              {navbarLinks.map((l) => (
                 <a
                   key={l.href}
                   href={l.href}
@@ -101,12 +106,12 @@ export default function Header() {
               ))}
 
               {/* More dropdown */}
-              <div className="relative group">
+              {overflowCategoryLinks.length > 0 ? <div className="relative group">
                 <button className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-foreground/80 transition hover:text-[#689c30]">
                   More <ChevronDown className="h-3.5 w-3.5" aria-hidden />
                 </button>
                 <div className="invisible absolute right-0 top-full mt-3 w-56 rounded-2xl border border-border/60 bg-popover p-2 opacity-0 shadow-luxe transition-all group-hover:visible group-hover:opacity-100 z-10">
-                  {MORE_LINKS.map((l) => (
+                  {overflowCategoryLinks.map((l) => (
                     <a
                       key={l.href}
                       href={l.href}
@@ -116,7 +121,7 @@ export default function Header() {
                     </a>
                   ))}
                 </div>
-              </div>
+              </div> : null}
             </nav>
 
             {/* Action icons */}
@@ -262,7 +267,7 @@ export default function Header() {
           <nav className="flex-1 overflow-y-auto px-4 py-5" aria-label="Mobile navigation">
             {/* Primary links */}
             <div className="space-y-0.5">
-              {NAV_LINKS.map((l) => (
+              {navbarLinks.map((l) => (
                 <a
                   key={l.href}
                   href={l.href}
@@ -274,14 +279,14 @@ export default function Header() {
               ))}
             </div>
 
-            {/* More section */}
-            <div className="mt-6 mb-2 px-4">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                More
-              </p>
-            </div>
-            <div className="space-y-0.5">
-              {MORE_LINKS.map((l) => (
+            {overflowCategoryLinks.length > 0 ? <>
+              <div className="mt-6 mb-2 px-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  More
+                </p>
+              </div>
+              <div className="space-y-0.5">
+              {overflowCategoryLinks.map((l) => (
                 <a
                   key={l.href}
                   href={l.href}
@@ -291,7 +296,8 @@ export default function Header() {
                   {l.label}
                 </a>
               ))}
-            </div>
+              </div>
+            </> : null}
 
             {/* ISO badge */}
             <div className="mt-6 mx-2 flex items-center gap-2 rounded-xl border border-border/50 bg-accent/10 px-4 py-3">

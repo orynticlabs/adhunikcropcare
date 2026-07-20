@@ -223,13 +223,14 @@ export default function SearchBox() {
 
       {/* Expanding input — grows leftward because of flex-row-reverse */}
       <div
+        className={`absolute right-full top-1/2 z-[60] -translate-y-1/2 transition-[width,opacity] duration-300 ease-out sm:static sm:z-auto sm:translate-y-0 ${
+          open
+            ? "w-[36vw] overflow-visible opacity-100 sm:w-[clamp(160px,28vw,280px)]"
+            : "w-0 overflow-hidden opacity-0"
+        }`}
         style={{
-          /* clamp keeps it responsive: 160px on small, up to 280px on lg */
-          width:   open ? "clamp(160px, 28vw, 280px)" : "0px",
-          opacity: open ? 1 : 0,
           transition:
             "width 320ms cubic-bezier(0.4, 0, 0.2, 1), opacity 220ms ease",
-          overflow: open ? "visible" : "hidden",
         }}
       >
         {/* small right gap so input doesn't touch the toggle button */}
@@ -271,7 +272,7 @@ export default function SearchBox() {
           {open ? (
             <div
               data-testid="search-suggestions"
-              className="absolute right-0 top-[calc(100%+0.55rem)] z-50 w-[min(92vw,23rem)] overflow-hidden rounded-[1.35rem] border border-border/60 bg-background/96 shadow-[0_18px_46px_rgba(3,57,39,0.14)] backdrop-blur-md"
+              className="fixed left-1/2 top-[6.25rem] z-50 w-[min(92vw,23rem)] -translate-x-1/2 overflow-hidden rounded-[1.35rem] border border-border/60 bg-background/96 shadow-[0_18px_46px_rgba(3,57,39,0.14)] backdrop-blur-md sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+0.55rem)] sm:translate-x-0"
             >
               <div className="border-b border-border/50 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                 {trimmedQuery ? "Search results" : "Popular searches"}

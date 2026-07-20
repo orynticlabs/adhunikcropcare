@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
+import { deleteOryCMSMediaIfUnreferenced } from "@/lib/orycms/media"
 
 export const PRODUCT_STATUSES = ["draft", "published"] as const
 
@@ -196,6 +197,8 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
 
 export async function deleteOryCMSProduct(id: string) {
   await ensureOryCMSProductsSchema()
+  const product = await getOryCMSProduct(id)
+
   await orycmsPrisma.$executeRaw`
     UPDATE orycms_products
     SET deleted_at = now(),
@@ -205,6 +208,16 @@ export async function deleteOryCMSProduct(id: string) {
     WHERE id = ${id}::uuid
       AND deleted_at IS NULL
   `
+
+  if (product) {
+    const images = Array.from(
+      new Map(product.images.map((image) => [image.id ?? image.url, image])).values(),
+    )
+
+    for (const image of images) {
+      await deleteOryCMSMediaIfUnreferenced({ id: image.id, url: image.url })
+    }
+  }
 }
 
 export async function bulkDeleteOryCMSProducts(ids: string[]) {
