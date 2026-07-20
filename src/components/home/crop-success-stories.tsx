@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight, Leaf, Play } from "lucide-react"
 
@@ -57,9 +57,8 @@ const STORIES = [
 
 export default function CropSuccessStories() {
   const [active, setActive] = useState(0)
-  const [visibleSlots, setVisibleSlots] = useState(6)
+  const [visibleSlots, setVisibleSlots] = useState(5)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const gridRef = useRef<HTMLDivElement>(null)
   const directionRef = useRef(0)
   const touchX = useRef(0)
   const total = STORIES.length
@@ -67,13 +66,19 @@ export default function CropSuccessStories() {
   useEffect(() => {
     const updateSlots = () => {
       const viewport = window.innerWidth
+      let nextSlots = 5
+
       if (viewport < 640) {
-        setVisibleSlots(1)
-      } else if (viewport < 1024) {
-        setVisibleSlots(4)
-      } else {
-        setVisibleSlots(6)
+        nextSlots = 1
+      } else if (viewport < 1280) {
+        nextSlots = 3
       }
+
+      setVisibleSlots((currentSlots) => {
+        if (currentSlots === nextSlots) return currentSlots
+        directionRef.current = 0
+        return nextSlots
+      })
     }
 
     updateSlots()
@@ -81,17 +86,7 @@ export default function CropSuccessStories() {
     return () => window.removeEventListener("resize", updateSlots)
   }, [])
 
-  const activeSlot = visibleSlots === 1 ? 0 : Math.max(1, Math.floor((visibleSlots - 1) / 2))
-  const visibleStories = useMemo(() => {
-    return Array.from({ length: visibleSlots }, (_, slotIndex) => {
-      const storyIndex = (active - activeSlot + slotIndex + total) % total
-      return {
-        ...STORIES[storyIndex],
-        storyIndex,
-        slotIndex,
-      }
-    })
-  }, [active, activeSlot, total, visibleSlots])
+  const cardGap = visibleSlots === 1 ? 12 : visibleSlots === 3 ? 16 : 20
 
   const stopTimer = () => {
     if (intervalRef.current) {
@@ -105,7 +100,7 @@ export default function CropSuccessStories() {
     intervalRef.current = setInterval(() => {
       directionRef.current = 1
       setActive((current) => (current + 1) % total)
-    }, 3000)
+    }, 4500)
   }
 
   useEffect(() => {
@@ -113,15 +108,6 @@ export default function CropSuccessStories() {
     return stopTimer
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total])
-
-  useLayoutEffect(() => {
-    if (!gridRef.current || !directionRef.current) return
-    const distance = gridRef.current.offsetWidth / visibleSlots
-    gridRef.current.animate(
-      [{ transform: `translateX(${directionRef.current * distance}px)` }, { transform: "translateX(0)" }],
-      { duration: 900, easing: "cubic-bezier(0.16, 1, 0.3, 1)" }
-    )
-  }, [active, visibleSlots])
 
   const goNext = () => {
     directionRef.current = 1
@@ -141,21 +127,21 @@ export default function CropSuccessStories() {
     const delta = event.changedTouches[0].clientX - touchX.current
     if (delta > 50) goPrev()
     if (delta < -50) goNext()
-    window.setTimeout(startTimer, 900)
+    window.setTimeout(startTimer, 1000)
   }
 
   return (
     <section
       id="crop-success-stories"
       aria-label="Crop Success Stories"
-      className="relative overflow-hidden py-14 sm:py-20"
+      className="relative overflow-hidden py-12 sm:py-16 lg:py-20"
     >
       <div className="relative">
-        <div className="text-center mx-auto max-w-3xl px-4">
+        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/70 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
             <Leaf className="h-3 w-3" aria-hidden /> Field demonstrations
           </div>
-          <h2 className="mt-5 font-display text-4xl sm:text-5xl leading-[1.1] tracking-tight">
+          <h2 className="mt-5 font-display text-3xl leading-[1.1] tracking-tight sm:text-4xl lg:text-5xl">
             Watch Results. Trust Performance.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
@@ -165,30 +151,41 @@ export default function CropSuccessStories() {
         </div>
 
         <div
-          className="relative mt-10 w-full select-none overflow-visible pb-8 pt-8"
+          className="relative mt-7 w-full touch-pan-y select-none overflow-visible px-4 pb-5 pt-8 sm:mt-10 sm:px-6 sm:pb-8 lg:px-8"
           onMouseEnter={stopTimer}
           onMouseLeave={startTimer}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
+          onTouchCancel={startTimer}
         >
-          <div
-            ref={gridRef}
-            className="grid w-full items-start gap-2 sm:gap-3 lg:gap-4"
-            style={{ gridTemplateColumns: `repeat(${visibleSlots}, minmax(0, 1fr))` }}
-          >
-            {visibleStories.map((story) => {
-              const isCenter = story.slotIndex === activeSlot
+          <div className="relative mx-auto w-full max-w-[1440px]">
+            <div
+              aria-hidden
+              className="mx-auto aspect-[9/16] w-[min(19rem,calc(100vw-2rem))] sm:w-[min(20rem,calc((100vw-5rem)/3))] xl:w-[calc((min(100vw,90rem)-9rem)/5)]"
+            />
+
+            {STORIES.map((story, storyIndex) => {
+              let offset = (storyIndex - active + total) % total
+              if (offset > total / 2) offset -= total
+
+              const isCenter = offset === 0
+              const isVisible = Math.abs(offset) <= Math.floor(visibleSlots / 2)
+              const translateY = isCenter ? "-1.25rem" : "0.5rem"
 
               return (
                 <article
-                  key={`${story.product}-${story.storyIndex}`}
-                  className={`min-w-0 transition-transform duration-700 ease-out ${
-                    isCenter ? "relative z-20 -translate-y-8" : "relative z-10 translate-y-4"
-                  }`}
+                  key={story.product}
+                  className="absolute left-1/2 top-0 w-[min(19rem,calc(100vw-2rem))] will-change-transform transition-[transform,opacity] duration-[950ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:duration-0 sm:w-[min(20rem,calc((100vw-5rem)/3))] xl:w-[calc((min(100vw,90rem)-9rem)/5)]"
+                  style={{
+                    transform: `translateX(calc(-50% + ${offset * 100}% + ${offset * cardGap}px)) translateY(${translateY})`,
+                    opacity: isCenter ? 1 : isVisible ? 0.8 : 0,
+                    pointerEvents: isCenter ? "auto" : "none",
+                    zIndex: isCenter ? 20 : isVisible ? 10 - Math.abs(offset) : 0,
+                  }}
                   aria-hidden={!isCenter}
                 >
                   <div
-                    className={`group relative aspect-[9/16] overflow-hidden rounded-[28px] border shadow-luxe ${
+                    className={`group relative aspect-[9/16] w-full overflow-hidden rounded-[22px] border shadow-luxe sm:rounded-[26px] lg:rounded-[28px] ${
                       isCenter
                         ? "border-white/70 bg-card"
                         : "border-white/45 bg-card/80 shadow-soft"
@@ -196,7 +193,7 @@ export default function CropSuccessStories() {
                   >
                     {isCenter ? (
                       <video
-                        key={story.product}
+                        key={story.video}
                         className="absolute inset-0 h-full w-full object-cover"
                         src={story.video}
                         poster={story.thumbnail}
@@ -210,7 +207,7 @@ export default function CropSuccessStories() {
                         src={story.thumbnail}
                         alt={`${story.result} field demonstration preview`}
                         fill
-                        sizes="(max-width: 639px) 33vw, (max-width: 1023px) 25vw, 17vw"
+                        sizes="(max-width: 639px) 304px, (max-width: 1279px) 320px, 20vw"
                         className="object-cover"
                       />
                     )}
@@ -244,19 +241,19 @@ export default function CropSuccessStories() {
           </div>
         </div>
 
-        <div className="mt-5 flex items-center justify-center gap-4">
+        <div className="mt-3 flex items-center justify-center gap-3 px-4 sm:mt-5 sm:gap-4">
           <button
             type="button"
             onClick={goPrev}
             onMouseEnter={stopTimer}
             onMouseLeave={startTimer}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/80 text-foreground shadow-soft backdrop-blur-sm hover:border-[#689c30] hover:text-[#689c30]"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-background/80 text-foreground shadow-soft backdrop-blur-sm transition-colors hover:border-[#689c30] hover:text-[#689c30] sm:h-9 sm:w-9"
             aria-label="Previous crop success story"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden />
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
             {STORIES.map((story, index) => (
               <button
                 key={story.product}
@@ -282,7 +279,7 @@ export default function CropSuccessStories() {
             onClick={goNext}
             onMouseEnter={stopTimer}
             onMouseLeave={startTimer}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background/80 text-foreground shadow-soft backdrop-blur-sm hover:border-[#689c30] hover:text-[#689c30]"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border bg-background/80 text-foreground shadow-soft backdrop-blur-sm transition-colors hover:border-[#689c30] hover:text-[#689c30] sm:h-9 sm:w-9"
             aria-label="Next crop success story"
           >
             <ChevronRight className="h-4 w-4" aria-hidden />

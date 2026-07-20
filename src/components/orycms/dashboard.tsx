@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import {
   ArrowDownRight,
   ArrowUpRight,
+  Award,
   Bell,
   Boxes,
   CheckCircle2,
@@ -101,6 +102,7 @@ type OryCMSDashboardData = {
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Analytics: LineChart,
   Categories: Tags,
+  Certificates: Award,
   Collections: Layers,
   Commerce: ShoppingBag,
   Content: FileText,

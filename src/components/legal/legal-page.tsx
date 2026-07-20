@@ -99,7 +99,7 @@ export default function LegalPage({
                 <div className={`inline-flex h-14 w-14 items-center justify-center rounded-2xl ${theme.badge}`}>
                   <Icon className="h-6 w-6" />
                 </div>
-                <h1 className="mt-7 max-w-4xl font-display text-5xl leading-[.96] tracking-tight sm:text-7xl">
+                <h1 className="mt-7 max-w-4xl font-display text-4xl leading-[.98] tracking-tight sm:text-6xl lg:text-7xl">
                   {title}
                 </h1>
               </div>

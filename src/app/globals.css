@@ -233,6 +233,32 @@ button:hover {
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  .contact-select-scrollbar {
+    scrollbar-color: #689c30 #edf3e8;
+    scrollbar-width: thin;
+  }
+
+  .contact-select-scrollbar::-webkit-scrollbar {
+    width: 7px;
+  }
+
+  .contact-select-scrollbar::-webkit-scrollbar-track {
+    margin-block: 6px;
+    border-radius: 999px;
+    background: #edf3e8;
+  }
+
+  .contact-select-scrollbar::-webkit-scrollbar-thumb {
+    min-height: 34px;
+    border: 2px solid #edf3e8;
+    border-radius: 999px;
+    background: #689c30;
+  }
+
+  .contact-select-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #4f7e31;
+  }
 }
 
 /* Product image auto-advance progress bar */

@@ -66,7 +66,7 @@ export default function AboutPage() {
       <CartDrawer />
 
       <main>
-        <section className="relative isolate min-h-[720px] overflow-hidden bg-[#063a2a] pt-36 text-white sm:pt-44">
+        <section className="relative isolate overflow-hidden bg-[#063a2a] pb-44 pt-32 text-white sm:pb-28 sm:pt-40 lg:min-h-[720px] lg:pt-44">
           <Image
             src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1800&q=90"
             alt="Adhunik Crop Care team working alongside Indian farmers"
@@ -79,7 +79,7 @@ export default function AboutPage() {
           <div className="absolute -right-28 top-20 h-[480px] w-[480px] rounded-full border border-white/10" />
           <div className="absolute -right-5 top-44 h-[250px] w-[250px] rounded-full border border-white/10" />
 
-          <div className="mx-auto grid max-w-7xl gap-12 px-4 pb-28 lg:grid-cols-[1.05fr_.95fr] lg:items-center">
+          <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:px-4 lg:pb-28">
             <div>
               <nav className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/55">
                 <Link href="/" className="hover:text-white">Home</Link>
@@ -90,7 +90,7 @@ export default function AboutPage() {
                 <Sprout className="h-3.5 w-3.5 text-[#e9c46a]" />
                 Rooted in Indian agriculture
               </div>
-              <h1 className="mt-7 max-w-3xl font-display text-5xl leading-[.95] tracking-tight sm:text-7xl lg:text-[5.6rem]">
+              <h1 className="mt-7 max-w-3xl font-display text-4xl leading-[.98] tracking-tight sm:text-6xl lg:text-[5.6rem]">
                 Growing trust,
                 <span className="block text-[#bdd879]">one field at a time.</span>
               </h1>
@@ -147,8 +147,8 @@ export default function AboutPage() {
         <section id="our-story" className="relative py-20 sm:py-28">
           <div className="absolute left-0 top-20 h-72 w-72 -translate-x-1/2 rounded-full bg-[#689c30]/10 blur-3xl" />
           <div className="mx-auto grid max-w-7xl gap-12 px-4 lg:grid-cols-[.9fr_1.1fr] lg:items-center">
-            <div className="relative min-h-[540px]">
-              <div className="absolute left-0 top-0 h-[440px] w-[78%] overflow-hidden rounded-[2.75rem]">
+            <div className="relative min-h-[420px] sm:min-h-[540px]">
+              <div className="absolute left-0 top-0 h-[330px] w-[82%] overflow-hidden rounded-[2rem] sm:h-[440px] sm:w-[78%] sm:rounded-[2.75rem]">
                 <Image
                   src="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1000&q=90"
                   alt="A healthy crop representing Adhunik Crop Care's growth"
@@ -157,10 +157,10 @@ export default function AboutPage() {
                   className="object-cover"
                 />
               </div>
-              <div className="absolute bottom-0 right-0 w-[58%] rounded-[2.25rem] bg-[#e9c46a] p-7 text-[#17382d] shadow-2xl">
+              <div className="absolute bottom-0 right-0 w-[68%] rounded-[1.75rem] bg-[#e9c46a] p-5 text-[#17382d] shadow-2xl sm:w-[58%] sm:rounded-[2.25rem] sm:p-7">
                 <MapPin className="h-6 w-6" />
                 <p className="mt-8 text-xs font-bold uppercase tracking-[0.18em]">Our focus</p>
-                <p className="mt-2 font-display text-3xl">Indian fields. Indian realities.</p>
+                <p className="mt-2 font-display text-2xl sm:text-3xl">Indian fields. Indian realities.</p>
               </div>
             </div>
 

@@ -65,7 +65,7 @@ export default function CropFertilizersPage() {
       <CartDrawer />
 
       <main>
-        <section className="relative isolate min-h-[760px] overflow-hidden bg-[#063a2a] pt-36 text-white sm:pt-44">
+        <section className="relative isolate overflow-hidden bg-[#063a2a] pb-44 pt-32 text-white sm:pb-36 sm:pt-40 lg:min-h-[760px] lg:pb-24 lg:pt-44">
           <Image
             src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1800&q=90"
             alt="Healthy crop field supported by balanced fertilizer nutrition"
@@ -78,7 +78,7 @@ export default function CropFertilizersPage() {
           <div className="absolute -right-24 top-20 h-[420px] w-[420px] rounded-full border border-white/15" />
           <div className="absolute -right-4 top-40 h-[260px] w-[260px] rounded-full border border-white/15" />
 
-          <div className="mx-auto grid max-w-7xl gap-12 px-4 pb-24 lg:grid-cols-[1.05fr_.95fr] lg:items-center">
+          <div className="mx-auto grid max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:px-4 lg:pb-24">
             <div>
               <nav className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.2em] text-white/60">
                 <Link href="/" className="hover:text-white">Home</Link>
@@ -89,7 +89,7 @@ export default function CropFertilizersPage() {
                 <Sparkles className="h-3.5 w-3.5 text-[#e9c46a]" />
                 Nutrition engineered for Indian fields
               </div>
-              <h1 className="mt-7 max-w-3xl font-display text-5xl leading-[.94] tracking-tight sm:text-7xl lg:text-[5.7rem]">
+              <h1 className="mt-7 max-w-3xl font-display text-4xl leading-[.98] tracking-tight sm:text-6xl lg:text-[5.7rem]">
                 Feed the crop.
                 <span className="block text-[#bdd879]">Build the soil.</span>
               </h1>

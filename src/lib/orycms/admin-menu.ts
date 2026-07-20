@@ -81,6 +81,13 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
     items: [
       {
         section: "Content",
+        label: "Certificates",
+        href: adminHref("/certificates"),
+        slug: "certificates",
+        description: "Add, order, publish, and maintain company certificates.",
+      },
+      {
+        section: "Content",
         label: "Collections",
         href: adminHref("/collections"),
         slug: "collections",

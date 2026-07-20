@@ -11,7 +11,6 @@ import {
   Mail,
   MapPin,
   MessageCircle,
-  Send,
   Sprout,
   Users,
 } from "lucide-react"
@@ -19,6 +18,7 @@ import AnnouncementBar from "@/components/layout/announcement-bar"
 import Header from "@/components/layout/header"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
+import ContactEnquiryForm from "@/components/contact/contact-enquiry-form"
 
 export const metadata: Metadata = {
   title: "Contact Us | Adhunik Crop Care",
@@ -49,9 +49,6 @@ const CHANNELS = [
     href: "mailto:support@adhunikcropcare.com?subject=Business%20Enquiry",
   },
 ]
-
-const FIELD_CLASS =
-  "h-12 w-full rounded-2xl border border-[#d5ddd6] bg-white px-4 text-sm text-[#203129] outline-none transition focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15 [color-scheme:light]"
 
 export default function ContactPage() {
   return (
@@ -86,7 +83,7 @@ export default function ContactPage() {
                   <MessageCircle className="h-3.5 w-3.5 text-[#e9c46a]" />
                   Let&apos;s talk about your field
                 </div>
-                <h1 className="mt-7 max-w-4xl font-display text-5xl leading-[.95] tracking-tight sm:text-7xl lg:text-[5.7rem]">
+                <h1 className="mt-7 max-w-4xl font-display text-4xl leading-[.98] tracking-tight sm:text-6xl lg:text-[5.7rem]">
                   The right answer starts
                   <span className="block text-[#bdd879]">with a conversation.</span>
                 </h1>
@@ -157,55 +154,7 @@ export default function ContactPage() {
               </div>
             </div>
 
-            <form className="rounded-[2.75rem] bg-white p-6 shadow-[0_20px_60px_rgba(3,57,39,.08)] sm:p-10">
-              <div className="grid gap-5 sm:grid-cols-2">
-                <label className="space-y-2 text-sm font-semibold">
-                  Full name
-                  <input className={FIELD_CLASS} name="name" placeholder="Your name" />
-                </label>
-                <label className="space-y-2 text-sm font-semibold">
-                  Phone number
-                  <input className={FIELD_CLASS} name="phone" type="tel" placeholder="+91" />
-                </label>
-                <label className="space-y-2 text-sm font-semibold">
-                  Email address
-                  <input className={FIELD_CLASS} name="email" type="email" placeholder="you@example.com" />
-                </label>
-                <label className="space-y-2 text-sm font-semibold">
-                  I need help with
-                  <select className={FIELD_CLASS} name="topic" defaultValue="">
-                    <option value="" disabled>Select a topic</option>
-                    <option>Crop guidance</option>
-                    <option>Product information</option>
-                    <option>Order support</option>
-                    <option>Dealership or distribution</option>
-                    <option>Wholesale enquiry</option>
-                    <option>Other</option>
-                  </select>
-                </label>
-                <label className="space-y-2 text-sm font-semibold sm:col-span-2">
-                  Location
-                  <input className={FIELD_CLASS} name="location" placeholder="Village, district, state" />
-                </label>
-                <label className="space-y-2 text-sm font-semibold sm:col-span-2">
-                  Your message
-                  <textarea
-                    className="min-h-36 w-full resize-y rounded-2xl border border-[#d5ddd6] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15"
-                    name="message"
-                    placeholder="Tell us about your crop, requirement, or question..."
-                  />
-                </label>
-              </div>
-              <button
-                type="submit"
-                className="mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black"
-              >
-                Send enquiry <Send className="h-4 w-4" />
-              </button>
-              <p className="mt-4 text-xs leading-5 text-[#7b887e]">
-                By submitting, you agree that our team may contact you about this enquiry.
-              </p>
-            </form>
+            <ContactEnquiryForm />
           </div>
         </section>
 

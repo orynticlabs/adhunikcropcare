@@ -34,7 +34,7 @@ export default function SoilCarePage() {
             </nav>
             <div className="mt-14 max-w-3xl">
               <span className="inline-flex items-center gap-2 rounded-full bg-[#e2dac8] px-4 py-2 text-xs font-bold uppercase tracking-[.18em]"><Layers3 className="h-4 w-4 text-[#689c30]" />Look beneath the crop</span>
-              <h1 className="mt-7 font-display text-5xl leading-[.92] sm:text-8xl lg:text-[7rem]">Good harvests have <span className="block italic text-[#8b6645]">deep foundations.</span></h1>
+          <h1 className="mt-7 font-display text-4xl leading-[.92] sm:text-6xl lg:text-[7rem]">Good harvests have <span className="block italic text-[#8b6645]">deep foundations.</span></h1>
               <p className="mt-7 max-w-xl text-lg leading-8 text-[#69675f]">Soil care begins with structure, moisture, pH, biology, and roots working as one connected environment.</p>
               <div className="mt-9 flex flex-wrap gap-3">
                 <a href="#soil-profile" className="inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">Read the profile <ArrowRight className="h-4 w-4" /></a>
@@ -74,7 +74,7 @@ export default function SoilCarePage() {
 
         <section className="bg-[#254737] py-20 text-white sm:py-28">
           <div className="mx-auto max-w-7xl px-4">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#e9c46a]">Soil-care range</p><h2 className="mt-4 font-display text-5xl">Tools for the root environment.</h2></div><Link href="/products?q=Soil%20Care" className="font-bold text-[#bdd879]">View all soil products →</Link></div>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#e9c46a]">Soil-care range</p><h2 className="mt-4 font-display text-4xl sm:text-5xl">Tools for the root environment.</h2></div><Link href="/products?q=Soil%20Care" className="font-bold text-[#bdd879]">View all soil products →</Link></div>
             <div className="mt-12 rounded-[2.3rem] border border-dashed border-white/20 bg-white/10 p-10 text-center text-white/75">
               Published soil-care products are loaded from OryCMS on the main products page.
             </div>

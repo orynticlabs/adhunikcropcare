@@ -118,6 +118,27 @@ model OryCMSCategory {
   @@map("orycms_categories")
 }
 
+model OryCMSCertificate {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title             String
+  issuingAuthority  String    @map("issuing_authority")
+  certificateNumber String?   @map("certificate_number")
+  description       String?
+  image             Json?
+  documentUrl       String?   @map("document_url")
+  issuedOn          DateTime? @map("issued_on") @db.Date
+  expiresOn         DateTime? @map("expires_on") @db.Date
+  status            String    @default("draft")
+  displayOrder      Int       @default(0) @map("display_order")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([status, displayOrder], map: "orycms_certificates_status_display_order_idx")
+  @@index([deletedAt], map: "orycms_certificates_deleted_at_idx")
+  @@map("orycms_certificates")
+}
+
 model OryCMSInventoryEvent {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   productId String?  @map("product_id") @db.Uuid
@@ -273,4 +294,22 @@ model StorefrontEmailPreference {
   updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   @@map("storefront_email_preferences")
+}
+
+model StorefrontContactEnquiry {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fullName         String   @map("full_name")
+  countryCode      String   @default("+91") @map("country_code")
+  mobileNumber     String   @map("mobile_number")
+  email            String
+  topic            String
+  location         String
+  message          String
+  status           String   @default("new")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status, createdAt], map: "storefront_contact_enquiries_status_created_at_idx")
+  @@index([email], map: "storefront_contact_enquiries_email_idx")
+  @@map("storefront_contact_enquiries")
 }

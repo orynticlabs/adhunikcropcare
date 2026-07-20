@@ -61,7 +61,7 @@ export default function OrganicRangePage() {
       <CartDrawer />
 
       <main>
-        <section className="relative isolate min-h-[760px] overflow-hidden pt-36 sm:pt-44">
+      <section className="relative isolate overflow-hidden pb-16 pt-32 sm:pb-20 sm:pt-40 lg:min-h-[760px] lg:pb-0 lg:pt-44">
           <Image
             src="https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=1800&q=90"
             alt="Hands nurturing healthy organic soil and young plants"
@@ -85,7 +85,7 @@ export default function OrganicRangePage() {
                 <Leaf className="h-3.5 w-3.5 text-[#e9c46a]" />
                 Grown from a respect for living soil
               </div>
-              <h1 className="mt-7 max-w-3xl font-display text-5xl leading-[.95] tracking-tight sm:text-7xl lg:text-[5.6rem]">
+              <h1 className="mt-7 max-w-3xl font-display text-4xl leading-[.95] tracking-tight sm:text-6xl lg:text-[5.6rem]">
                 Farm in rhythm
                 <span className="block italic text-[#d5dfaa]">with nature.</span>
               </h1>

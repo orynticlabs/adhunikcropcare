@@ -85,18 +85,18 @@ export default function BlogPage() {
               <span className="text-[#689c30]">Field Journal</span>
             </nav>
 
-            <div className="mt-12 grid gap-10 lg:grid-cols-[1.1fr_.9fr] lg:items-end">
+            <div className="mt-9 grid gap-8 sm:mt-12 lg:grid-cols-[1.1fr_.9fr] lg:items-end lg:gap-10">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full border border-[#bfcabb] bg-white/55 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em]">
                   <BookOpen className="h-4 w-4 text-[#689c30]" />
                   Ideas grown in the field
                 </div>
-                <h1 className="mt-7 max-w-4xl font-display text-6xl leading-[.88] tracking-tight sm:text-8xl lg:text-[7.5rem]">
+                <h1 className="mt-7 max-w-4xl font-display text-5xl leading-[.92] tracking-tight sm:text-7xl lg:text-[7.5rem]">
                   Field
                   <span className="block italic text-[#689c30]">Journal.</span>
                 </h1>
               </div>
-              <div className="border-l border-[#bac6ba] pl-6">
+              <div className="border-t border-[#bac6ba] pt-6 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
                 <p className="max-w-lg text-lg leading-8 text-[#5f6b62]">
                   Practical thinking for growers who want to understand the field,
                   not simply react to it.
@@ -116,7 +116,7 @@ export default function BlogPage() {
         <section className="pb-20">
           <div className="mx-auto max-w-7xl px-4">
             <article className="grid overflow-hidden rounded-[2.75rem] bg-[#173d30] text-white shadow-2xl lg:grid-cols-[1.2fr_.8fr]">
-              <div className="relative min-h-[430px] lg:min-h-[590px]">
+              <div className="relative min-h-[300px] sm:min-h-[430px] lg:min-h-[590px]">
                 <Image
                   src="https://images.unsplash.com/photo-1463123081488-789f998ac9c4?w=1400&q=90"
                   alt="Farmer walking through a green field"
@@ -133,7 +133,7 @@ export default function BlogPage() {
               <div className="flex flex-col justify-between p-8 sm:p-12">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#bdd879]">Farmer perspective</p>
-                  <h2 className="mt-5 font-display text-4xl leading-tight sm:text-6xl">
+                  <h2 className="mt-5 font-display text-3xl leading-tight sm:text-5xl lg:text-6xl">
                     The best technology still begins with observation.
                   </h2>
                   <p className="mt-6 leading-7 text-white/65">
@@ -175,7 +175,7 @@ export default function BlogPage() {
                     story.size === "large" ? "lg:row-span-2" : ""
                   } ${story.size === "wide" ? "lg:col-span-2 lg:grid lg:grid-cols-2" : ""}`}
                 >
-                  <div className={`relative overflow-hidden ${story.size === "large" ? "min-h-[440px]" : "min-h-64"}`}>
+                  <div className={`relative overflow-hidden ${story.size === "large" ? "min-h-72 sm:min-h-[440px]" : "min-h-56 sm:min-h-64"}`}>
                     <Image
                       src={story.image}
                       alt={story.title}
