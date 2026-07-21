@@ -1,7 +1,8 @@
 import crypto from "crypto"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { ensureStorefrontAuthSchema, normalizePhone, validateEmail } from "@/lib/storefront-auth"
-import { sendAdminEmail, sendEmail } from "@/lib/email/mailer"
+import { emailBaseUrl, sendAdminEmail, sendEmail, sendOrderAdminNotifications } from "@/lib/email/mailer"
+import { getEnabledOrderNotificationRecipients } from "@/lib/orycms/order-notification-emails"
 
 export type StorefrontPaymentMethod = "cash_on_delivery" | "razorpay"
 
@@ -457,6 +458,7 @@ async function sendOrderConfirmationEmail(order: StorefrontOrderRow) {
     sendOrderEventEmail(order, "orderPlaced"),
     sendAdminEmail({ firstName: contact?.firstName, orderNumber: order.number, template: "orderPlaced", total: Number(order.total), unsubscribeUrl: "" }),
   ]).catch((error) => console.error("Order SMTP email failed", error))
+  await sendConfiguredAdminOrderNotifications(order).catch((error) => console.error("Admin order notification failed", error))
   let status = "skipped"
   let providerId: string | null = null
   if (process.env.RESEND_API_KEY && process.env.ORDER_EMAIL_FROM) {
@@ -479,6 +481,25 @@ async function sendOrderConfirmationEmail(order: StorefrontOrderRow) {
     VALUES (${order.id}::uuid, 'order_confirmation', ${recipient}, ${providerId}, ${status})
     ON CONFLICT (order_id, type) DO NOTHING
   `
+}
+
+async function sendConfiguredAdminOrderNotifications(order: StorefrontOrderRow) {
+  const recipients = await getEnabledOrderNotificationRecipients()
+  if (recipients.length === 0) return { skipped: true }
+  const contact = order.contact as { email?: string; firstName?: string; lastName?: string; phone?: string } | null
+  const customerName = [contact?.firstName, contact?.lastName].filter(Boolean).join(" ")
+  return sendOrderAdminNotifications(recipients, {
+    adminOrderUrl: `${emailBaseUrl()}/admin/orders/${order.id}`,
+    customerEmail: contact?.email,
+    customerName: customerName || undefined,
+    mobileNumber: contact?.phone,
+    orderDate: new Date(order.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }),
+    orderNumber: order.number,
+    orderStatus: order.status,
+    paymentMethod: order.payment_method,
+    paymentStatus: order.payment_status,
+    total: Number(order.total),
+  })
 }
 
 async function sendOrderEventEmail(order: StorefrontOrderRow, template: "orderPlaced" | "orderCancelled" | "refundUpdate") {

@@ -22,6 +22,7 @@ export type OryCMSProductInput = {
   category: string
   featured: boolean
   fullDescription?: string
+  howToUse?: string
   images: ProductImageInput[]
   metaDescription?: string
   metaTitle?: string
@@ -29,9 +30,11 @@ export type OryCMSProductInput = {
   packSizes: PackSizeInput[]
   price: number
   salePrice?: number | null
+  shippingReturns?: string
   shortDescription: string
   sku: string
   slug?: string
+  specifications?: string
   status: ProductStatus
   stockQuantity: number
   tags: string[]
@@ -51,6 +54,7 @@ type OryCMSProductRow = {
   created_at: Date
   featured: boolean
   full_description: string | null
+  how_to_use: string | null
   id: string
   images: Prisma.JsonValue
   meta_description: string | null
@@ -59,9 +63,11 @@ type OryCMSProductRow = {
   pack_sizes: Prisma.JsonValue
   price: Prisma.Decimal | number | string
   sale_price: Prisma.Decimal | number | string | null
+  shipping_returns: string | null
   short_description: string
   sku: string
   slug: string
+  specifications: string | null
   status: string
   stock_quantity: number
   tags: Prisma.JsonValue
@@ -129,6 +135,7 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
           category = ${data.category},
           featured = ${data.featured},
           full_description = ${data.fullDescription},
+          how_to_use = ${data.howToUse},
           images = ${JSON.stringify(payload.images)}::jsonb,
           meta_description = ${data.metaDescription},
           meta_title = ${data.metaTitle},
@@ -136,8 +143,10 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
           pack_sizes = ${JSON.stringify(payload.packSizes)}::jsonb,
           price = ${data.price},
           sale_price = ${data.salePrice},
+          shipping_returns = ${data.shippingReturns},
           short_description = ${data.shortDescription},
           sku = ${data.sku},
+          specifications = ${data.specifications},
           status = ${data.status},
           stock_quantity = ${data.stockQuantity},
           tags = ${JSON.stringify(payload.tags)}::jsonb,
@@ -152,6 +161,7 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
           category,
           featured,
           full_description,
+          how_to_use,
           images,
           meta_description,
           meta_title,
@@ -159,9 +169,11 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
           pack_sizes,
           price,
           sale_price,
+          shipping_returns,
           short_description,
           sku,
           slug,
+          specifications,
           status,
           stock_quantity,
           tags,
@@ -172,6 +184,7 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
           ${data.category},
           ${data.featured},
           ${data.fullDescription},
+          ${data.howToUse},
           ${JSON.stringify(payload.images)}::jsonb,
           ${data.metaDescription},
           ${data.metaTitle},
@@ -179,9 +192,11 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
           ${JSON.stringify(payload.packSizes)}::jsonb,
           ${data.price},
           ${data.salePrice},
+          ${data.shippingReturns},
           ${data.shortDescription},
           ${data.sku},
           ${slug},
+          ${data.specifications},
           ${data.status},
           ${data.stockQuantity},
           ${JSON.stringify(payload.tags)}::jsonb,
@@ -267,6 +282,7 @@ function validateProductInput(input: OryCMSProductInput) {
     brand: input.brand?.trim(),
     category: input.category.trim(),
     fullDescription: input.fullDescription?.trim(),
+    howToUse: input.howToUse?.trim(),
     images: input.images.filter((image) => image.url.trim()),
     metaDescription: input.metaDescription?.trim(),
     metaTitle: input.metaTitle?.trim(),
@@ -276,9 +292,11 @@ function validateProductInput(input: OryCMSProductInput) {
       .filter((pack) => pack.size && Number.isFinite(pack.price)),
     price: Number(input.price),
     salePrice: input.salePrice ? Number(input.salePrice) : null,
+    shippingReturns: input.shippingReturns?.trim(),
     shortDescription: input.shortDescription.trim(),
     sku: input.sku.trim(),
     slug: input.slug?.trim(),
+    specifications: input.specifications?.trim(),
     stockQuantity: Number(input.stockQuantity),
     tags: input.tags.map((tag) => tag.trim()).filter(Boolean),
     unit: input.unit.trim(),
@@ -330,6 +348,7 @@ function toPrismaProductData(input: OryCMSProductInput & { slug: string }) {
     category: input.category,
     featured: input.featured,
     fullDescription: input.fullDescription || null,
+    howToUse: input.howToUse || null,
     images: input.images as unknown as Prisma.InputJsonValue,
     metaDescription: input.metaDescription || null,
     metaTitle: input.metaTitle || null,
@@ -337,9 +356,11 @@ function toPrismaProductData(input: OryCMSProductInput & { slug: string }) {
     packSizes: input.packSizes as unknown as Prisma.InputJsonValue,
     price: input.price,
     salePrice: input.salePrice || null,
+    shippingReturns: input.shippingReturns || null,
     shortDescription: input.shortDescription,
     sku: input.sku,
     slug: input.slug,
+    specifications: input.specifications || null,
     status: input.status,
     stockQuantity: input.stockQuantity,
     tags: input.tags as unknown as Prisma.InputJsonValue,
@@ -354,6 +375,7 @@ function toProductDTO(product: OryCMSProductRow): OryCMSProductDTO {
     createdAt: new Date(product.created_at).toISOString(),
     featured: product.featured,
     fullDescription: product.full_description ?? "",
+    howToUse: product.how_to_use ?? "",
     id: product.id,
     images: normalizeImages(product.images),
     metaDescription: product.meta_description ?? "",
@@ -362,9 +384,11 @@ function toProductDTO(product: OryCMSProductRow): OryCMSProductDTO {
     packSizes: normalizePackSizes(product.pack_sizes),
     price: Number(product.price),
     salePrice: product.sale_price ? Number(product.sale_price) : null,
+    shippingReturns: product.shipping_returns ?? "",
     shortDescription: product.short_description,
     sku: product.sku,
     slug: product.slug,
+    specifications: product.specifications ?? "",
     status: product.status as ProductStatus,
     stockQuantity: product.stock_quantity,
     tags: normalizeTags(product.tags),

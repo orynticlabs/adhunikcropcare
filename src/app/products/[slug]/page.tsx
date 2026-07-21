@@ -1,8 +1,11 @@
 import AnnouncementBar from "@/components/layout/announcement-bar"
 import CartDrawer from "@/features/cart/components/cart-drawer"
+import CropSuccessStories from "@/components/home/crop-success-stories"
 import Header from "@/components/layout/header"
 import ProductDetailView, { ProductDetail } from "@/features/products/components/product-detail-view"
 import SiteFooter from "@/components/layout/site-footer"
+import TestimonialsCarousel from "@/components/home/testimonials-carousel"
+import { Leaf } from "lucide-react"
 import {
   ensureProductImages,
   getPublishedOryCMSProductBySlug,
@@ -70,6 +73,7 @@ function mapOryCMSProductToDetail(
     category: product.category,
     description: product.fullDescription || product.shortDescription,
     dosage: packs.map((pack) => `${pack.size}: use as recommended by crop, soil condition, and agronomist guidance.`),
+    howToUse: product.howToUse,
     images,
     ingredients: [
       product.brand ? `${product.brand} formulation` : `${product.category} formulation`,
@@ -94,8 +98,11 @@ function mapOryCMSProductToDetail(
       "Keep away from children, animal feed, and drinking water.",
       "Follow label guidance and local agronomy recommendations.",
     ],
+    shippingReturns: product.shippingReturns,
+    shortDescription: product.shortDescription,
     sku: product.sku,
     slug: product.slug,
+    specifications: product.specifications,
     stockQuantity: product.stockQuantity,
     storage: [
       "Store in a cool, dry, and shaded place.",
@@ -149,6 +156,26 @@ export default async function ProductPage({
       <Header />
       <CartDrawer />
       <ProductDetailView product={product} />
+
+      {/* Testimonials — "Farmers, not customers." */}
+      <section className="relative overflow-hidden py-12 sm:py-16 bg-gradient-to-b from-accent/20 to-transparent">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="text-center mx-auto max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
+              <Leaf className="h-3 w-3" aria-hidden /> Voices from the field
+            </div>
+            <h2 className="mt-5 font-display text-4xl sm:text-5xl leading-[1.1] tracking-tight">
+              Farmers, not customers.
+            </h2>
+          </div>
+
+          <TestimonialsCarousel />
+        </div>
+      </section>
+
+      {/* "Watch Results. Trust Performance." */}
+      <CropSuccessStories />
+
       <SiteFooter />
     </div>
   )

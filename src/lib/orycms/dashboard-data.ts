@@ -62,45 +62,52 @@ export async function getOryCMSDashboardData(actor: CurrentOryCMSAdmin, input: {
 
   const range = resolveRange(input)
   const today = todayBounds()
-  const admin = await getOryCMSAdminProfile(actor)
-  const orders = await orycmsPrisma.$queryRaw<OrderRow[]>`
-    SELECT id, user_id, number, status, payment_status, payment_method, refund_status,
-           contact, discount_total, items, total, created_at
-    FROM storefront_orders
-    WHERE created_at >= ${range.from} AND created_at <= ${range.to}
-    ORDER BY created_at ASC
-  `
-  const previousOrders = await orycmsPrisma.$queryRaw<OrderRow[]>`
-    SELECT id, user_id, number, status, payment_status, payment_method, refund_status,
-           contact, discount_total, items, total, created_at
-    FROM storefront_orders
-    WHERE created_at >= ${range.previousFrom} AND created_at < ${range.from}
-  `
-  const todayOrders = await orycmsPrisma.$queryRaw<OrderRow[]>`
-    SELECT id, user_id, number, status, payment_status, payment_method, refund_status,
-           contact, discount_total, items, total, created_at
-    FROM storefront_orders
-    WHERE created_at >= ${today.from} AND created_at <= ${today.to}
-  `
-  const latestOrders = await orycmsPrisma.$queryRaw<OrderRow[]>`
-    SELECT id, user_id, number, status, payment_status, payment_method, refund_status,
-           contact, discount_total, items, total, created_at
-    FROM storefront_orders
-    ORDER BY created_at DESC
-    LIMIT 6
-  `
-  const products = await orycmsPrisma.$queryRaw<ProductRow[]>`
-    SELECT id, name, sku, price, stock_quantity
-    FROM orycms_products
-    WHERE deleted_at IS NULL
-  `
-  const customers = await orycmsPrisma.$queryRaw<CustomerRow[]>`
-    SELECT id, first_name, last_name, email, created_at
-    FROM storefront_users
-    WHERE deleted_at IS NULL
-    ORDER BY created_at DESC
-    LIMIT 6
-  `
+  // These reads are mutually independent — issue them concurrently so the
+  // dashboard waits on the single slowest query instead of the sum of all of
+  // them. (Prisma runs each on its own pooled connection.)
+  const [admin, orders, previousOrders, todayOrders, latestOrders, products, customers, visitors] =
+    await Promise.all([
+      getOryCMSAdminProfile(actor),
+      orycmsPrisma.$queryRaw<OrderRow[]>`
+        SELECT id, user_id, number, status, payment_status, payment_method, refund_status,
+               contact, discount_total, items, total, created_at
+        FROM storefront_orders
+        WHERE created_at >= ${range.from} AND created_at <= ${range.to}
+        ORDER BY created_at ASC
+      `,
+      orycmsPrisma.$queryRaw<OrderRow[]>`
+        SELECT id, user_id, number, status, payment_status, payment_method, refund_status,
+               contact, discount_total, items, total, created_at
+        FROM storefront_orders
+        WHERE created_at >= ${range.previousFrom} AND created_at < ${range.from}
+      `,
+      orycmsPrisma.$queryRaw<OrderRow[]>`
+        SELECT id, user_id, number, status, payment_status, payment_method, refund_status,
+               contact, discount_total, items, total, created_at
+        FROM storefront_orders
+        WHERE created_at >= ${today.from} AND created_at <= ${today.to}
+      `,
+      orycmsPrisma.$queryRaw<OrderRow[]>`
+        SELECT id, user_id, number, status, payment_status, payment_method, refund_status,
+               contact, discount_total, items, total, created_at
+        FROM storefront_orders
+        ORDER BY created_at DESC
+        LIMIT 6
+      `,
+      orycmsPrisma.$queryRaw<ProductRow[]>`
+        SELECT id, name, sku, price, stock_quantity
+        FROM orycms_products
+        WHERE deleted_at IS NULL
+      `,
+      orycmsPrisma.$queryRaw<CustomerRow[]>`
+        SELECT id, first_name, last_name, email, created_at
+        FROM storefront_users
+        WHERE deleted_at IS NULL
+        ORDER BY created_at DESC
+        LIMIT 6
+      `,
+      countVisitors(range),
+    ])
 
   const paidOrders = orders.filter(isRevenueOrder)
   const previousPaid = previousOrders.filter(isRevenueOrder)
@@ -110,7 +117,6 @@ export async function getOryCMSDashboardData(actor: CurrentOryCMSAdmin, input: {
   const todayRevenue = sum(todayPaid.map((order) => Number(order.total)))
   const items = paidOrders.flatMap(orderItems)
   const productStats = topProducts(items, products)
-  const visitors = await countVisitors(range)
   const conversionRate = visitors ? (paidOrders.length / visitors) * 100 : null
   const lowStock = products.filter((product) => product.stock_quantity > 0 && product.stock_quantity <= 10)
   const outOfStock = products.filter((product) => product.stock_quantity <= 0)

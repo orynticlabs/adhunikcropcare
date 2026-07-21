@@ -84,3 +84,44 @@ export async function sendAdminEmail(input: Omit<SendInput, "to" | "userId">) {
   const admin = process.env.SMTP_ADMIN_EMAIL
   return admin ? sendEmail({ ...input, to: admin }) : { skipped: true }
 }
+
+export type OrderAdminNotificationData = {
+  adminOrderUrl?: string
+  customerEmail?: string
+  customerName?: string
+  mobileNumber?: string
+  orderDate?: string
+  orderNumber?: string
+  orderStatus?: string
+  paymentMethod?: string
+  paymentStatus?: string
+  total?: number
+}
+
+/**
+ * Sends the detailed "new order" notification to admin-configured recipients
+ * (managed on the Settings page). No unsubscribe/preference gating is applied —
+ * these are operational admin addresses, not customers. Skips silently when no
+ * recipients are configured or Gmail SMTP is not set up, so a missing config
+ * never blocks order placement.
+ */
+export async function sendOrderAdminNotifications(recipients: string[], data: OrderAdminNotificationData) {
+  const unique = Array.from(new Set(recipients.map((email) => email.trim().toLowerCase()).filter(Boolean)))
+  if (unique.length === 0) return { skipped: true }
+  const user = process.env.SMTP_GMAIL_USER
+  const pass = process.env.SMTP_GMAIL_APP_PASSWORD
+  if (!user || !pass) {
+    console.warn("Order admin notification skipped: Gmail SMTP is not configured.")
+    return { skipped: true }
+  }
+  const rendered = emailTemplates.adminOrderNotification({ ...data, unsubscribeUrl: `${emailBaseUrl()}/admin/settings` })
+  const transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } })
+  const info = await transporter.sendMail({
+    from: process.env.SMTP_EMAIL_FROM ?? user,
+    to: unique.join(", "),
+    subject: rendered.subject,
+    text: rendered.text,
+    html: rendered.html,
+  })
+  return { messageId: info.messageId, recipients: unique, skipped: false }
+}

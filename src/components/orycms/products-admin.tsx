@@ -31,6 +31,7 @@ type Product = {
   createdAt: string
   featured: boolean
   fullDescription: string
+  howToUse: string
   id: string
   images: ProductImage[]
   metaDescription: string
@@ -39,9 +40,11 @@ type Product = {
   packSizes: PackSize[]
   price: number
   salePrice: number | null
+  shippingReturns: string
   shortDescription: string
   sku: string
   slug: string
+  specifications: string
   status: ProductStatus
   stockQuantity: number
   tags: string[]
@@ -66,6 +69,7 @@ const emptyProduct: Product = {
   createdAt: "",
   featured: false,
   fullDescription: "",
+  howToUse: "",
   id: "",
   images: [],
   metaDescription: "",
@@ -74,9 +78,11 @@ const emptyProduct: Product = {
   packSizes: [{ price: 0, size: "" }],
   price: 0,
   salePrice: null,
+  shippingReturns: "",
   shortDescription: "",
   sku: "",
   slug: "",
+  specifications: "",
   status: "draft",
   stockQuantity: 0,
   tags: [],
@@ -637,6 +643,45 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                 rows={8}
                 className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] outline-none focus:border-border-strong"
                 placeholder="Rich text content. Use paragraphs, bullets, or simple HTML."
+              />
+            </label>
+          </Card>
+
+          <Card title="Storefront content">
+            <p className="text-[11.5px] text-muted-foreground">
+              These appear on the product page. Full Description above powers the
+              &ldquo;Product Description&rdquo; section; the fields below power the
+              collapsible accordions. Use one item per line or simple HTML. Leave blank
+              to fall back to defaults.
+            </p>
+            <label className="block space-y-1.5">
+              <span className="text-[12px] font-medium">Product Specifications</span>
+              <textarea
+                value={product.specifications}
+                onChange={(event) => patch({ specifications: event.target.value })}
+                rows={5}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] outline-none focus:border-border-strong"
+                placeholder={"One per line, e.g.\nWeight: 60g\nQuantity: 20 sticks\nLasts: Up to 60 days"}
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-[12px] font-medium">How to Use</span>
+              <textarea
+                value={product.howToUse}
+                onChange={(event) => patch({ howToUse: event.target.value })}
+                rows={5}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] outline-none focus:border-border-strong"
+                placeholder={"One step per line, e.g.\nInsert 2-3 inches into the soil\nWater as usual\nReapply every 60 days"}
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-[12px] font-medium">Shipping &amp; Returns</span>
+              <textarea
+                value={product.shippingReturns}
+                onChange={(event) => patch({ shippingReturns: event.target.value })}
+                rows={4}
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] outline-none focus:border-border-strong"
+                placeholder="Free shipping on orders above ₹499. 30-day replacement for damaged products."
               />
             </label>
           </Card>
