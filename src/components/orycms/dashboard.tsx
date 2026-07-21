@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
+  CreditCard,
   Database,
   FileText,
   Image as ImageIcon,
@@ -23,6 +24,7 @@ import {
   Megaphone,
   Package,
   PanelLeft,
+  Percent,
   Puzzle,
   Receipt,
   SearchCheck,
@@ -108,11 +110,13 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Content: FileText,
   Customers: Users,
   Database,
+  Discounts: Percent,
   Inventory: Boxes,
   Marketing: Megaphone,
   Media: ImageIcon,
   Orders: Receipt,
   Overview: LayoutDashboard,
+  Payments: CreditCard,
   Plugins: Puzzle,
   Products: Package,
   Roles: Shield,
@@ -971,6 +975,36 @@ function OryCMSSidebar({ collapsed }: { collapsed: boolean }) {
   const pathname = usePathname()
   const [copilotOpen, setCopilotOpen] = useState(false)
   const [open, setOpen] = useState<Record<string, boolean>>({})
+  const [unreadOrders, setUnreadOrders] = useState(0)
+
+  const onOrdersPage = pathname === "/admin/orders" || pathname.startsWith("/admin/orders/")
+
+  // Poll the live unread-orders count so a newly placed order raises the badge.
+  useEffect(() => {
+    let active = true
+    async function refresh() {
+      try {
+        const json = await fetch("/api/orycms/orders/unread-count", { cache: "no-store" }).then((r) => r.json())
+        if (active && json.success) setUnreadOrders(Number(json.data.count) || 0)
+      } catch {
+        /* ignore transient errors */
+      }
+    }
+    refresh()
+    const interval = window.setInterval(refresh, 30000)
+    return () => {
+      active = false
+      window.clearInterval(interval)
+    }
+  }, [])
+
+  // Opening the Orders module marks orders viewed and clears the badge.
+  useEffect(() => {
+    if (!onOrdersPage) return
+    fetch("/api/orycms/orders/unread-count", { method: "POST" })
+      .then(() => setUnreadOrders(0))
+      .catch(() => setUnreadOrders(0))
+  }, [onOrdersPage])
 
   useEffect(() => {
     try {
@@ -1032,7 +1066,7 @@ function OryCMSSidebar({ collapsed }: { collapsed: boolean }) {
               {group.items.map((item) => (
                 <OryCMSMenuItem
                   key={item.label}
-                  item={item}
+                  item={item.label === "Orders" ? { ...item, badge: unreadOrders > 0 ? String(unreadOrders) : undefined } : item}
                   collapsed={collapsed}
                   pathname={pathname}
                   open={Boolean(open[item.label])}

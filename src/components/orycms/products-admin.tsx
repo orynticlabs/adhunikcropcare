@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { CheckCircle2, ChevronLeft, ChevronRight, Eye, GripVertical, ImageIcon, Loader2, Plus, Save, Search, Star, Trash2, Upload, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { RichTextEditor } from "@/components/orycms/rich-text-editor"
 import { cn } from "@/lib/utils"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
 
@@ -500,6 +501,11 @@ export function OryCMSProductForm({ id }: { id?: string }) {
   }
 
   async function saveProduct() {
+    const validationError = validateProduct(product)
+    if (validationError) {
+      showToast(validationError, "error")
+      return
+    }
     setSaving(true)
     const response = await fetch(effectiveId ? `/api/orycms/products/${effectiveId}` : "/api/orycms/products", {
       body: JSON.stringify(product),
@@ -634,15 +640,18 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                 className="h-9 w-full cursor-not-allowed rounded-lg border border-border bg-surface-muted px-3 text-[13px] text-muted-foreground outline-none"
               />
             </label>
-            <Field label="Short Description*" value={product.shortDescription} onChange={(shortDescription) => patch({ shortDescription })} />
+            <LimitedField
+              label="Short Description*"
+              value={product.shortDescription}
+              onChange={(shortDescription) => patch({ shortDescription })}
+              maxLength={85}
+            />
             <label className="block space-y-1.5">
               <span className="text-[12px] font-medium">Full Description</span>
-              <textarea
+              <RichTextEditor
                 value={product.fullDescription}
-                onChange={(event) => patch({ fullDescription: event.target.value })}
-                rows={8}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] outline-none focus:border-border-strong"
-                placeholder="Rich text content. Use paragraphs, bullets, or simple HTML."
+                onChange={(fullDescription) => patch({ fullDescription })}
+                placeholder="Rich text content. Use headings, bold, lists, tables, links, and images."
               />
             </label>
           </Card>
@@ -651,36 +660,30 @@ export function OryCMSProductForm({ id }: { id?: string }) {
             <p className="text-[11.5px] text-muted-foreground">
               These appear on the product page. Full Description above powers the
               &ldquo;Product Description&rdquo; section; the fields below power the
-              collapsible accordions. Use one item per line or simple HTML. Leave blank
+              collapsible accordions. Format with the rich text toolbar. Leave blank
               to fall back to defaults.
             </p>
             <label className="block space-y-1.5">
               <span className="text-[12px] font-medium">Product Specifications</span>
-              <textarea
+              <RichTextEditor
                 value={product.specifications}
-                onChange={(event) => patch({ specifications: event.target.value })}
-                rows={5}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] outline-none focus:border-border-strong"
-                placeholder={"One per line, e.g.\nWeight: 60g\nQuantity: 20 sticks\nLasts: Up to 60 days"}
+                onChange={(specifications) => patch({ specifications })}
+                placeholder="e.g. Weight: 60g · Quantity: 20 sticks · Lasts: Up to 60 days"
               />
             </label>
             <label className="block space-y-1.5">
               <span className="text-[12px] font-medium">How to Use</span>
-              <textarea
+              <RichTextEditor
                 value={product.howToUse}
-                onChange={(event) => patch({ howToUse: event.target.value })}
-                rows={5}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] outline-none focus:border-border-strong"
-                placeholder={"One step per line, e.g.\nInsert 2-3 inches into the soil\nWater as usual\nReapply every 60 days"}
+                onChange={(howToUse) => patch({ howToUse })}
+                placeholder="Step-by-step usage instructions."
               />
             </label>
             <label className="block space-y-1.5">
               <span className="text-[12px] font-medium">Shipping &amp; Returns</span>
-              <textarea
+              <RichTextEditor
                 value={product.shippingReturns}
-                onChange={(event) => patch({ shippingReturns: event.target.value })}
-                rows={4}
-                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] outline-none focus:border-border-strong"
+                onChange={(shippingReturns) => patch({ shippingReturns })}
                 placeholder="Free shipping on orders above ₹499. 30-day replacement for damaged products."
               />
             </label>
@@ -908,6 +911,19 @@ export function OryCMSProductForm({ id }: { id?: string }) {
   )
 }
 
+/** Client-side required-field check mirroring the server rules, for fast feedback. */
+function validateProduct(product: Product): string | null {
+  if (!product.name.trim()) return "Product Name is required."
+  if (!product.shortDescription.trim()) return "Short Description is required."
+  if (product.shortDescription.length > 85) return "Short Description must be 85 characters or fewer."
+  if (!product.category.trim()) return "Category is required."
+  if (!product.sku.trim()) return "SKU is required."
+  if (!product.unit.trim()) return "Unit is required."
+  if (!Number.isFinite(product.price) || product.price <= 0) return "Price is required."
+  if (!Number.isFinite(product.stockQuantity) || product.stockQuantity < 0) return "Stock Quantity is required."
+  return null
+}
+
 function Card({ children, title }: { children: ReactNode; title: string }) {
   return (
     <div className="space-y-4 rounded-xl border border-border bg-surface p-5 shadow-xs">
@@ -1047,6 +1063,40 @@ function Field({
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
+      />
+    </label>
+  )
+}
+
+function LimitedField({
+  label,
+  onChange,
+  placeholder,
+  value,
+  maxLength,
+}: {
+  label: string
+  onChange: (value: string) => void
+  placeholder?: string
+  value: string
+  maxLength: number
+}) {
+  const count = value.length
+  const atLimit = count >= maxLength
+  return (
+    <label className="block space-y-1.5">
+      <span className="flex items-center justify-between">
+        <span className="text-[12px] font-medium">{label}</span>
+        <span className={cn("text-[11px] tabular-nums", atLimit ? "text-destructive" : "text-muted-foreground")}>
+          {count}/{maxLength}
+        </span>
+      </span>
+      <input
+        value={value}
+        maxLength={maxLength}
+        onChange={(event) => onChange(event.target.value.slice(0, maxLength))}
         placeholder={placeholder}
         className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
       />

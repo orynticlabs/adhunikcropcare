@@ -400,6 +400,25 @@ async function releaseExpiredStockReservations() {
   for (const order of orders) await releaseOrderStock(order, "stock.released_timeout")
 }
 
+/**
+ * Restores reserved inventory for an order and marks it released (idempotent via
+ * stock_released_at). Shared by the storefront cancel flow and Shiprocket
+ * cancellation/RTO/refund handling so both paths use one implementation.
+ */
+export async function restoreOrderInventory(order: StorefrontOrderRow, event = "stock.restored") {
+  return releaseOrderStock(order, event)
+}
+
+/** Loads a raw order row by id without user scoping — for admin/fulfillment use only. */
+export async function selectOrderRowById(orderId: string): Promise<StorefrontOrderRow | null> {
+  await ensureStorefrontAuthSchema()
+  const rows = await orycmsPrisma.$queryRawUnsafe<StorefrontOrderRow[]>(
+    `SELECT ${ORDER_SELECT} FROM storefront_orders WHERE id = $1::uuid LIMIT 1`,
+    orderId,
+  )
+  return rows[0] ?? null
+}
+
 async function releaseOrderStock(order: StorefrontOrderRow, event = "stock.released") {
   if (order.stock_released_at) return
   await releaseReservedStockItems(Array.isArray(order.items) ? order.items as CheckoutItem[] : [])

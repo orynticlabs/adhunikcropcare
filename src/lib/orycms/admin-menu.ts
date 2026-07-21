@@ -64,7 +64,6 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
         label: "Orders",
         href: adminHref("/orders"),
         slug: "orders",
-        badge: "12",
         description: "Review payments, fulfillment queues, dispatch status, and returns.",
       },
       {
@@ -92,6 +91,29 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
         href: adminHref("/collections"),
         slug: "collections",
         description: "Define content schemas and manage collection structure.",
+        children: [
+          {
+            section: "Content",
+            label: "Collections",
+            href: adminHref("/collections"),
+            slug: "collections",
+            description: "Define content schemas and manage collection structure.",
+          },
+          {
+            section: "Content",
+            label: "Payments",
+            href: adminHref("/payments"),
+            slug: "payments",
+            description: "Review payment providers, transactions, and payout configuration.",
+          },
+          {
+            section: "Content",
+            label: "Discounts",
+            href: adminHref("/discounts"),
+            slug: "discounts",
+            description: "Create and manage discount codes, offers, and promotions.",
+          },
+        ],
       },
       {
         section: "Content",

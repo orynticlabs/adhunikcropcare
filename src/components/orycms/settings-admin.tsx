@@ -20,6 +20,7 @@ import {
   Smartphone,
   Store,
   Trash2,
+  Truck,
   Users,
   X,
 } from "lucide-react"
@@ -142,6 +143,10 @@ export function OryCMSSettingsPage() {
           </Card>
 
           <OrderNotificationEmailsCard onToast={toast} />
+
+          <ShiprocketSettingsCard onToast={toast} />
+
+          <ShipmentNotificationsCard onToast={toast} />
 
           <Card>
             <SectionHeader
@@ -582,6 +587,311 @@ function OrderNotificationEmailsCard({ onToast }: { onToast: (message: string, t
           </div>
         )}
       </div>
+    </Card>
+  )
+}
+
+type ShiprocketConfig = {
+  apiEmail: string | null
+  apiPasswordSet: boolean
+  channelId: string | null
+  pickupLocation: string | null
+  pickupName: string | null
+  pickupPhone: string | null
+  pickupAddress1: string | null
+  pickupAddress2: string | null
+  pickupCity: string | null
+  pickupState: string | null
+  pickupCountry: string | null
+  pickupPincode: string | null
+  packageLengthCm: number
+  packageBreadthCm: number
+  packageHeightCm: number
+  packageWeightKg: number
+  autoShipOnConfirm: boolean
+  enabled: boolean
+}
+
+const EMPTY_SHIPROCKET_FORM = {
+  apiEmail: "",
+  apiPassword: "",
+  channelId: "",
+  pickupLocation: "",
+  pickupName: "",
+  pickupPhone: "",
+  pickupAddress1: "",
+  pickupAddress2: "",
+  pickupCity: "",
+  pickupState: "",
+  pickupCountry: "India",
+  pickupPincode: "",
+  packageLengthCm: "10",
+  packageBreadthCm: "10",
+  packageHeightCm: "10",
+  packageWeightKg: "0.5",
+}
+
+function ShiprocketSettingsCard({ onToast }: { onToast: (message: string, tone: Toast["tone"]) => void }) {
+  const [form, setForm] = useState({ ...EMPTY_SHIPROCKET_FORM })
+  const [enabled, setEnabled] = useState(false)
+  const [autoShip, setAutoShip] = useState(false)
+  const [passwordSet, setPasswordSet] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    fetch("/api/orycms/settings/shiprocket", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!active) return
+        if (!json.success) throw new Error(json.error?.message ?? "Failed to load Shiprocket settings.")
+        applyConfig(json.data as ShiprocketConfig | null)
+      })
+      .catch((error) => {
+        if (active) onToast(error instanceof Error ? error.message : "Failed to load Shiprocket settings.", "error")
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function applyConfig(config: ShiprocketConfig | null) {
+    if (!config) return
+    setForm({
+      apiEmail: config.apiEmail ?? "",
+      apiPassword: "",
+      channelId: config.channelId ?? "",
+      pickupLocation: config.pickupLocation ?? "",
+      pickupName: config.pickupName ?? "",
+      pickupPhone: config.pickupPhone ?? "",
+      pickupAddress1: config.pickupAddress1 ?? "",
+      pickupAddress2: config.pickupAddress2 ?? "",
+      pickupCity: config.pickupCity ?? "",
+      pickupState: config.pickupState ?? "",
+      pickupCountry: config.pickupCountry ?? "India",
+      pickupPincode: config.pickupPincode ?? "",
+      packageLengthCm: String(config.packageLengthCm ?? "10"),
+      packageBreadthCm: String(config.packageBreadthCm ?? "10"),
+      packageHeightCm: String(config.packageHeightCm ?? "10"),
+      packageWeightKg: String(config.packageWeightKg ?? "0.5"),
+    })
+    setEnabled(Boolean(config.enabled))
+    setAutoShip(Boolean(config.autoShipOnConfirm))
+    setPasswordSet(Boolean(config.apiPasswordSet))
+  }
+
+  function set<K extends keyof typeof form>(key: K, value: string) {
+    setForm((current) => ({ ...current, [key]: value }))
+  }
+
+  async function save() {
+    setSaving(true)
+    try {
+      const body = {
+        ...form,
+        packageLengthCm: Number(form.packageLengthCm) || 0,
+        packageBreadthCm: Number(form.packageBreadthCm) || 0,
+        packageHeightCm: Number(form.packageHeightCm) || 0,
+        packageWeightKg: Number(form.packageWeightKg) || 0,
+        autoShipOnConfirm: autoShip,
+        enabled,
+        // Omit the password when left blank so the stored one is preserved.
+        apiPassword: form.apiPassword.trim().length > 0 ? form.apiPassword : undefined,
+      }
+      const json = await fetch("/api/orycms/settings/shiprocket", {
+        body: JSON.stringify(body),
+        headers: { "content-type": "application/json" },
+        method: "PUT",
+      }).then((response) => response.json())
+      if (!json.success) throw new Error(json.error?.message ?? "Failed to save Shiprocket settings.")
+      applyConfig(json.data as ShiprocketConfig | null)
+      onToast("Shiprocket settings saved.", "success")
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : "Failed to save Shiprocket settings.", "error")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card>
+      <div className="flex items-start justify-between gap-3">
+        <SectionHeader
+          icon={Truck}
+          title="Shiprocket shipping"
+          description="Connect Shiprocket to auto-create shipments, assign couriers, and sync tracking. API password is encrypted at rest and never shown again."
+        />
+        <Toggle checked={enabled} onChange={setEnabled} />
+      </div>
+
+      {loading ? (
+        <div className="mt-5 grid min-h-[96px] place-items-center text-[12.5px] text-muted-foreground">
+          <span className="inline-flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading Shiprocket settings…
+          </span>
+        </div>
+      ) : (
+        <>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <Field label="API email" value={form.apiEmail} onChange={(value) => set("apiEmail", value)} />
+            <label className="space-y-1.5">
+              <span className="text-[11.5px] font-medium text-muted-foreground">
+                API password {passwordSet ? "(saved — leave blank to keep)" : ""}
+              </span>
+              <input
+                type="password"
+                value={form.apiPassword}
+                onChange={(event) => set("apiPassword", event.target.value)}
+                placeholder={passwordSet ? "••••••••" : "Shiprocket API password"}
+                className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
+              />
+            </label>
+            <Field label="Channel ID (optional)" value={form.channelId} onChange={(value) => set("channelId", value)} />
+            <Field label="Pickup location nickname" value={form.pickupLocation} onChange={(value) => set("pickupLocation", value)} />
+          </div>
+
+          <div className="mt-5 rounded-lg border border-border bg-surface-muted/40 p-4">
+            <div className="text-[12px] font-medium">Pickup address</div>
+            <div className="mt-3 grid gap-4 md:grid-cols-2">
+              <Field label="Contact name" value={form.pickupName} onChange={(value) => set("pickupName", value)} />
+              <Field label="Contact phone" value={form.pickupPhone} onChange={(value) => set("pickupPhone", value)} />
+              <Field label="Address line 1" value={form.pickupAddress1} onChange={(value) => set("pickupAddress1", value)} className="md:col-span-2" />
+              <Field label="Address line 2" value={form.pickupAddress2} onChange={(value) => set("pickupAddress2", value)} className="md:col-span-2" />
+              <Field label="City" value={form.pickupCity} onChange={(value) => set("pickupCity", value)} />
+              <Field label="State" value={form.pickupState} onChange={(value) => set("pickupState", value)} />
+              <Field label="Pincode" value={form.pickupPincode} onChange={(value) => set("pickupPincode", value)} />
+              <Field label="Country" value={form.pickupCountry} onChange={(value) => set("pickupCountry", value)} />
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-lg border border-border bg-surface-muted/40 p-4">
+            <div className="text-[12px] font-medium">Default package</div>
+            <div className="mt-3 grid gap-4 md:grid-cols-4">
+              <Field label="Length (cm)" value={form.packageLengthCm} onChange={(value) => set("packageLengthCm", value)} />
+              <Field label="Breadth (cm)" value={form.packageBreadthCm} onChange={(value) => set("packageBreadthCm", value)} />
+              <Field label="Height (cm)" value={form.packageHeightCm} onChange={(value) => set("packageHeightCm", value)} />
+              <Field label="Weight (kg)" value={form.packageWeightKg} onChange={(value) => set("packageWeightKg", value)} />
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <SettingRow
+              title="Auto-create shipment on confirm"
+              description="When an admin confirms an order, immediately create the Shiprocket shipment, assign a courier, and schedule pickup."
+              control={<Toggle checked={autoShip} onChange={setAutoShip} />}
+            />
+          </div>
+
+          <div className="mt-5 flex justify-end">
+            <button
+              type="button"
+              onClick={() => void save()}
+              disabled={saving}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3 text-[12.5px] font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              Save Shiprocket settings
+            </button>
+          </div>
+        </>
+      )}
+    </Card>
+  )
+}
+
+type NotificationToggles = {
+  enabled: boolean
+  shipmentCreated: boolean
+  shipped: boolean
+  outForDelivery: boolean
+  delivered: boolean
+  cancelled: boolean
+}
+
+function ShipmentNotificationsCard({ onToast }: { onToast: (message: string, tone: Toast["tone"]) => void }) {
+  const [settings, setSettings] = useState<NotificationToggles>({
+    enabled: true, shipmentCreated: true, shipped: true, outForDelivery: true, delivered: true, cancelled: true,
+  })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    fetch("/api/orycms/settings/shiprocket-notifications", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!active) return
+        if (json.success && json.data) setSettings(json.data)
+      })
+      .catch(() => {})
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  async function save(next: NotificationToggles) {
+    setSaving(true)
+    try {
+      const json = await fetch("/api/orycms/settings/shiprocket-notifications", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(next),
+      }).then((response) => response.json())
+      if (!json.success) throw new Error(json.error?.message ?? "Failed to save.")
+      setSettings(json.data)
+      onToast("Notification settings saved.", "success")
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : "Failed to save.", "error")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function update(key: keyof NotificationToggles, value: boolean) {
+    const next = { ...settings, [key]: value }
+    setSettings(next)
+    void save(next)
+  }
+
+  const rows: [keyof NotificationToggles, string, string][] = [
+    ["shipmentCreated", "Shipment created", "Emailed when a shipment is created and a courier assigned."],
+    ["shipped", "Shipped", "Emailed when the parcel is picked up / shipped."],
+    ["outForDelivery", "Out for delivery", "Emailed on the day the parcel is out for delivery."],
+    ["delivered", "Delivered", "Emailed when the parcel is delivered."],
+    ["cancelled", "Cancelled", "Emailed when a shipment is cancelled."],
+  ]
+
+  return (
+    <Card>
+      <div className="flex items-start justify-between gap-3">
+        <SectionHeader
+          icon={Bell}
+          title="Shipment notifications"
+          description="Choose which shipment lifecycle emails are sent to customers. The master toggle disables all shipment emails."
+        />
+        <Toggle checked={settings.enabled} disabled={saving} onChange={(value) => update("enabled", value)} />
+      </div>
+      {loading ? (
+        <div className="mt-5 grid min-h-[64px] place-items-center text-[12.5px] text-muted-foreground">
+          <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</span>
+        </div>
+      ) : (
+        <div className="mt-5">
+          {rows.map(([key, title, description]) => (
+            <SettingRow
+              key={key}
+              title={title}
+              description={description}
+              control={<Toggle checked={settings[key]} disabled={saving || !settings.enabled} onChange={(value) => update(key, value)} />}
+            />
+          ))}
+        </div>
+      )}
     </Card>
   )
 }

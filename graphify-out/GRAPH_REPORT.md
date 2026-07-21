@@ -1,16 +1,16 @@
-# Graph Report - adhunikcropcare  (2026-07-21)
+# Graph Report - adhunikcropcare  (2026-07-22)
 
 ## Corpus Check
-- 369 files · ~830,120 words
+- 434 files · ~862,483 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2149 nodes · 3824 edges · 201 communities (173 shown, 28 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 27 edges (avg confidence: 0.54)
+- 2588 nodes · 4943 edges · 244 communities (183 shown, 61 thin omitted)
+- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 37 edges (avg confidence: 0.6)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4d5128bd`
+- Built from commit: `7736f9d7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -140,25 +140,70 @@
 - AGENTS.md
 - bcryptjs
 - eslint.config.mjs
-- next
+- breadcrumb.tsx
 - next-auth
 - collection-schema-form.test.ts
+- page.tsx
+- route.ts
+- route.ts
+- input-otp.tsx
+- testimonials-carousel.tsx
 - postcss.config.mjs
 - check-node-version.mjs
+- accordion.tsx
+- tabs.tsx
+- vercel.json
+- route.ts
+- @base-ui/react
+- class-variance-authority
+- clsx
+- dotenv
+- init
+- lucide-react
+- @neondatabase/serverless
+- next-auth
+- nodemailer
+- @ory-cms/core
+- @ory-cms/next
+- pg
+- @prisma/adapter-pg
+- @prisma/client
+- react-dom
+- sanitize-html
+- @sentry/nextjs
+- shadcn
+- sharp
+- tailwind-merge
+- @tiptap/extension-image
+- @tiptap/extension-link
+- @tiptap/extension-table
+- @tiptap/extension-table-header
+- @tiptap/extension-table-row
+- @tiptap/extension-text-align
+- @tiptap/pm
+- @tiptap/react
+- @tiptap/starter-kit
+- tw-animate-css
+- @types/nodemailer
+- @types/sanitize-html
+- @tiptap/extension-table-cell
+- @tiptap/extension-underline
 
 ## God Nodes (most connected - your core abstractions)
-1. `cn()` - 157 edges
-2. `requireOryCMSUser()` - 65 edges
-3. `ensureStorefrontAuthSchema()` - 38 edges
-4. `jsonError()` - 35 edges
-5. `formatCurrency()` - 32 edges
-6. `requireCsrf()` - 30 edges
-7. `useAuth()` - 22 edges
-8. `CartDrawer()` - 22 edges
-9. `OryCMSDashboard()` - 21 edges
-10. `getOryCMSAnalyticsInsights()` - 20 edges
+1. `cn()` - 173 edges
+2. `requireOryCMSUser()` - 112 edges
+3. `ensureStorefrontAuthSchema()` - 41 edges
+4. `formatCurrency()` - 40 edges
+5. `jsonError()` - 35 edges
+6. `requireCsrf()` - 32 edges
+7. `OryCMSDashboard()` - 24 edges
+8. `paymentsError()` - 24 edges
+9. `useAuth()` - 22 edges
+10. `CartDrawer()` - 22 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `OryCMSCollectionSchemaEditor()` --indirect_call--> `slug()`  [INFERRED]
+  orycms/components/collections/OryCMSCollectionSchemaEditor.tsx → src/lib/shiprocket/fulfillment.ts
 - `AppSidebar()` --calls--> `cn()`  [EXTRACTED]
   orycms/components/dashboard/AppSidebar.tsx → src/lib/utils.ts
 - `Card()` --calls--> `cn()`  [EXTRACTED]
@@ -167,13 +212,11 @@
   orycms/components/dashboard/Dashboard.tsx → src/lib/utils.ts
 - `Segmented()` --calls--> `cn()`  [EXTRACTED]
   orycms/components/dashboard/Dashboard.tsx → src/lib/utils.ts
-- `StatusPill()` --calls--> `cn()`  [EXTRACTED]
-  orycms/components/dashboard/Dashboard.tsx → src/lib/utils.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (201 total, 28 thin omitted)
+## Communities (244 total, 61 thin omitted)
 
 ### Community 0 - "index.ts"
 Cohesion: 0.06
@@ -181,39 +224,39 @@ Nodes (59): clearOryCMSHooks(), defineOryCMSHook(), getOryCMSHooks(), HookOption
 
 ### Community 1 - "users.ts"
 Cohesion: 0.06
-Nodes (70): hashToken(), POST(), GET(), PATCH(), profileError(), DELETE(), GET(), PATCH() (+62 more)
+Nodes (73): hashToken(), POST(), GET(), GET(), PATCH(), profileError(), DELETE(), GET() (+65 more)
 
 ### Community 2 - "cart-drawer.tsx"
-Cohesion: 0.07
-Nodes (31): nextConfig, .next, metadata, MILESTONES, PROMISES, VALUES, CULTURES, metadata (+23 more)
+Cohesion: 0.05
+Nodes (36): nextConfig, .next, metadata, MILESTONES, PROMISES, VALUES, CULTURES, metadata (+28 more)
 
 ### Community 3 - "utils.ts"
 Cohesion: 0.04
-Nodes (29): Avatar, AvatarFallback, AvatarImage, Button, ButtonProps, buttonVariants, Checkbox, HoverCardContent (+21 more)
+Nodes (30): Alert, AlertDescription, AlertTitle, alertVariants, Button, ButtonProps, buttonVariants, Checkbox (+22 more)
 
 ### Community 4 - "storefront-orders.ts"
-Cohesion: 0.12
-Nodes (39): POST(), POST(), aggregateItems(), cancelOrder(), CheckoutItem, CheckoutOrderResponse, CheckoutPayload, createCheckoutOrder() (+31 more)
+Cohesion: 0.13
+Nodes (40): sendAdminEmail(), ensureStorefrontAuthSchema(), aggregateItems(), buildInvoicePdf(), cancelOrder(), CheckoutItem, CheckoutOrderResponse, CheckoutPayload (+32 more)
 
 ### Community 5 - "cn"
 Cohesion: 0.07
-Nodes (30): Badge(), BadgeProps, badgeVariants, Calendar(), CalendarDayButton(), DialogContent, DialogDescription, DialogFooter() (+22 more)
+Nodes (31): Badge(), BadgeProps, badgeVariants, Breadcrumb, BreadcrumbEllipsis(), BreadcrumbItem, BreadcrumbLink, BreadcrumbList (+23 more)
 
 ### Community 6 - "database-health.ts"
-Cohesion: 0.07
-Nodes (31): config, isSafeFromPath(), isStorefrontProtectedPath(), middleware(), PUBLIC_ORYCMS_AUTH_API, PUBLIC_ORYCMS_PAGES, orycmsConfig, AdminPlaceholderPage() (+23 more)
+Cohesion: 0.06
+Nodes (39): config, isSafeFromPath(), isStorefrontProtectedPath(), middleware(), PUBLIC_ORYCMS_AUTH_API, PUBLIC_ORYCMS_PAGES, Table, TableBody (+31 more)
 
 ### Community 7 - "storefront-auth.ts"
-Cohesion: 0.11
-Nodes (31): GET(), POST(), GET(), POST(), assertAuthSecret(), base64url(), clearAuthCookies(), consumeAuthToken() (+23 more)
+Cohesion: 0.15
+Nodes (22): GET(), GET(), assertAuthSecret(), base64url(), clearAuthCookies(), cookieOptions(), createSessionCookies(), csrfResponse() (+14 more)
 
 ### Community 8 - "dashboard.tsx"
 Cohesion: 0.06
-Nodes (31): AlertsAndCustomers(), DashboardShell(), dateTime(), findActiveSidebarGroup(), greeting(), ICONS, Insight(), InventoryHealth() (+23 more)
+Nodes (32): AlertsAndCustomers(), DashboardShell(), dateTime(), findActiveSidebarGroup(), greeting(), ICONS, Insight(), InventoryHealth() (+24 more)
 
 ### Community 9 - "formatCurrency"
 Cohesion: 0.07
-Nodes (25): Card(), CustomerInsights(), Delta(), ExecMetrics(), funnel, orders, OrdersOverview(), OrdersTable() (+17 more)
+Nodes (24): Card(), CustomerInsights(), Delta(), ExecMetrics(), funnel, orders, OrdersOverview(), OrdersTable() (+16 more)
 
 ### Community 10 - "auth.ts"
 Cohesion: 0.11
@@ -236,16 +279,12 @@ Cohesion: 0.06
 Nodes (32): app, components, dom, dom.iterable, esnext, **/*.mts, .next/dev/types/**/*.ts, next-env.d.ts (+24 more)
 
 ### Community 15 - "products.ts"
-Cohesion: 0.13
-Nodes (29): DELETE(), GET(), PATCH(), productError(), DELETE(), GET(), POST(), productError() (+21 more)
-
-### Community 16 - "dependencies"
-Cohesion: 0.04
-Nodes (47): @base-ui/react, bcryptjs, class-variance-authority, clsx, dotenv, init, lucide-react, @neondatabase/serverless (+39 more)
+Cohesion: 0.21
+Nodes (14): GET(), ordersError(), GET(), POST(), unreadError(), asRecord(), getUnreadOrderCount(), listOryCMSOrders() (+6 more)
 
 ### Community 17 - "products-admin.tsx"
-Cohesion: 0.08
-Nodes (15): ALLOWED_EXTENSIONS, ALLOWED_TYPES, emptyProduct, formatBytes(), formatDateTime(), MediaPickerDialog(), Meta, OryCMSProductForm() (+7 more)
+Cohesion: 0.07
+Nodes (16): ALLOWED_EXTENSIONS, ALLOWED_TYPES, emptyProduct, formatBytes(), formatDateTime(), LimitedField(), MediaPickerDialog(), Meta (+8 more)
 
 ### Community 18 - "customers-admin.tsx"
 Cohesion: 0.09
@@ -253,11 +292,11 @@ Nodes (19): Avatar(), BulkButton(), ConfirmModal(), ConfirmState, Customer, Cust
 
 ### Community 19 - "useAuth"
 Cohesion: 0.11
-Nodes (19): metadata, AppProviders(), AuthModal(), ForgotPasswordForm(), inputCls(), ResetPasswordForm(), SignInForm(), SignUpForm() (+11 more)
+Nodes (18): metadata, AppProviders(), AuthModal(), ForgotPasswordForm(), inputCls(), ResetPasswordForm(), SignInForm(), SignUpForm() (+10 more)
 
 ### Community 20 - "sidebar.tsx"
 Cohesion: 0.07
-Nodes (26): Sidebar, SidebarContent, SidebarContext, SidebarContextProps, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupContent (+18 more)
+Nodes (28): Sidebar, SidebarContent, SidebarContext, SidebarContextProps, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupContent (+20 more)
 
 ### Community 21 - "header.tsx"
 Cohesion: 0.13
@@ -268,28 +307,28 @@ Cohesion: 0.13
 Nodes (23): AccountPage(), Address, AddressesView(), comparePrice(), EditProfileView(), fmt(), fmtDate(), formatAddress() (+15 more)
 
 ### Community 23 - "analytics-insights.ts"
-Cohesion: 0.15
-Nodes (23): GET(), aggregateCategories(), aggregateProducts(), between(), buildRecommendations(), byQuantity(), byRevenue(), CustomerRow (+15 more)
+Cohesion: 0.16
+Nodes (22): aggregateCategories(), aggregateProducts(), between(), buildRecommendations(), byQuantity(), byRevenue(), CustomerRow, getOryCMSAnalyticsInsights() (+14 more)
 
 ### Community 24 - "customers.ts"
 Cohesion: 0.19
 Nodes (22): customerError(), DELETE(), GET(), PATCH(), customerError(), GET(), PATCH(), bulkUpdateOryCMSCustomers() (+14 more)
 
 ### Community 25 - "mailer.ts"
-Cohesion: 0.16
-Nodes (21): POST(), GET(), canSend(), disableOptionalEmails(), emailBaseUrl(), ensureEmailSchema(), isEmailDeliveryConfigured(), OPTIONAL_EMAIL_TYPES (+13 more)
+Cohesion: 0.15
+Nodes (22): POST(), POST(), GET(), canSend(), disableOptionalEmails(), emailBaseUrl(), ensureEmailSchema(), OPTIONAL_EMAIL_TYPES (+14 more)
 
 ### Community 26 - "categories.ts"
-Cohesion: 0.17
-Nodes (21): GET(), categoryError(), DELETE(), GET(), PATCH(), CATEGORY_STATUSES, CategoryImageInput, CategoryStatus (+13 more)
+Cohesion: 0.13
+Nodes (29): GET(), categoryError(), DELETE(), GET(), PATCH(), categoryError(), DELETE(), GET() (+21 more)
 
 ### Community 27 - "media.ts"
-Cohesion: 0.16
-Nodes (21): DELETE(), GET(), POST(), toOryCMSMediaError(), allowedTypes, cleanMediaName(), CloudinaryUploadResponse, deleteCloudinaryAsset() (+13 more)
+Cohesion: 0.18
+Nodes (20): GET(), POST(), toOryCMSMediaError(), allowedTypes, cleanMediaName(), CloudinaryUploadResponse, deleteCloudinaryAsset(), deleteOryCMSMedia() (+12 more)
 
 ### Community 28 - "dashboard-data.ts"
-Cohesion: 0.39
-Nodes (6): GET(), EventRow, iso(), listOryCMSNotifications(), OryCMSNotificationDTO, relativeTime()
+Cohesion: 0.10
+Nodes (39): POST(), assignAwb(), cancelPickup(), cancelShiprocketOrder(), cancelShiprocketShipment(), createShiprocketOrder(), requestPickup(), reschedulePickup() (+31 more)
 
 ### Community 29 - "database-admin.tsx"
 Cohesion: 0.14
@@ -308,12 +347,12 @@ Cohesion: 0.09
 Nodes (21): aliases, components, hooks, lib, ui, utils, iconLibrary, menuAccent (+13 more)
 
 ### Community 33 - "categories-admin.tsx"
-Cohesion: 0.09
-Nodes (11): ALLOWED_EXTENSIONS, ALLOWED_TYPES, Category, CategoryImage, CategoryStatus, emptyCategory, formatDateTime(), OryCMSCategoriesList() (+3 more)
+Cohesion: 0.07
+Nodes (12): OryCMSAdminPage(), ALLOWED_EXTENSIONS, ALLOWED_TYPES, Category, CategoryImage, CategoryStatus, emptyCategory, formatDateTime() (+4 more)
 
 ### Community 34 - "profile-admin.tsx"
-Cohesion: 0.12
-Nodes (11): AdminProfile, ALLOWED_EXTENSIONS, dateTime(), initials(), label(), MediaAsset, OryCMSAdminProfilePage(), Toast (+3 more)
+Cohesion: 0.11
+Nodes (12): Toast, AdminProfile, ALLOWED_EXTENSIONS, dateTime(), initials(), label(), MediaAsset, OryCMSAdminProfilePage() (+4 more)
 
 ### Community 35 - "devDependencies"
 Cohesion: 0.11
@@ -324,11 +363,11 @@ Cohesion: 0.16
 Nodes (14): Card(), csvCell(), dateTime(), download(), downloadCsv(), downloadExcel(), downloadPdf(), escapeHtml() (+6 more)
 
 ### Community 37 - "page.tsx"
-Cohesion: 0.17
-Nodes (15): CATEGORIES, comparePrice(), formatINR(), getHomeProducts(), Home(), SUSTAINABILITY, TUTORIALS, FAQAccordion() (+7 more)
+Cohesion: 0.13
+Nodes (15): CATEGORIES, comparePrice(), formatINR(), getHomeProducts(), Home(), SUSTAINABILITY, TUTORIALS, STORIES (+7 more)
 
 ### Community 38 - "analytics-admin.tsx"
-Cohesion: 0.13
+Cohesion: 0.14
 Nodes (13): Analytics, arr(), dateTime(), healthTitle(), InsightRows(), Metric(), money(), num() (+5 more)
 
 ### Community 39 - "OryCMSContentTable.tsx"
@@ -344,24 +383,24 @@ Cohesion: 0.13
 Nodes (12): ALLOWED_EXTENSIONS, ALLOWED_TYPES, formatBytes(), MediaAsset, MediaCard(), MediaPreview(), OryCMSMediaLibrary(), PendingUpload (+4 more)
 
 ### Community 42 - "requireOryCMSUser"
-Cohesion: 0.28
-Nodes (11): categoryError(), DELETE(), GET(), POST(), GET(), passwordError(), PATCH(), hashToken() (+3 more)
+Cohesion: 0.12
+Nodes (23): GET(), GET(), GET(), DELETE(), POST(), shipmentError(), cancelError(), POST() (+15 more)
 
 ### Community 43 - "orders-admin.tsx"
-Cohesion: 0.19
-Nodes (12): dateTime(), formatAddress(), Info(), label(), Order, OrderItem, OryCMSOrderDetails(), OryCMSOrdersList() (+4 more)
+Cohesion: 0.11
+Nodes (21): ActivityLog, ActivityPanel(), dateTime(), formatAddress(), FulfillmentActionBar(), FulfillmentSteps(), Info(), label() (+13 more)
 
 ### Community 44 - "jsonError"
-Cohesion: 0.24
-Nodes (11): POST(), GET(), GET(), GET(), PATCH(), POST(), globalForPrisma, jsonError() (+3 more)
+Cohesion: 0.13
+Nodes (20): DELETE(), PATCH(), responseError(), GET(), POST(), responseError(), EMPTY, OryCMSCertificatesAdmin() (+12 more)
 
 ### Community 45 - "requireCsrf"
-Cohesion: 0.33
-Nodes (12): POST(), POST(), POST(), POST(), POST(), POST(), authenticateUser(), findUserByEmail() (+4 more)
+Cohesion: 0.16
+Nodes (27): POST(), POST(), POST(), POST(), POST(), POST(), GET(), PATCH() (+19 more)
 
 ### Community 46 - "legal-page.tsx"
 Cohesion: 0.11
-Nodes (12): metadata, metadata, SECTIONS, metadata, SECTIONS, metadata, SECTIONS, LegalPage() (+4 more)
+Nodes (13): metadata, SECTIONS, metadata, SECTIONS, metadata, SECTIONS, metadata, SECTIONS (+5 more)
 
 ### Community 47 - "menubar.tsx"
 Cohesion: 0.12
@@ -372,48 +411,52 @@ Cohesion: 0.12
 Nodes (17): allowScripts, esbuild, @esbuild/darwin-arm64, @esbuild/darwin-x64, @esbuild/linux-arm64, @esbuild/linux-x64, fsevents@2.3.3, @img/sharp-darwin-arm64 (+9 more)
 
 ### Community 49 - "inventory.ts"
-Cohesion: 0.26
-Nodes (15): GET(), asArray(), ensureInventoryEventsSchema(), getOryCMSInventoryData(), InventoryEventRow, iso(), label(), lookup() (+7 more)
+Cohesion: 0.14
+Nodes (25): DELETE(), GET(), PATCH(), productError(), GET(), deleteOryCMSProduct(), ensureOryCMSProductsSchema(), getOryCMSProduct() (+17 more)
 
 ### Community 50 - "product-detail-view.tsx"
-Cohesion: 0.16
-Nodes (15): buildSubtitle(), ProductCard(), ProductCardProps, comparePrice(), contentLines(), isHtml(), ProductDetail, ProductDetailView() (+7 more)
+Cohesion: 0.15
+Nodes (16): buildSubtitle(), ProductCard(), ProductCardProps, comparePrice(), contentLines(), isHtml(), ProductDetail, ProductDetailView() (+8 more)
 
 ### Community 51 - "page.tsx"
-Cohesion: 0.16
-Nodes (11): canCancel(), canRetry(), fmt(), loadRazorpaySdk(), openRazorpayCheckout(), Order, OrderDetailsPage(), OrderItem (+3 more)
+Cohesion: 0.13
+Nodes (14): canCancel(), canRetry(), fmt(), loadRazorpaySdk(), openRazorpayCheckout(), Order, OrderDetailsPage(), OrderItem (+6 more)
 
 ### Community 52 - "orders.ts"
-Cohesion: 0.24
-Nodes (12): GET(), orderError(), GET(), ordersError(), asRecord(), getOryCMSOrder(), isUuid(), listOryCMSOrders() (+4 more)
+Cohesion: 0.19
+Nodes (19): GET(), GET(), GET(), orderError(), POST(), getOryCMSOrder(), isUuid(), buildResult() (+11 more)
 
 ### Community 53 - "collection-schema-form.ts"
 Cohesion: 0.21
 Nodes (11): collectionDefinitionToForm(), CollectionFieldFormState, collectionFieldFormToSchema(), CollectionSchemaFormState, collectionSchemaFormToDefinition(), createEmptyCollectionField(), createEmptyCollectionSchemaForm(), ORYCMS_FIELD_TYPES (+3 more)
 
 ### Community 54 - "carousel.tsx"
-Cohesion: 0.15
-Nodes (12): Carousel, CarouselApi, CarouselContent, CarouselContext, CarouselContextProps, CarouselItem, CarouselNext, CarouselOptions (+4 more)
+Cohesion: 0.05
+Nodes (34): Carousel, CarouselApi, CarouselContent, CarouselContext, CarouselContextProps, CarouselItem, CarouselNext, CarouselOptions (+26 more)
 
 ### Community 55 - "scripts"
 Cohesion: 0.15
 Nodes (13): scripts, build, check:node, clean, dev, lint, prebuild, predev (+5 more)
 
 ### Community 56 - "settings-admin.tsx"
-Cohesion: 0.17
-Nodes (7): Card(), Field(), NotificationEmail, OrderNotificationEmailsCard(), OryCMSSettingsPage(), ToastStack(), Toggle()
+Cohesion: 0.12
+Nodes (10): Card(), EMPTY_SHIPROCKET_FORM, Field(), NotificationEmail, NotificationToggles, OrderNotificationEmailsCard(), OryCMSSettingsPage(), ShiprocketConfig (+2 more)
 
 ### Community 57 - "tokens.repo.ts"
 Cohesion: 0.30
 Nodes (7): consumeOryCMSToken(), createOryCMSToken(), DEFAULT_TTL_MS, hashToken(), OryCMSConsumedToken, OryCMSCreateTokenInput, OryCMSTokenType
 
+### Community 58 - "OryCMSDashboard"
+Cohesion: 0.36
+Nodes (9): firstString(), normalizeDate(), POST(), safeEqual(), ShiprocketWebhookBody, enqueueJob(), getShipmentByAwb(), getShipmentByShiprocketId() (+1 more)
+
 ### Community 59 - "page.tsx"
-Cohesion: 0.22
-Nodes (10): comparePrice(), discountLabel(), formatINR(), inr, loadProduct(), mapOryCMSProductToDetail(), ProductPage(), STORIES (+2 more)
+Cohesion: 0.33
+Nodes (8): button(), detailsTable(), EmailTemplateName, emailTemplates, escapeHtml(), layout(), shipmentEmail(), TemplateInput
 
 ### Community 60 - "form.tsx"
-Cohesion: 0.18
-Nodes (9): FormControl, FormDescription, FormFieldContext, FormFieldContextValue, FormItem, FormItemContext, FormItemContextValue, FormLabel (+1 more)
+Cohesion: 0.14
+Nodes (31): POST(), issueRefund(), linkOrder(), OrderLink, paise(), rzpDate(), syncOrderRefundStatus(), syncPaymentsFromRazorpay() (+23 more)
 
 ### Community 61 - "route-guards.test.ts"
 Cohesion: 0.29
@@ -424,8 +467,8 @@ Cohesion: 0.31
 Nodes (7): BODY, buildOryCMSTokenLink(), dispatchOryCMSTokenLink(), oryAppOrigin(), OryCMSTokenDispatchResult, SUBJECTS, TOKEN_PATHS
 
 ### Community 63 - "chart.tsx"
-Cohesion: 0.20
-Nodes (7): ChartConfig, ChartContainer, ChartContext, ChartContextProps, ChartLegendContent, ChartTooltipContent, THEMES
+Cohesion: 0.14
+Nodes (24): GET(), GET(), GET(), GET(), GET(), POST(), POST(), GET() (+16 more)
 
 ### Community 64 - "command.tsx"
 Cohesion: 0.20
@@ -440,8 +483,8 @@ Cohesion: 0.20
 Nodes (9): DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuShortcut(), DropdownMenuSubContent (+1 more)
 
 ### Community 67 - "frontend-auth-page.tsx"
-Cohesion: 0.22
-Nodes (3): AuthFlow(), Mode, safePath()
+Cohesion: 0.26
+Nodes (15): GET(), asArray(), ensureInventoryEventsSchema(), getOryCMSInventoryData(), InventoryEventRow, iso(), label(), lookup() (+7 more)
 
 ### Community 68 - "content-ui.test.ts"
 Cohesion: 0.25
@@ -452,36 +495,32 @@ Cohesion: 0.22
 Nodes (8): AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter(), AlertDialogHeader(), AlertDialogOverlay, AlertDialogTitle
 
 ### Community 70 - "sheet.tsx"
-Cohesion: 0.22
-Nodes (8): SheetContent, SheetContentProps, SheetDescription, SheetFooter(), SheetHeader(), SheetOverlay, SheetTitle, sheetVariants
+Cohesion: 0.21
+Nodes (14): GET(), isAuthorized(), POST(), run(), safeEqual(), runDueJobs(), runJob(), RunSummary (+6 more)
 
 ### Community 71 - "table.tsx"
-Cohesion: 0.22
-Nodes (8): Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow
+Cohesion: 0.12
+Nodes (11): Analytics, buildWarnings(), Cards, Chart(), OryCMSPaymentsAdmin(), Payment, Series, Settlement (+3 more)
 
 ### Community 72 - "default-memoji-avatar.tsx"
 Cohesion: 0.28
 Nodes (8): BACKGROUNDS, DefaultMemojiAvatar(), DefaultMemojiAvatarProps, HAIRS, hashSeed(), pick(), SHIRTS, SKINS
-
-### Community 73 - "templates.ts"
-Cohesion: 0.31
-Nodes (7): button(), detailsTable(), EmailTemplateName, emailTemplates, escapeHtml(), layout(), TemplateInput
 
 ### Community 74 - "OryCMSCollectionSchemaEditor.tsx"
 Cohesion: 0.29
 Nodes (5): ApiResponse, fieldTypeLabels, moveItem(), OryCMSCollectionSchemaEditor(), OryCMSCollectionSchemaEditorProps
 
 ### Community 75 - "breadcrumb.tsx"
-Cohesion: 0.25
-Nodes (7): Breadcrumb, BreadcrumbEllipsis(), BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator()
+Cohesion: 0.15
+Nodes (23): GET(), parseInput(), PUT(), settingsError(), resetShiprocketToken(), decryptSecret(), encryptionKey(), encryptSecret() (+15 more)
 
 ### Community 76 - "drawer.tsx"
-Cohesion: 0.25
-Nodes (6): DrawerContent, DrawerDescription, DrawerFooter(), DrawerHeader(), DrawerOverlay, DrawerTitle
+Cohesion: 0.35
+Nodes (9): POST(), POST(), POST(), requireOryCMSRole(), PaymentAuditAction, PaymentAuditRow, recordPaymentAudit(), getCapturedPaymentForRefund() (+1 more)
 
 ### Community 77 - "navigation-menu.tsx"
-Cohesion: 0.25
-Nodes (7): NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle, NavigationMenuViewport
+Cohesion: 0.17
+Nodes (7): Card(), OrdersTable(), QueueBoard(), rows, ServicePanel(), stages, StatusPill()
 
 ### Community 78 - "select.tsx"
 Cohesion: 0.25
@@ -492,12 +531,12 @@ Cohesion: 0.39
 Nodes (6): adminContentCreatePath(), adminContentEditPath(), adminContentListPath(), legacyCollectionContentCreatePath(), legacyCollectionContentEditPath(), legacyCollectionContentListPath()
 
 ### Community 80 - "validateEmail"
-Cohesion: 0.32
-Nodes (7): POST(), createUser(), normalizePhone(), validateEmail(), verifySignupOtp(), money(), normalizeCheckoutPayload()
+Cohesion: 0.08
+Nodes (32): cache, CacheEntry, GET(), AuthProvider(), ApiContext, AssignAwbResponse, CancelResponse, checkServiceability() (+24 more)
 
 ### Community 81 - "page.tsx"
-Cohesion: 0.36
-Nodes (7): formatCurrency(), formatOrderId(), loadOrder(), OrderItem, PAYMENT_LABELS, ThankYouOrder, ThankYouPage()
+Cohesion: 0.20
+Nodes (8): Badge(), Detail, extractTimeline(), Info(), OryCMSPaymentDetail(), RefundModal(), Toast, ToastStack()
 
 ### Community 82 - "PageHeader.tsx"
 Cohesion: 0.33
@@ -512,12 +551,12 @@ Cohesion: 0.53
 Nodes (5): DELETE(), errResponse(), GET(), PATCH(), RouteCtx
 
 ### Community 86 - "AppSidebar.tsx"
-Cohesion: 0.33
-Nodes (5): AppSidebar(), ChildItem, Item, NAV, NavPermission
+Cohesion: 0.32
+Nodes (10): comparePrice(), discountLabel(), formatINR(), inr, loadProduct(), mapOryCMSProductToDetail(), ProductPage(), ensureProductImages() (+2 more)
 
 ### Community 87 - "react"
-Cohesion: 0.33
-Nodes (6): useCarousel(), useChart(), useFormField(), useSidebar(), react, react
+Cohesion: 0.35
+Nodes (10): GET(), cell(), COLUMNS, escapePdf(), ExportRow, makeSimplePdf(), toCsv(), toPdf() (+2 more)
 
 ### Community 88 - "package.json"
 Cohesion: 0.33
@@ -540,12 +579,12 @@ Cohesion: 0.50
 Nodes (3): formatBytes(), ListResult, OryCMSMediaLibrary()
 
 ### Community 97 - "alert.tsx"
-Cohesion: 0.40
-Nodes (4): Alert, AlertDescription, AlertTitle, alertVariants
+Cohesion: 0.17
+Nodes (14): ALL_FIELDS, ContactApiResponse, ContactEnquiryForm(), INITIAL_VALUES, inputClass(), phoneContainerClass(), SubmissionState, CONTACT_TOPICS (+6 more)
 
 ### Community 98 - "input-otp.tsx"
-Cohesion: 0.50
-Nodes (3): ToggleGroup, ToggleGroupContext, ToggleGroupItem
+Cohesion: 0.22
+Nodes (3): AuthFlow(), Mode, safePath()
 
 ### Community 99 - "oryntic-error-reporting.ts"
 Cohesion: 0.40
@@ -561,7 +600,7 @@ Nodes (3): deployment, prismaCli, require
 
 ### Community 104 - "testimonials-carousel.tsx"
 Cohesion: 0.50
-Nodes (4): buildTransform(), ITEMS, Slot, TestimonialsCarousel()
+Nodes (3): Avatar, AvatarFallback, AvatarImage
 
 ### Community 110 - "route.ts"
 Cohesion: 0.83
@@ -572,36 +611,80 @@ Cohesion: 0.83
 Nodes (3): errResponse(), GET(), POST()
 
 ### Community 114 - "accordion.tsx"
+Cohesion: 0.27
+Nodes (9): POST(), consumeAuthToken(), createUser(), normalizePhone(), setPassword(), validateEmail(), validatePassword(), money() (+1 more)
+
+### Community 115 - "tabs.tsx"
+Cohesion: 0.24
+Nodes (13): GET(), notifError(), PUT(), DEFAULTS, getShipmentNotificationSettings(), isNotificationTypeEnabled(), ShipmentNotificationSettings, ShipmentNotificationType (+5 more)
+
+### Community 135 - "bcryptjs"
+Cohesion: 0.22
+Nodes (8): SheetContent, SheetContentProps, SheetDescription, SheetFooter(), SheetHeader(), SheetOverlay, SheetTitle, sheetVariants
+
+### Community 137 - "breadcrumb.tsx"
+Cohesion: 0.25
+Nodes (7): NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle, NavigationMenuViewport
+
+### Community 183 - "page.tsx"
+Cohesion: 0.28
+Nodes (7): CertificationsPage(), formatDate(), getCertificates(), metadata, PRINCIPLES, PROCESS, STANDARDS
+
+### Community 184 - "route.ts"
+Cohesion: 0.47
+Nodes (5): bad(), BulkAction, ENQUEUE_ACTIONS, POST(), printManifest()
+
+### Community 185 - "route.ts"
+Cohesion: 0.39
+Nodes (6): GET(), GET(), CONTENT_TYPES, isDocumentKind(), proxyDocument(), DocumentKind
+
+### Community 186 - "input-otp.tsx"
+Cohesion: 0.29
+Nodes (6): DialogContent, DialogDescription, DialogFooter(), DialogHeader(), DialogOverlay, DialogTitle
+
+### Community 187 - "testimonials-carousel.tsx"
+Cohesion: 0.50
+Nodes (4): buildTransform(), ITEMS, Slot, TestimonialsCarousel()
+
+### Community 206 - "accordion.tsx"
 Cohesion: 0.50
 Nodes (3): AccordionContent, AccordionItem, AccordionTrigger
 
-### Community 115 - "tabs.tsx"
+### Community 207 - "tabs.tsx"
 Cohesion: 0.50
 Nodes (3): TabsContent, TabsList, TabsTrigger
 
-### Community 135 - "bcryptjs"
-Cohesion: 0.83
-Nodes (3): GET(), listActiveOryCMSCategoryNames(), listOryCMSProductMedia()
+### Community 209 - "route.ts"
+Cohesion: 0.33
+Nodes (5): AppSidebar(), ChildItem, Item, NAV, NavPermission
+
+### Community 210 - "@base-ui/react"
+Cohesion: 0.18
+Nodes (11): @base-ui/react, dependencies, @base-ui/react, pg, @sentry/nextjs, shadcn, tw-animate-css, pg (+3 more)
+
+### Community 221 - "pg"
+Cohesion: 0.50
+Nodes (3): ToggleGroup, ToggleGroupContext, ToggleGroupItem
 
 ## Knowledge Gaps
-- **636 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+631 more)
+- **728 isolated node(s):** `$schema`, `style`, `rsc`, `tsx`, `config` (+723 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **28 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **61 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `cn()` connect `cn` to `utils.ts`, `dashboard.tsx`, `formatCurrency`, `users-admin.tsx`, `products-admin.tsx`, `customers-admin.tsx`, `sidebar.tsx`, `database-admin.tsx`, `categories-admin.tsx`, `profile-admin.tsx`, `inventory-admin.tsx`, `analytics-admin.tsx`, `OryCMSContentTable.tsx`, `media-library.tsx`, `orders-admin.tsx`, `menubar.tsx`, `carousel.tsx`, `settings-admin.tsx`, `form.tsx`, `chart.tsx`, `command.tsx`, `context-menu.tsx`, `dropdown-menu.tsx`, `alert-dialog.tsx`, `sheet.tsx`, `table.tsx`, `breadcrumb.tsx`, `drawer.tsx`, `navigation-menu.tsx`, `select.tsx`, `PageHeader.tsx`, `card.tsx`, `AppSidebar.tsx`, `alert.tsx`, `input-otp.tsx`, `accordion.tsx`, `tabs.tsx`?**
-  _High betweenness centrality (0.322) - this node is a cross-community bridge._
-- **Why does `Calendar()` connect `cn` to `page.tsx`?**
-  _High betweenness centrality (0.217) - this node is a cross-community bridge._
-- **Why does `ProfileView()` connect `page.tsx` to `useAuth`, `cn`?**
-  _High betweenness centrality (0.216) - this node is a cross-community bridge._
+- **Why does `cn()` connect `cn` to `utils.ts`, `database-health.ts`, `bcryptjs`, `dashboard.tsx`, `formatCurrency`, `breadcrumb.tsx`, `users-admin.tsx`, `products-admin.tsx`, `customers-admin.tsx`, `sidebar.tsx`, `database-admin.tsx`, `categories-admin.tsx`, `profile-admin.tsx`, `inventory-admin.tsx`, `analytics-admin.tsx`, `OryCMSContentTable.tsx`, `media-library.tsx`, `orders-admin.tsx`, `menubar.tsx`, `carousel.tsx`, `settings-admin.tsx`, `input-otp.tsx`, `command.tsx`, `context-menu.tsx`, `dropdown-menu.tsx`, `alert-dialog.tsx`, `table.tsx`, `navigation-menu.tsx`, `accordion.tsx`, `select.tsx`, `tabs.tsx`, `route.ts`, `PageHeader.tsx`, `card.tsx`, `page.tsx`, `pg`, `testimonials-carousel.tsx`?**
+  _High betweenness centrality (0.218) - this node is a cross-community bridge._
+- **Why does `react` connect `carousel.tsx` to `index.ts`, `@base-ui/react`, `cn`?**
+  _High betweenness centrality (0.127) - this node is a cross-community bridge._
+- **Why does `dependencies` connect `@base-ui/react` to `dependencies`, `carousel.tsx`, `class-variance-authority`, `clsx`, `dotenv`, `init`, `lucide-react`, `package.json`, `next-auth`, `nodemailer`, `@ory-cms/core`, `@ory-cms/next`, `@neondatabase/serverless`, `@prisma/adapter-pg`, `@prisma/client`, `react-dom`, `sanitize-html`, `shadcn`, `sharp`, `tailwind-merge`, `@tiptap/extension-image`, `@tiptap/extension-link`, `@tiptap/extension-table`, `@tiptap/extension-table-header`, `@tiptap/extension-table-row`, `@tiptap/extension-text-align`, `@tiptap/pm`, `@tiptap/react`, `@tiptap/starter-kit`, `tw-animate-css`, `@types/nodemailer`, `@types/sanitize-html`, `@tiptap/extension-table-cell`, `@tiptap/extension-underline`?**
+  _High betweenness centrality (0.123) - this node is a cross-community bridge._
 - **What connects `$schema`, `style`, `rsc` to the rest of the system?**
-  _636 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _728 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `index.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.06202950918398073 - nodes in this community are weakly interconnected._
 - **Should `users.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.06425153793574846 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05864197530864197 - nodes in this community are weakly interconnected._
 - **Should `cart-drawer.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.06638714185883997 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05310734463276836 - nodes in this community are weakly interconnected._

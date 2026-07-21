@@ -235,6 +235,7 @@ model StorefrontOrder {
   discountTotal        Decimal   @default(0) @map("discount_total") @db.Decimal(12, 2)
   invoiceNumber        String?   @map("invoice_number")
   refundStatus         String    @default("none") @map("refund_status")
+  shiprocketStatus     String?   @map("shiprocket_status")
   cancelledAt          DateTime? @map("cancelled_at") @db.Timestamptz(6)
   reservationExpiresAt DateTime? @map("reservation_expires_at") @db.Timestamptz(6)
   stockReleasedAt      DateTime? @map("stock_released_at") @db.Timestamptz(6)
@@ -277,6 +278,112 @@ model StorefrontIdempotencyKey {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@map("storefront_idempotency_keys")
+}
+
+model RazorpayPayment {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  razorpayPaymentId String    @unique @map("razorpay_payment_id")
+  razorpayOrderId   String?   @map("razorpay_order_id")
+  orderId           String?   @map("order_id") @db.Uuid
+  orderNumber       String?   @map("order_number")
+  customerName      String?   @map("customer_name")
+  amount            Decimal   @default(0) @db.Decimal(14, 2)
+  amountRefunded    Decimal   @default(0) @map("amount_refunded") @db.Decimal(14, 2)
+  currency          String    @default("INR")
+  status            String
+  method            String?
+  captured          Boolean   @default(false)
+  email             String?
+  contact           String?
+  fee               Decimal?  @db.Decimal(14, 2)
+  tax               Decimal?  @db.Decimal(14, 2)
+  refundStatus      String?   @map("refund_status")
+  international     Boolean   @default(false)
+  notes             Json?
+  raw               Json?
+  createdAtRzp      DateTime? @map("created_at_rzp") @db.Timestamptz(6)
+  syncedAt          DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([orderId], map: "razorpay_payments_order_id_idx")
+  @@index([status], map: "razorpay_payments_status_idx")
+  @@index([method], map: "razorpay_payments_method_idx")
+  @@index([createdAtRzp], map: "razorpay_payments_created_at_rzp_idx")
+  @@map("razorpay_payments")
+}
+
+model RazorpayRefund {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  razorpayRefundId  String    @unique @map("razorpay_refund_id")
+  razorpayPaymentId String    @map("razorpay_payment_id")
+  orderId           String?   @map("order_id") @db.Uuid
+  amount            Decimal   @default(0) @db.Decimal(14, 2)
+  currency          String    @default("INR")
+  status            String
+  speedProcessed    String?   @map("speed_processed")
+  reason            String?
+  receipt           String?
+  notes             Json?
+  raw               Json?
+  createdAtRzp      DateTime? @map("created_at_rzp") @db.Timestamptz(6)
+  syncedAt          DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([razorpayPaymentId], map: "razorpay_refunds_payment_id_idx")
+  @@index([status], map: "razorpay_refunds_status_idx")
+  @@map("razorpay_refunds")
+}
+
+model RazorpaySettlement {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  razorpaySettlementId String    @unique @map("razorpay_settlement_id")
+  amount               Decimal   @default(0) @db.Decimal(14, 2)
+  fees                 Decimal   @default(0) @db.Decimal(14, 2)
+  tax                  Decimal   @default(0) @db.Decimal(14, 2)
+  status               String
+  settled              Boolean   @default(false)
+  utr                  String?
+  raw                  Json?
+  createdAtRzp         DateTime? @map("created_at_rzp") @db.Timestamptz(6)
+  syncedAt             DateTime  @default(now()) @map("synced_at") @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([status], map: "razorpay_settlements_status_idx")
+  @@index([createdAtRzp], map: "razorpay_settlements_created_at_rzp_idx")
+  @@map("razorpay_settlements")
+}
+
+model RazorpayWebhookLog {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event           String
+  razorpayEventId String?  @map("razorpay_event_id")
+  signatureValid  Boolean  @default(false) @map("signature_valid")
+  status          String   @default("received")
+  retryCount      Int      @default(0) @map("retry_count")
+  error           String?
+  payload         Json?
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([event], map: "razorpay_webhook_logs_event_idx")
+  @@index([createdAt], map: "razorpay_webhook_logs_created_at_idx")
+  @@map("razorpay_webhook_logs")
+}
+
+model OryCMSPaymentAuditLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  adminId    String?  @map("admin_id") @db.Uuid
+  adminEmail String?  @map("admin_email")
+  action     String
+  paymentId  String?  @map("payment_id")
+  refundId   String?  @map("refund_id")
+  detail     Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([paymentId], map: "orycms_payment_audit_logs_payment_id_idx")
+  @@index([createdAt], map: "orycms_payment_audit_logs_created_at_idx")
+  @@map("orycms_payment_audit_logs")
 }
 
 model StorefrontEmailLog {
@@ -328,4 +435,144 @@ model OryCMSOrderNotificationEmail {
 
   @@index([enabled], map: "orycms_order_notification_emails_enabled_idx")
   @@map("orycms_order_notification_emails")
+}
+
+model OryCMSShiprocketSettings {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  apiEmail             String?  @map("api_email")
+  apiPasswordEncrypted String?  @map("api_password_encrypted")
+  channelId            String?  @map("channel_id")
+  pickupLocation       String?  @map("pickup_location")
+  pickupName           String?  @map("pickup_name")
+  pickupPhone          String?  @map("pickup_phone")
+  pickupAddress1       String?  @map("pickup_address1")
+  pickupAddress2       String?  @map("pickup_address2")
+  pickupCity           String?  @map("pickup_city")
+  pickupState          String?  @map("pickup_state")
+  pickupCountry        String   @default("India") @map("pickup_country")
+  pickupPincode        String?  @map("pickup_pincode")
+  packageLengthCm      Decimal  @default(10) @map("package_length_cm") @db.Decimal(10, 2)
+  packageBreadthCm     Decimal  @default(10) @map("package_breadth_cm") @db.Decimal(10, 2)
+  packageHeightCm      Decimal  @default(10) @map("package_height_cm") @db.Decimal(10, 2)
+  packageWeightKg      Decimal  @default(0.5) @map("package_weight_kg") @db.Decimal(10, 3)
+  autoShipOnConfirm    Boolean  @default(false) @map("auto_ship_on_confirm")
+  enabled              Boolean  @default(false)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("orycms_shiprocket_settings")
+}
+
+model StorefrontShipment {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId               String    @unique @map("order_id") @db.Uuid
+  shiprocketOrderId     String?   @map("shiprocket_order_id")
+  shiprocketShipmentId  String?   @map("shiprocket_shipment_id")
+  awbCode               String?   @map("awb_code")
+  courierName           String?   @map("courier_name")
+  courierId             String?   @map("courier_id")
+  status                String    @default("created")
+  statusCode            String?   @map("status_code")
+  trackingUrl           String?   @map("tracking_url")
+  estimatedDeliveryDate DateTime? @map("estimated_delivery_date") @db.Timestamptz(6)
+  shippingCharge        Decimal?  @map("shipping_charge") @db.Decimal(12, 2)
+  pickupScheduledDate   DateTime? @map("pickup_scheduled_date") @db.Timestamptz(6)
+  pickupStatus          String?   @map("pickup_status")
+  pickupToken           String?   @map("pickup_token")
+  labelUrl              String?   @map("label_url")
+  manifestUrl           String?   @map("manifest_url")
+  invoiceUrl            String?   @map("invoice_url")
+  retryCount            Int       @default(0) @map("retry_count")
+  lastErrorCode         String?   @map("last_error_code")
+  lastErrorMessage      String?   @map("last_error_message")
+  lastRetryAt           DateTime? @map("last_retry_at") @db.Timestamptz(6)
+  rawResponse           Json?     @map("raw_response")
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([orderId], map: "storefront_shipments_order_id_idx")
+  @@index([awbCode], map: "storefront_shipments_awb_code_idx")
+  @@index([shiprocketShipmentId], map: "storefront_shipments_shiprocket_shipment_id_idx")
+  @@map("storefront_shipments")
+}
+
+model StorefrontShipmentEvent {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shipmentId String   @map("shipment_id") @db.Uuid
+  orderId    String   @map("order_id") @db.Uuid
+  status     String
+  statusCode String?  @map("status_code")
+  location   String?
+  activity   String?
+  occurredAt DateTime @map("occurred_at") @db.Timestamptz(6)
+  raw        Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([shipmentId, statusCode, occurredAt], map: "storefront_shipment_events_dedupe_key")
+  @@index([shipmentId], map: "storefront_shipment_events_shipment_id_idx")
+  @@index([orderId], map: "storefront_shipment_events_order_id_idx")
+  @@map("storefront_shipment_events")
+}
+
+model ShiprocketJob {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type        String
+  orderId     String?   @map("order_id") @db.Uuid
+  shipmentId  String?   @map("shipment_id") @db.Uuid
+  payload     Json      @default("{}")
+  status      String    @default("pending")
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5) @map("max_attempts")
+  runAfter    DateTime  @default(now()) @map("run_after") @db.Timestamptz(6)
+  lockedAt    DateTime? @map("locked_at") @db.Timestamptz(6)
+  lastError   String?   @map("last_error")
+  lastErrorCode String? @map("last_error_code")
+  dedupeKey   String?   @unique @map("dedupe_key")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status, runAfter], map: "shiprocket_jobs_status_run_after_idx")
+  @@map("shiprocket_jobs")
+}
+
+model ShiprocketApiLog {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId         String?  @map("order_id") @db.Uuid
+  shipmentId      String?  @map("shipment_id") @db.Uuid
+  direction       String   @default("request")
+  endpoint        String
+  method          String
+  statusCode      Int?     @map("status_code")
+  ok              Boolean  @default(false)
+  errorCode       String?  @map("error_code")
+  errorMessage    String?  @map("error_message")
+  requestSummary  Json?    @map("request_summary")
+  responseSummary Json?    @map("response_summary")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([shipmentId, createdAt], map: "shiprocket_api_logs_shipment_id_created_at_idx")
+  @@index([orderId, createdAt], map: "shiprocket_api_logs_order_id_created_at_idx")
+  @@map("shiprocket_api_logs")
+}
+
+model OryCMSShiprocketNotificationSettings {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  enabled          Boolean  @default(true)
+  shipmentCreated  Boolean  @default(true) @map("shipment_created")
+  shipped          Boolean  @default(true)
+  outForDelivery   Boolean  @default(true) @map("out_for_delivery")
+  delivered        Boolean  @default(true)
+  cancelled        Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("orycms_shiprocket_notification_settings")
+}
+
+model OryCMSOrderView {
+  userId       String   @id @map("user_id") @db.Uuid
+  lastViewedAt DateTime @default(now()) @map("last_viewed_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("orycms_order_views")
 }

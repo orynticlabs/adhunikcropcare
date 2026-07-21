@@ -6,10 +6,11 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import {
   ChevronRight, Leaf, SlidersHorizontal,
-  ChevronDown, Loader2, X,
+  ChevronDown, X,
 } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
 import { ProductCard } from "@/components/products/product-card"
+import { ProductGridSkeleton } from "@/components/ui/skeleton"
 import Header from "@/components/layout/header"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import SiteFooter from "@/components/layout/site-footer"
@@ -413,10 +414,7 @@ function ProductsPageContent() {
 
           {/* Empty state */}
           {productsLoading ? (
-            <div className="flex flex-col items-center justify-center py-28 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-[#689c30]" />
-              <p className="mt-3 text-sm text-muted-foreground">Loading OryCMS products…</p>
-            </div>
+            <ProductGridSkeleton count={8} />
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-28 text-center">
               <div className="grid h-20 w-20 place-items-center rounded-full bg-[#689c30]/8 mb-5">

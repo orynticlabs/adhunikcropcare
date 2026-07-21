@@ -11,6 +11,7 @@ import {
   ArrowLeft, AlertCircle,
 } from "lucide-react"
 import { ProductCard } from "@/components/products/product-card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/features/auth/auth-context"
 import AnnouncementBar from "@/components/layout/announcement-bar"
 import Header from "@/components/layout/header"
@@ -316,7 +317,20 @@ function OrdersView({ loading, orders }: { loading: boolean; orders: Order[] }) 
   return (
     <div className="space-y-4">
       <h3 className="font-display text-2xl">My Orders</h3>
-      {loading ? <p className="rounded-2xl border border-border/50 bg-muted/20 p-5 text-sm text-muted-foreground">Loading orders...</p> : null}
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-4 rounded-2xl border border-border/50 bg-card p-5">
+              <Skeleton className="h-14 w-14 shrink-0 rounded-xl" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+          ))}
+        </div>
+      ) : null}
       {!loading && orders.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-border/50 bg-muted/15 py-12 text-center">
           <Package className="h-12 w-12 text-muted-foreground/30" strokeWidth={1} />
@@ -693,8 +707,27 @@ export default function AccountPage() {
         <AnnouncementBar />
         <Header />
         <main className="px-4 pt-36">
-          <div className="mx-auto max-w-6xl rounded-2xl border border-border/50 bg-card p-8 text-sm text-muted-foreground">
-            Loading your account...
+          <div className="mx-auto max-w-6xl space-y-6">
+            <div className="flex items-center gap-4 rounded-2xl border border-border/50 bg-card p-6">
+              <Skeleton className="h-16 w-16 rounded-full" />
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-48" />
+                <Skeleton className="h-3 w-32" />
+              </div>
+            </div>
+            <div className="grid gap-6 md:grid-cols-[220px_1fr]">
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <Skeleton key={index} className="h-10 w-full rounded-xl" />
+                ))}
+              </div>
+              <div className="space-y-4 rounded-2xl border border-border/50 bg-card p-6">
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </div>
           </div>
         </main>
       </div>
