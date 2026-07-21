@@ -136,7 +136,6 @@
   "134": "AGENTS.md",
   "135": "bcryptjs",
   "136": "eslint.config.mjs",
-  "137": "next",
   "138": "next-auth",
   "139": "admin-page.tsx",
   "140": "collections-page.tsx",
@@ -182,11 +181,8 @@
   "180": "page.tsx",
   "181": "page.tsx",
   "182": "page.tsx",
-  "183": "pg",
-  "184": "react-dom",
-  "185": "shadcn",
-  "186": "tailwind-merge",
-  "187": "tw-animate-css",
+  "183": "page.tsx",
+  "184": "route.ts",
   "188": "postcss.config.mjs",
   "189": "check-node-version.mjs",
   "190": "page.tsx",
@@ -204,5 +200,6 @@
   "202": "collapsible.tsx",
   "203": "admin-content-routes.test.ts",
   "204": "prisma.config.ts",
-  "205": "prisma.migrate.config.ts"
+  "205": "prisma.migrate.config.ts",
+  "208": "vercel.json"
 }

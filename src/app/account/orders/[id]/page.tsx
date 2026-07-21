@@ -9,9 +9,19 @@ import AnnouncementBar from "@/components/layout/announcement-bar"
 import Header from "@/components/layout/header"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/features/auth/auth-context"
 
 type OrderItem = { image?: string; img?: string; name: string; price: number; qty?: number; quantity?: number }
+type Shipment = {
+  awb_code?: string | null
+  courier_name?: string | null
+  status?: string
+  tracking_url?: string | null
+  estimated_delivery_date?: string | null
+  shiprocket_shipment_id?: string | null
+} | null
+type ShipmentEvent = { id: string; status: string; location?: string | null; activity?: string | null; occurred_at: string }
 type Order = {
   contact?: { email?: string; firstName?: string; lastName?: string; phone?: string } | null
   created_at: string
@@ -25,6 +35,8 @@ type Order = {
   payment_timeline?: { at: string; event: string; status: string }[]
   razorpay_order_id?: string | null
   refund_status?: string
+  shipment?: Shipment
+  shipmentEvents?: ShipmentEvent[]
   shipping_address?: { address1?: string; address2?: string; city?: string; pincode?: string; state?: string } | null
   status: string
   total: number | string
@@ -80,7 +92,26 @@ export default function OrderDetailsPage() {
 
           <div className="rounded-[2rem] border border-border/50 bg-card p-6 shadow-soft sm:p-8">
             {loading ? (
-              <p className="text-sm text-muted-foreground">Loading order...</p>
+              <div className="space-y-8">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-8 w-52" />
+                    <Skeleton className="h-3 w-36" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-6 w-24 rounded-full" />
+                    <Skeleton className="h-6 w-28 rounded-full" />
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <Skeleton key={index} className="h-24 w-full rounded-2xl" />
+                  ))}
+                </div>
+                <Skeleton className="h-40 w-full rounded-2xl" />
+                <Skeleton className="h-56 w-full rounded-2xl" />
+              </div>
             ) : !order ? (
               <div className="py-12 text-center">
                 <Package className="mx-auto h-12 w-12 text-muted-foreground/30" strokeWidth={1} />
@@ -106,7 +137,7 @@ export default function OrderDetailsPage() {
 
                 <div className="grid gap-4 sm:grid-cols-3">
                   <InfoCard icon={FileText} label="Invoice" value={order.invoice_number ?? "Generated"} href={`/api/auth/orders/${order.id}/invoice`} />
-                  <InfoCard icon={Truck} label="Tracking" value={order.tracking ?? "Pending"} />
+                  <InfoCard icon={Truck} label="Tracking" value={trackingSummary(order)} href={order.shipment?.tracking_url ?? undefined} />
                   <InfoCard icon={RotateCcw} label="Reorder" value="Add items again" href="/products" />
                 </div>
 
@@ -142,6 +173,54 @@ export default function OrderDetailsPage() {
                         {retryError ? <p className="mt-2 text-sm text-red-600">{retryError}</p> : null}
                       </div>
                     </div>
+                  </div>
+                ) : null}
+
+                {order.shipment ? (
+                  <div className="rounded-2xl border border-border/50 bg-background/60 p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h2 className="font-display text-2xl text-[#033927]">Shipment Tracking</h2>
+                      <span className="rounded-full bg-[#689c30]/10 px-3 py-1 text-xs font-semibold capitalize text-[#689c30]">{order.shipment.status ?? "Created"}</span>
+                    </div>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <TrackField label="AWB Number" value={order.shipment.awb_code ?? "Pending"} />
+                      <TrackField label="Courier" value={order.shipment.courier_name ?? "Assigning"} />
+                      <TrackField
+                        label="Estimated Delivery"
+                        value={order.shipment.estimated_delivery_date ? new Date(order.shipment.estimated_delivery_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "To be confirmed"}
+                      />
+                      <TrackField label="Tracking Number" value={order.shipment.awb_code ?? "Pending"} />
+                    </div>
+                    {order.shipment.tracking_url ? (
+                      <a
+                        href={order.shipment.tracking_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-[#033927] px-6 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black"
+                      >
+                        <Truck className="h-4 w-4" />
+                        Track on courier site
+                      </a>
+                    ) : null}
+
+                    {order.shipmentEvents && order.shipmentEvents.length > 0 ? (
+                      <div className="mt-6 space-y-3">
+                        <p className="text-sm font-semibold">Delivery Timeline</p>
+                        {order.shipmentEvents.map((event) => (
+                          <div key={event.id} className="flex gap-3">
+                            <span className="mt-1 h-2.5 w-2.5 rounded-full bg-[#689c30]" />
+                            <div>
+                              <p className="text-sm font-semibold capitalize">{event.status}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(event.occurred_at).toLocaleString("en-IN")}
+                                {event.location ? ` · ${event.location}` : ""}
+                                {event.activity ? ` · ${event.activity}` : ""}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
 
@@ -266,6 +345,22 @@ function canRetry(order: Order) {
 
 function canCancel(order: Order) {
   return !["cancelled", "shipped", "delivered"].includes(order.status) && order.payment_status !== "refunded"
+}
+
+function trackingSummary(order: Order) {
+  if (order.shipment?.awb_code) {
+    return `${order.shipment.courier_name ? `${order.shipment.courier_name} · ` : ""}${order.shipment.awb_code}`
+  }
+  return order.tracking ?? "Pending"
+}
+
+function TrackField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-semibold">{value}</p>
+    </div>
+  )
 }
 
 function Badge({ label }: { label: string }) {

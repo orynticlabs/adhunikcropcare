@@ -79,6 +79,15 @@ type Review = {
   verified: boolean
 }
 
+type ServiceabilityResult = {
+  serviceable: boolean
+  reason?: string
+  codAvailable?: boolean
+  estimatedDeliveryDays?: string | null
+  estimatedDeliveryDate?: string | null
+  couriers: { name: string; etd?: string; estimatedDeliveryDays?: string; rate?: number; cod?: boolean }[]
+}
+
 const SAMPLE_REVIEWS: Review[] = [
   {
     name: "Ramesh Patil",
@@ -178,6 +187,9 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
   const [quantity, setQuantity] = useState(1)
   const [pincode, setPincode] = useState("")
   const [checkedPin, setCheckedPin] = useState("")
+  const [serviceability, setServiceability] = useState<ServiceabilityResult | null>(null)
+  const [checkingPin, setCheckingPin] = useState(false)
+  const [pinError, setPinError] = useState("")
   const [couponCopied, setCouponCopied] = useState(false)
   const [openSpec, setOpenSpec] = useState<string>("Product Specifications")
   const [visibleReviews, setVisibleReviews] = useState(3)
@@ -217,6 +229,28 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
     setCouponCopied(true)
   }
 
+  async function checkPincode() {
+    const pin = pincode.trim()
+    if (!/^\d{6}$/.test(pin)) {
+      setPinError("Enter a valid 6-digit pincode.")
+      return
+    }
+    setCheckingPin(true)
+    setPinError("")
+    setServiceability(null)
+    try {
+      const response = await fetch(`/api/shiprocket/serviceability?pincode=${pin}`)
+      const json = await response.json()
+      if (!json.success) throw new Error(json.error?.message ?? "Unable to check delivery.")
+      setCheckedPin(pin)
+      setServiceability(json.data as ServiceabilityResult)
+    } catch (error) {
+      setPinError(error instanceof Error ? error.message : "Unable to check delivery.")
+    } finally {
+      setCheckingPin(false)
+    }
+  }
+
   const descriptionBullets = product.benefits.filter(Boolean)
   const specRows: Array<[string, string]> = [
     ["Category", product.category],
@@ -239,7 +273,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
         if (isHtml(product.specifications)) {
           return (
             <div
-              className="text-sm leading-6 text-foreground/75"
+              className="richtext text-sm text-foreground/75"
               dangerouslySetInnerHTML={{ __html: product.specifications as string }}
             />
           )
@@ -284,7 +318,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
       render: () =>
         isHtml(product.howToUse) ? (
           <div
-            className="text-sm leading-6 text-foreground/75"
+            className="richtext text-sm text-foreground/75"
             dangerouslySetInnerHTML={{ __html: product.howToUse as string }}
           />
         ) : (
@@ -303,7 +337,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
       render: () =>
         isHtml(product.shippingReturns) ? (
           <div
-            className="text-sm leading-6 text-foreground/75"
+            className="richtext text-sm text-foreground/75"
             dangerouslySetInnerHTML={{ __html: product.shippingReturns as string }}
           />
         ) : (
@@ -444,22 +478,51 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                 <input
                   value={pincode}
                   onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onKeyDown={(e) => { if (e.key === "Enter") void checkPincode() }}
                   placeholder="Enter pincode"
                   className="flex-1 bg-transparent text-sm outline-none placeholder:text-foreground/40"
                 />
                 <button
                   type="button"
-                  onClick={() => setCheckedPin(pincode)}
-                  className="text-sm font-semibold text-[#033927] transition-colors hover:text-[#689c30]"
+                  onClick={() => void checkPincode()}
+                  disabled={checkingPin}
+                  className="text-sm font-semibold text-[#033927] transition-colors hover:text-[#689c30] disabled:opacity-50"
                 >
-                  Check
+                  {checkingPin ? "Checking…" : "Check"}
                 </button>
               </div>
-              {checkedPin && (
-                <p className="mt-3 flex items-center gap-2 text-sm">
-                  <Truck className="h-4 w-4 text-[#689c30]" aria-hidden />
-                  <span className="font-semibold">Delivery available to {checkedPin}</span> · Dispatch in 24–48 hrs
-                </p>
+              {pinError && <p className="mt-2 text-sm text-red-600">{pinError}</p>}
+              {checkedPin && serviceability && (
+                serviceability.serviceable ? (
+                  <div className="mt-3 space-y-2 rounded-lg border border-[#689c30]/30 bg-[#689c30]/5 p-3 text-sm">
+                    <p className="flex items-center gap-2 font-semibold text-[#033927]">
+                      <Truck className="h-4 w-4 text-[#689c30]" aria-hidden />
+                      Delivery available to {checkedPin}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {serviceability.estimatedDeliveryDate && (
+                        <span><span className="text-foreground/60">Est. delivery:</span> <strong>{serviceability.estimatedDeliveryDate}</strong></span>
+                      )}
+                      <span>
+                        <span className="text-foreground/60">COD:</span>{" "}
+                        <strong>{serviceability.codAvailable ? "Available" : "Not available"}</strong>
+                      </span>
+                    </div>
+                    {serviceability.couriers.length > 0 && (
+                      <div className="text-xs text-foreground/70">
+                        <span className="text-foreground/60">Couriers:</span>{" "}
+                        {serviceability.couriers.slice(0, 3).map((c) => c.name).join(", ")}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-3 flex items-center gap-2 text-sm text-red-600">
+                    <Truck className="h-4 w-4" aria-hidden />
+                    {serviceability.reason === "unconfigured"
+                      ? "Delivery checking is temporarily unavailable."
+                      : `Sorry, delivery is not available to ${checkedPin}.`}
+                  </p>
+                )
               )}
             </div>
 
@@ -519,11 +582,11 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                   <h2 className="text-xl font-bold">Product Description</h2>
                   {product.description.includes("<") ? (
                     <div
-                      className="text-sm leading-relaxed text-foreground/80"
+                      className="richtext text-sm text-foreground/80"
                       dangerouslySetInnerHTML={{ __html: product.description }}
                     />
                   ) : (
-                    <p className="text-sm leading-relaxed text-foreground/80">{product.description}</p>
+                    <p className="text-sm leading-relaxed text-foreground/80" style={{ textAlign: "justify" }}>{product.description}</p>
                   )}
                   {descriptionBullets.length > 0 && (
                     <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-foreground/80">

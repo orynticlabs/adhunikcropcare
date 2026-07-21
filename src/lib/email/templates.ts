@@ -10,12 +10,20 @@ export type EmailTemplateName =
   | "offerAnnouncement"
   | "saleAnnouncement"
   | "adminOrderNotification"
+  | "shipmentCreated"
+  | "shipmentShipped"
+  | "shipmentOutForDelivery"
+  | "shipmentDelivered"
+  | "shipmentCancelled"
 
 type TemplateInput = {
   actionUrl?: string
   adminOrderUrl?: string
+  awbCode?: string
+  courierName?: string
   customerEmail?: string
   customerName?: string
+  estimatedDelivery?: string
   mobileNumber?: string
   orderDate?: string
   orderStatus?: string
@@ -27,6 +35,7 @@ type TemplateInput = {
   productName?: string
   refundStatus?: string
   total?: number
+  trackingUrl?: string
   unsubscribeUrl: string
 }
 
@@ -104,4 +113,29 @@ export const emailTemplates: Record<EmailTemplateName, (input: TemplateInput) =>
       i.unsubscribeUrl,
     ),
   }),
+  shipmentCreated: (i) => shipmentEmail("Your order is being packed", `<p>Hello ${escapeHtml(i.firstName)},</p><p>Good news — a shipment has been created for your order <strong>${escapeHtml(i.orderNumber)}</strong> and a courier has been assigned.</p>`, i),
+  shipmentShipped: (i) => shipmentEmail("Your order has shipped", `<p>Hello ${escapeHtml(i.firstName)},</p><p>Your order <strong>${escapeHtml(i.orderNumber)}</strong> is on its way.</p>`, i),
+  shipmentOutForDelivery: (i) => shipmentEmail("Out for delivery today", `<p>Hello ${escapeHtml(i.firstName)},</p><p>Your order <strong>${escapeHtml(i.orderNumber)}</strong> is out for delivery and should reach you today.</p>`, i),
+  shipmentDelivered: (i) => shipmentEmail("Your order has been delivered", `<p>Hello ${escapeHtml(i.firstName)},</p><p>Your order <strong>${escapeHtml(i.orderNumber)}</strong> has been delivered. We hope you love it!</p>`, i),
+  shipmentCancelled: (i) => shipmentEmail("Your shipment was cancelled", `<p>Hello ${escapeHtml(i.firstName)},</p><p>The shipment for your order <strong>${escapeHtml(i.orderNumber)}</strong> has been cancelled. If this is unexpected, please contact support.</p>`, i),
+}
+
+/** Shared builder for the five shipment lifecycle emails (AWB/courier/tracking rows). */
+function shipmentEmail(title: string, intro: string, i: TemplateInput) {
+  const rows: [string, unknown][] = [["Order Number", i.orderNumber ?? "-"]]
+  if (i.awbCode) rows.push(["AWB Number", i.awbCode])
+  if (i.courierName) rows.push(["Courier", i.courierName])
+  if (i.estimatedDelivery) rows.push(["Estimated Delivery", i.estimatedDelivery])
+  const subjectMap: Record<string, string> = {
+    "Your order is being packed": `Shipment created for order ${i.orderNumber}`,
+    "Your order has shipped": `Order ${i.orderNumber} shipped`,
+    "Out for delivery today": `Order ${i.orderNumber} is out for delivery`,
+    "Your order has been delivered": `Order ${i.orderNumber} delivered`,
+    "Your shipment was cancelled": `Order ${i.orderNumber} shipment cancelled`,
+  }
+  return {
+    subject: subjectMap[title] ?? `Update for order ${i.orderNumber}`,
+    text: `${title}. Order ${i.orderNumber}.${i.awbCode ? ` AWB ${i.awbCode} (${i.courierName ?? "courier"}).` : ""}${i.trackingUrl ? ` Track: ${i.trackingUrl}` : ""}`,
+    html: layout(title, `${intro}${detailsTable(rows)}${i.trackingUrl ? button("Track your order", i.trackingUrl) : ""}`, i.unsubscribeUrl),
+  }
 }

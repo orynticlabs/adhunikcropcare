@@ -42,3 +42,20 @@ export async function requireOryCMSUser(request: NextRequest) {
     roleName: session.user.role.name,
   }
 }
+
+export type OryCMSAuthUser = Awaited<ReturnType<typeof requireOryCMSUser>>
+
+/**
+ * Like requireOryCMSUser, but additionally enforces that the admin's role is one
+ * of `allowed`. Throws a 403 Response otherwise. Used to gate privileged actions
+ * such as issuing refunds (Super Admin + Admin only).
+ */
+export async function requireOryCMSRole(request: NextRequest, allowed: string[]): Promise<OryCMSAuthUser> {
+  const user = await requireOryCMSUser(request)
+  if (!allowed.includes(user.roleName)) {
+    throw new Response("You do not have permission to perform this action.", { status: 403 })
+  }
+  return user
+}
+
+export const REFUND_ALLOWED_ROLES = ["Super Admin", "Admin"]

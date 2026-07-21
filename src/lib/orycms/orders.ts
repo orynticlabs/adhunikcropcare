@@ -1,6 +1,7 @@
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { ensureStorefrontAuthSchema } from "@/lib/storefront-auth"
 import { serializeOrder, type StorefrontOrderRow } from "@/lib/storefront-orders"
+import { getShipmentByOrderId, listShipmentEvents, serializeShipment, serializeShipmentEvent } from "@/lib/shiprocket/shipments"
 
 const ORDER_SELECT = `
   id, user_id, number, status, payment_status, payment_method, razorpay_order_id, razorpay_payment_id,
@@ -15,6 +16,11 @@ export type OryCMSOrderDTO = ReturnType<typeof serializeOrder> & {
   totalItems: number
 }
 
+export type OryCMSOrderDetailDTO = OryCMSOrderDTO & {
+  shipment: ReturnType<typeof serializeShipment> | null
+  shipmentEvents: ReturnType<typeof serializeShipmentEvent>[]
+}
+
 export async function listOryCMSOrders() {
   await ensureStorefrontAuthSchema()
   const orders = await orycmsPrisma.$queryRawUnsafe<StorefrontOrderRow[]>(
@@ -23,7 +29,7 @@ export async function listOryCMSOrders() {
   return orders.map(toOrderDTO)
 }
 
-export async function getOryCMSOrder(id: string) {
+export async function getOryCMSOrder(id: string): Promise<OryCMSOrderDetailDTO | null> {
   await ensureStorefrontAuthSchema()
   const orders = isUuid(id)
     ? await orycmsPrisma.$queryRawUnsafe<StorefrontOrderRow[]>(
@@ -36,7 +42,14 @@ export async function getOryCMSOrder(id: string) {
         id,
       )
   const [order] = orders
-  return order ? toOrderDTO(order) : null
+  if (!order) return null
+  const shipmentRow = await getShipmentByOrderId(order.id)
+  const events = shipmentRow ? await listShipmentEvents(shipmentRow.id) : []
+  return {
+    ...toOrderDTO(order),
+    shipment: shipmentRow ? serializeShipment(shipmentRow) : null,
+    shipmentEvents: events.map(serializeShipmentEvent),
+  }
 }
 
 function toOrderDTO(order: StorefrontOrderRow): OryCMSOrderDTO {
@@ -68,4 +81,29 @@ function text(value: unknown) {
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+/**
+ * Number of orders placed since this admin last opened the Orders module. Backs the
+ * live sidebar badge. A first-time admin (no view row) sees the total order count.
+ */
+export async function getUnreadOrderCount(userId: string): Promise<number> {
+  await ensureStorefrontAuthSchema()
+  const rows = await orycmsPrisma.$queryRaw<{ count: bigint }[]>`
+    SELECT COUNT(*)::bigint AS count
+    FROM storefront_orders o
+    LEFT JOIN orycms_order_views v ON v.user_id = ${userId}::uuid
+    WHERE v.last_viewed_at IS NULL OR o.created_at > v.last_viewed_at
+  `
+  return Number(rows[0]?.count ?? 0)
+}
+
+/** Marks all current orders as viewed for this admin, clearing the unread badge. */
+export async function markOrdersViewed(userId: string): Promise<void> {
+  await ensureStorefrontAuthSchema()
+  await orycmsPrisma.$executeRaw`
+    INSERT INTO orycms_order_views (user_id, last_viewed_at, updated_at)
+    VALUES (${userId}::uuid, now(), now())
+    ON CONFLICT (user_id) DO UPDATE SET last_viewed_at = now(), updated_at = now()
+  `
 }

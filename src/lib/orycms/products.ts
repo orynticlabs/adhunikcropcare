@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { deleteOryCMSMediaIfUnreferenced } from "@/lib/orycms/media"
+import { sanitizeRichText } from "@/lib/orycms/sanitize-html"
 
 export const PRODUCT_STATUSES = ["draft", "published"] as const
 
@@ -281,8 +282,8 @@ function validateProductInput(input: OryCMSProductInput) {
     ...input,
     brand: input.brand?.trim(),
     category: input.category.trim(),
-    fullDescription: input.fullDescription?.trim(),
-    howToUse: input.howToUse?.trim(),
+    fullDescription: sanitizeRichText(input.fullDescription),
+    howToUse: sanitizeRichText(input.howToUse),
     images: input.images.filter((image) => image.url.trim()),
     metaDescription: input.metaDescription?.trim(),
     metaTitle: input.metaTitle?.trim(),
@@ -292,11 +293,11 @@ function validateProductInput(input: OryCMSProductInput) {
       .filter((pack) => pack.size && Number.isFinite(pack.price)),
     price: Number(input.price),
     salePrice: input.salePrice ? Number(input.salePrice) : null,
-    shippingReturns: input.shippingReturns?.trim(),
+    shippingReturns: sanitizeRichText(input.shippingReturns),
     shortDescription: input.shortDescription.trim(),
     sku: input.sku.trim(),
     slug: input.slug?.trim(),
-    specifications: input.specifications?.trim(),
+    specifications: sanitizeRichText(input.specifications),
     stockQuantity: Number(input.stockQuantity),
     tags: input.tags.map((tag) => tag.trim()).filter(Boolean),
     unit: input.unit.trim(),
@@ -312,6 +313,10 @@ function validateProductInput(input: OryCMSProductInput) {
 
   for (const [label, value] of required) {
     if (!value) throw new Error(`${label} is required.`)
+  }
+
+  if (normalized.shortDescription.length > 85) {
+    throw new Error("Short Description must be 85 characters or fewer.")
   }
 
   if (!Number.isFinite(normalized.price) || normalized.price <= 0) throw new Error("Price is required.")
