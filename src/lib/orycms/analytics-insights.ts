@@ -37,34 +37,37 @@ export async function getOryCMSAnalyticsInsights(input: { from?: string | null; 
   await ensureStorefrontAuthSchema()
   await ensureOryCMSProductsSchema()
   const range = resolveRange(input)
-  const orders = await orycmsPrisma.$queryRaw<OrderRow[]>`
-    SELECT id, user_id, status, payment_status, payment_method, refund_status, cancelled_at,
-           shipping_address, discount_total, items, total, created_at
-    FROM storefront_orders
-    WHERE created_at >= ${range.from} AND created_at <= ${range.to}
-    ORDER BY created_at ASC
-  `
-  const previousOrders = await orycmsPrisma.$queryRaw<OrderRow[]>`
-    SELECT id, user_id, status, payment_status, payment_method, refund_status, cancelled_at,
-           shipping_address, discount_total, items, total, created_at
-    FROM storefront_orders
-    WHERE created_at >= ${range.previousFrom} AND created_at < ${range.from}
-  `
-  const customers = await orycmsPrisma.$queryRaw<CustomerRow[]>`
-    SELECT id, first_name, last_name, email, created_at
-    FROM storefront_users
-    WHERE deleted_at IS NULL AND created_at >= ${range.from} AND created_at <= ${range.to}
-  `
-  const allCustomers = await orycmsPrisma.$queryRaw<CustomerRow[]>`
-    SELECT id, first_name, last_name, email, created_at
-    FROM storefront_users
-    WHERE deleted_at IS NULL
-  `
-  const products = await orycmsPrisma.$queryRaw<ProductRow[]>`
-    SELECT id, name, sku, category, price, stock_quantity, status
-    FROM orycms_products
-    WHERE deleted_at IS NULL
-  `
+  // Independent reads — run concurrently rather than as a serial waterfall.
+  const [orders, previousOrders, customers, allCustomers, products] = await Promise.all([
+    orycmsPrisma.$queryRaw<OrderRow[]>`
+      SELECT id, user_id, status, payment_status, payment_method, refund_status, cancelled_at,
+             shipping_address, discount_total, items, total, created_at
+      FROM storefront_orders
+      WHERE created_at >= ${range.from} AND created_at <= ${range.to}
+      ORDER BY created_at ASC
+    `,
+    orycmsPrisma.$queryRaw<OrderRow[]>`
+      SELECT id, user_id, status, payment_status, payment_method, refund_status, cancelled_at,
+             shipping_address, discount_total, items, total, created_at
+      FROM storefront_orders
+      WHERE created_at >= ${range.previousFrom} AND created_at < ${range.from}
+    `,
+    orycmsPrisma.$queryRaw<CustomerRow[]>`
+      SELECT id, first_name, last_name, email, created_at
+      FROM storefront_users
+      WHERE deleted_at IS NULL AND created_at >= ${range.from} AND created_at <= ${range.to}
+    `,
+    orycmsPrisma.$queryRaw<CustomerRow[]>`
+      SELECT id, first_name, last_name, email, created_at
+      FROM storefront_users
+      WHERE deleted_at IS NULL
+    `,
+    orycmsPrisma.$queryRaw<ProductRow[]>`
+      SELECT id, name, sku, category, price, stock_quantity, status
+      FROM orycms_products
+      WHERE deleted_at IS NULL
+    `,
+  ])
 
   const paidOrders = orders.filter(isRevenueOrder)
   const previousPaid = previousOrders.filter(isRevenueOrder)

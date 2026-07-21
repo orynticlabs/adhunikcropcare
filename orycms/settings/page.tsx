@@ -9,9 +9,13 @@ import {
   Globe,
   Lock,
   Mail,
+  MailPlus,
+  Pencil,
+  Plus,
   Shield,
   Smartphone,
   Store,
+  Trash2,
   Users,
 } from "lucide-react";
 import { AppShell } from "@/components/dashboard/AppShell";
@@ -98,6 +102,11 @@ export default function SettingsPage() {
   const [marketingDigest, setMarketingDigest] = useState(true);
   const [returnApproval, setReturnApproval] = useState(true);
   const [internationalOrders, setInternationalOrders] = useState(false);
+  const [orderNotificationEmails, setOrderNotificationEmails] = useState([
+    { id: "1", email: "orders@orynticlabs.com", label: "Operations", enabled: true },
+    { id: "2", email: "warehouse@orynticlabs.com", label: "Warehouse", enabled: false },
+  ]);
+  const [newNotificationEmail, setNewNotificationEmail] = useState("");
 
   return (
     <AppShell section="Settings">
@@ -258,6 +267,92 @@ export default function SettingsPage() {
                     <Switch checked={marketingDigest} onCheckedChange={setMarketingDigest} />
                   }
                 />
+              </div>
+            </Card>
+
+            <Card className="p-5">
+              <SectionHeader
+                icon={MailPlus}
+                title="Order notification emails"
+                description="Send a detailed notification to these addresses whenever a new order is placed. Disabled or empty lists receive nothing."
+              />
+              <div className="mt-5 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface-muted/40 p-4">
+                <label className="min-w-[200px] flex-1 space-y-1.5">
+                  <span className="text-[11.5px] font-medium text-muted-foreground">Email address</span>
+                  <Input
+                    value={newNotificationEmail}
+                    onChange={(e) => setNewNotificationEmail(e.target.value)}
+                    placeholder="warehouse@yourdomain.com"
+                  />
+                </label>
+                <Button
+                  onClick={() => {
+                    const email = newNotificationEmail.trim().toLowerCase();
+                    if (!/^\S+@\S+\.\S+$/.test(email)) return;
+                    setOrderNotificationEmails((current) => [
+                      ...current,
+                      { id: `${current.length + 1}`, email, label: "", enabled: true },
+                    ]);
+                    setNewNotificationEmail("");
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add email
+                </Button>
+              </div>
+              <div className="mt-4 space-y-2">
+                {orderNotificationEmails.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border bg-surface-muted/30 px-4 py-6 text-center text-[12.5px] text-muted-foreground">
+                    No recipients yet. No order notification emails are sent until you add an address above.
+                  </div>
+                ) : (
+                  orderNotificationEmails.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2.5"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[12.5px] font-medium">{item.email}</span>
+                        {item.label ? (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10.5px] text-muted-foreground">
+                            {item.label}
+                          </span>
+                        ) : null}
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-[10.5px] font-medium",
+                            item.enabled ? "bg-success/10 text-success" : "bg-muted text-muted-foreground",
+                          )}
+                        >
+                          {item.enabled ? "Enabled" : "Disabled"}
+                        </span>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Switch
+                          checked={item.enabled}
+                          onCheckedChange={(checked) =>
+                            setOrderNotificationEmails((current) =>
+                              current.map((row) => (row.id === item.id ? { ...row, enabled: checked } : row)),
+                            )
+                          }
+                        />
+                        <Button variant="outline" size="icon" aria-label="Edit recipient">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          aria-label="Delete recipient"
+                          onClick={() =>
+                            setOrderNotificationEmails((current) => current.filter((row) => row.id !== item.id))
+                          }
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
 

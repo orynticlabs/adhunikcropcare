@@ -72,6 +72,9 @@ model OryCMSProduct {
   slug             String    @unique
   shortDescription String    @map("short_description")
   fullDescription  String?   @map("full_description")
+  specifications   String?   @map("specifications")
+  howToUse         String?   @map("how_to_use")
+  shippingReturns  String?   @map("shipping_returns")
   category         String
   brand            String?
   sku              String    @unique
@@ -243,6 +246,7 @@ model StorefrontOrder {
   createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([userId], map: "storefront_orders_user_id_idx")
+  @@index([createdAt], map: "storefront_orders_created_at_idx")
   @@map("storefront_orders")
 }
 
@@ -312,4 +316,16 @@ model StorefrontContactEnquiry {
   @@index([status, createdAt], map: "storefront_contact_enquiries_status_created_at_idx")
   @@index([email], map: "storefront_contact_enquiries_email_idx")
   @@map("storefront_contact_enquiries")
+}
+
+model OryCMSOrderNotificationEmail {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email     String   @unique
+  label     String?
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([enabled], map: "orycms_order_notification_emails_enabled_idx")
+  @@map("orycms_order_notification_emails")
 }
