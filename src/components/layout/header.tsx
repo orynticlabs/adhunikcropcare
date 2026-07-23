@@ -22,16 +22,17 @@ type StorefrontCategory = {
   slug: string
 }
 
-export default function Header() {
+export default function Header({ initialCategories }: { initialCategories?: StorefrontCategory[] }) {
   const accountRef = useRef<HTMLDivElement | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
-  const [categories, setCategories] = useState<StorefrontCategory[]>([])
+  const [categories, setCategories] = useState<StorefrontCategory[]>(initialCategories ?? [])
   const [mobileOpen, setMobileOpen] = useState(false)
   const { openCart } = useCart()
   const { logout, openAuthModal, user } = useAuth()
 
   /* lock body scroll while drawer is open */
   useEffect(() => {
+    if (initialCategories) return // already have data — skip network fetch
     fetch("/api/categories")
       .then((response) => response.json())
       .then((json) => {
@@ -99,7 +100,7 @@ export default function Header() {
                 <a
                   key={l.href}
                   href={l.href}
-                  className="rounded-full px-3 py-1.5 text-sm font-medium text-foreground/80 transition hover:text-[#689c30]"
+                  className="rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground/80 transition hover:text-[#689c30]"
                 >
                   {l.label}
                 </a>
@@ -107,7 +108,7 @@ export default function Header() {
 
               {/* More dropdown */}
               {overflowCategoryLinks.length > 0 ? <div className="relative group">
-                <button className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium text-foreground/80 transition hover:text-[#689c30]">
+                <button className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground/80 transition hover:text-[#689c30]">
                   More <ChevronDown className="h-3.5 w-3.5" aria-hidden />
                 </button>
                 <div className="invisible absolute right-0 top-full mt-3 w-56 rounded-2xl border border-border/60 bg-popover p-2 opacity-0 shadow-luxe transition-all group-hover:visible group-hover:opacity-100 z-10">
@@ -115,7 +116,7 @@ export default function Header() {
                     <a
                       key={l.href}
                       href={l.href}
-                      className="block rounded-xl px-3 py-2 text-sm text-foreground/80 hover:text-[#689c30] transition"
+                      className="block rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-foreground/80 hover:text-[#689c30] transition"
                     >
                       {l.label}
                     </a>
@@ -272,7 +273,7 @@ export default function Header() {
                   key={l.href}
                   href={l.href}
                   onClick={closeMenu}
-                  className="flex items-center rounded-xl px-4 py-3 text-[15px] font-medium text-foreground/80 transition hover:bg-[#689c30]/10 hover:text-[#689c30]"
+                  className="flex items-center rounded-xl px-4 py-3 text-[13px] font-semibold uppercase tracking-wide text-foreground/80 transition hover:bg-[#689c30]/10 hover:text-[#689c30]"
                 >
                   {l.label}
                 </a>
@@ -291,7 +292,7 @@ export default function Header() {
                   key={l.href}
                   href={l.href}
                   onClick={closeMenu}
-                  className="flex items-center rounded-xl px-4 py-2.5 text-sm text-foreground/70 transition hover:bg-[#689c30]/10 hover:text-[#689c30]"
+                  className="flex items-center rounded-xl px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-foreground/70 transition hover:bg-[#689c30]/10 hover:text-[#689c30]"
                 >
                   {l.label}
                 </a>

@@ -120,6 +120,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     try {
@@ -134,11 +135,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return
-    try {
-      window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
-    } catch {
-      // Storage can be unavailable in private/restricted contexts.
-    }
+    // Debounce writes — rapid updates (quantity spinner) only flush after 400 ms of inactivity
+    if (saveTimer.current) clearTimeout(saveTimer.current)
+    saveTimer.current = setTimeout(() => {
+      try {
+        window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+      } catch {
+        // Storage can be unavailable in private/restricted contexts.
+      }
+    }, 400)
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current) }
   }, [hydrated, items])
 
   const addItem = useCallback((product?: CartProductInput) => {

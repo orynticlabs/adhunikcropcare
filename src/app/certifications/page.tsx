@@ -14,7 +14,7 @@ import {
   Sparkles,
 } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
-import Header from "@/components/layout/header"
+import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import { listOryCMSCertificates, type OryCMSCertificateDTO } from "@/lib/orycms/certificates"
@@ -57,7 +57,7 @@ export default async function CertificationsPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <AnnouncementBar />
-      <Header />
+      <HeaderServer />
       <CartDrawer />
 
       <main>

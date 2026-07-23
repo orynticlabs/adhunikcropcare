@@ -3,7 +3,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowDown, ArrowRight, ChevronRight, CloudRain, Droplet, Gauge, Leaf, Radio, Waves } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
-import Header from "@/components/layout/header"
+import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 
@@ -19,7 +19,7 @@ const FLOW = [
 export default function IrrigationPage() {
   return (
     <div className="min-h-screen overflow-hidden bg-[#edf5f2] text-[#17382d]">
-      <AnnouncementBar /><Header /><CartDrawer />
+      <AnnouncementBar /><HeaderServer /><CartDrawer />
       <main>
       <section className="relative overflow-hidden pb-16 pt-32 sm:pb-20 sm:pt-40 lg:min-h-[760px] lg:pb-24 lg:pt-44">
           <Image src="https://images.unsplash.com/photo-1563514227147-6d2ff665a6a0?w=1800&q=90" alt="Irrigated green agricultural field" fill priority sizes="100vw" className="-z-20 object-cover" />

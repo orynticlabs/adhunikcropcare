@@ -169,6 +169,7 @@ function DashboardShell({
   const { loaded, user, roleName } = useOryCMSSession()
   const headerActionsRef = useRef<HTMLDivElement>(null)
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [insightsOpen, setInsightsOpen] = useState(false)
   const [notificationsOpen, setNotificationsOpen] = useState(false)
@@ -182,6 +183,9 @@ function DashboardShell({
     const from = pathname?.startsWith("/admin") ? pathname : "/admin/dashboard"
     router.replace(`/admin/login?from=${encodeURIComponent(from)}`)
   }, [loaded, pathname, roleName, router, user])
+
+  // Close mobile sidebar on route change
+  useEffect(() => { setMobileSidebarOpen(false) }, [pathname])
 
   useEffect(() => {
     if (!user || !roleName) return
@@ -279,20 +283,32 @@ function DashboardShell({
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <OryCMSSidebar collapsed={collapsed} />
+      <OryCMSSidebar collapsed={collapsed} mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 h-14 shrink-0 border-b border-border bg-background">
           <div className="flex h-full items-center gap-3 px-4">
+          {/* Mobile: open drawer. Desktop: collapse sidebar */}
+          <button
+            type="button"
+            onClick={() => setMobileSidebarOpen(true)}
+            aria-label="Open navigation"
+            className="grid h-9 w-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:hidden"
+          >
+            <PanelLeft className="h-4 w-4" />
+          </button>
           <button
             type="button"
             onClick={() => setCollapsed((value) => !value)}
             aria-label="Toggle sidebar"
-            className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="hidden h-9 w-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground lg:grid"
           >
             <PanelLeft className="h-4 w-4" />
           </button>
 
-          <div className="hidden items-center gap-1.5 text-sm md:flex">
+          {/* Mobile: show current section name only */}
+          <span className="text-[13px] font-semibold lg:hidden">{section}</span>
+          {/* Desktop: full breadcrumb */}
+          <div className="hidden items-center gap-1.5 text-sm lg:flex">
             <Link href="/admin" className="text-muted-foreground transition-colors hover:text-chart-3">
               OryCMS
             </Link>
@@ -971,7 +987,7 @@ function OryCMSFooter() {
   )
 }
 
-function OryCMSSidebar({ collapsed }: { collapsed: boolean }) {
+function OryCMSSidebar({ collapsed, mobileOpen, onMobileClose }: { collapsed: boolean; mobileOpen: boolean; onMobileClose: () => void }) {
   const pathname = usePathname()
   const [copilotOpen, setCopilotOpen] = useState(false)
   const [open, setOpen] = useState<Record<string, boolean>>({})
@@ -1033,31 +1049,12 @@ function OryCMSSidebar({ collapsed }: { collapsed: boolean }) {
     })
   }
 
-  return (
-    <aside
-      className={cn(
-        "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-sidebar transition-[width] duration-300 ease-out lg:flex",
-        collapsed ? "w-[68px]" : "w-[248px]",
-      )}
-    >
-      <div className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2.5 border-b border-border/70 bg-sidebar px-4">
-        <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-surface">
-          <img src="/orycms/img/favicon.png" alt="" className="h-5 w-5 object-contain" />
-        </div>
-        {!collapsed && (
-          <div className="min-w-0">
-            <div className="truncate text-[13px] font-semibold tracking-tight">OryCMS</div>
-            <div className="truncate text-[11px] text-muted-foreground">
-              By OrynticLabs Private Limited
-            </div>
-          </div>
-        )}
-      </div>
-
+  const navContent = (isMobile: boolean) => (
+    <>
       <nav className="flex-1 space-y-5 overflow-y-auto px-2.5 py-3">
         {ORYCMS_MENU.map((group) => (
           <div key={group.section}>
-            {!collapsed && (
+            {(!collapsed || isMobile) && (
               <div className="px-2 pb-1.5 text-[10.5px] font-medium uppercase tracking-[0.08em] text-muted-foreground/80">
                 {group.section}
               </div>
@@ -1067,7 +1064,7 @@ function OryCMSSidebar({ collapsed }: { collapsed: boolean }) {
                 <OryCMSMenuItem
                   key={item.label}
                   item={item.label === "Orders" ? { ...item, badge: unreadOrders > 0 ? String(unreadOrders) : undefined } : item}
-                  collapsed={collapsed}
+                  collapsed={!isMobile && collapsed}
                   pathname={pathname}
                   open={Boolean(open[item.label])}
                   onToggle={() => toggleGroup(item.label)}
@@ -1077,8 +1074,7 @@ function OryCMSSidebar({ collapsed }: { collapsed: boolean }) {
           </div>
         ))}
       </nav>
-
-      {!collapsed && (
+      {(!collapsed || isMobile) && (
         <div className="m-2.5 rounded-lg border border-border bg-surface p-3">
           <div className="flex items-center gap-1.5 text-[11.5px] font-medium">
             <Sparkles className="h-3.5 w-3.5" />
@@ -1089,15 +1085,66 @@ function OryCMSSidebar({ collapsed }: { collapsed: boolean }) {
           </p>
           <button
             type="button"
-            onClick={() => setCopilotOpen(true)}
+            onClick={() => { setCopilotOpen(true); if (isMobile) onMobileClose() }}
             className="mt-2 h-7 w-full rounded-md bg-foreground text-[11.5px] font-medium text-background transition-opacity hover:opacity-90"
           >
             Try Copilot
           </button>
         </div>
       )}
-      <CopilotComingSoonModal open={copilotOpen} onClose={() => setCopilotOpen(false)} />
-    </aside>
+    </>
+  )
+
+  return (
+    <>
+      {/* Mobile drawer overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-[90] lg:hidden" aria-modal="true" role="dialog" aria-label="Navigation">
+          <button type="button" className="absolute inset-0 bg-black/50" onClick={onMobileClose} aria-label="Close navigation" />
+          <aside className="absolute inset-y-0 left-0 flex w-[280px] flex-col border-r border-border bg-sidebar shadow-xl">
+            <div className="flex h-14 shrink-0 items-center justify-between border-b border-border/70 bg-sidebar px-4">
+              <div className="flex items-center gap-2.5">
+                <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-surface">
+                  <img src="/orycms/img/favicon.png" alt="" className="h-5 w-5 object-contain" />
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-[13px] font-semibold tracking-tight">OryCMS</div>
+                  <div className="truncate text-[11px] text-muted-foreground">By OrynticLabs</div>
+                </div>
+              </div>
+              <button type="button" onClick={onMobileClose} className="grid h-8 w-8 place-items-center rounded-md text-muted-foreground hover:bg-accent">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {navContent(true)}
+          </aside>
+        </div>
+      )}
+
+      {/* Desktop sidebar */}
+      <aside
+        className={cn(
+          "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-sidebar transition-[width] duration-300 ease-out lg:flex",
+          collapsed ? "w-[68px]" : "w-[248px]",
+        )}
+      >
+        <div className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2.5 border-b border-border/70 bg-sidebar px-4">
+          <div className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-surface">
+            <img src="/orycms/img/favicon.png" alt="" className="h-5 w-5 object-contain" />
+          </div>
+          {!collapsed && (
+            <div className="min-w-0">
+              <div className="truncate text-[13px] font-semibold tracking-tight">OryCMS</div>
+              <div className="truncate text-[11px] text-muted-foreground">
+                By OrynticLabs Private Limited
+              </div>
+            </div>
+          )}
+        </div>
+        {navContent(false)}
+        <CopilotComingSoonModal open={copilotOpen} onClose={() => setCopilotOpen(false)} />
+      </aside>
+    </>
   )
 }
 

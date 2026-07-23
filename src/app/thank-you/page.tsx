@@ -10,7 +10,7 @@ import {
   Truck,
 } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
-import Header from "@/components/layout/header"
+import HeaderServer from "@/components/layout/header-server"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import SiteFooter from "@/components/layout/site-footer"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
@@ -63,7 +63,7 @@ export default async function ThankYouPage({
   return (
     <div className="min-h-screen bg-[#f7f4ec] text-foreground">
       <AnnouncementBar />
-      <Header />
+      <HeaderServer />
       <CartDrawer />
 
       <main className="pt-28 sm:pt-36 lg:pt-40">

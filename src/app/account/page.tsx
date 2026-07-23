@@ -656,7 +656,7 @@ function WishlistView() {
               originalPrice={comparePrice(item.price)}
               subtitle={item.inStock ? "Saved for later from your wishlist" : "Currently unavailable in stock"}
               overlayLabel={item.inStock ? "Wishlist" : "Out of Stock"}
-              imageSizes="(max-width: 640px) 50vw, 33vw"
+              imageSizes="(max-width: 639px) calc(100vw - 2rem), calc(50vw - 2rem)"
             />
           </div>
         ))}

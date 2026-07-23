@@ -3,7 +3,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, ChevronRight, Droplets, Gauge, Layers3, Leaf, Microscope, Sprout } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
-import Header from "@/components/layout/header"
+import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 
@@ -21,7 +21,7 @@ const LAYERS = [
 export default function SoilCarePage() {
   return (
     <div className="min-h-screen overflow-hidden bg-[#f1eee5] text-[#2d3029]">
-      <AnnouncementBar /><Header /><CartDrawer />
+      <AnnouncementBar /><HeaderServer /><CartDrawer />
       <main>
         <section className="relative overflow-hidden pb-24 pt-36 sm:pt-44">
           <div className="absolute inset-y-0 right-0 hidden w-[45%] lg:block">
