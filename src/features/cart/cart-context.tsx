@@ -19,6 +19,7 @@ interface CartContextValue {
   updateQuantity: (id: string, quantity: number) => void
   removeItem: (id: string) => void
   clearCart: () => void
+  hasUnavailableItems: boolean
   openCart: () => void
   closeCart: () => void
 }
@@ -35,6 +36,7 @@ export interface CartItem extends CartProductInput {
   id: string          // encodes name + size so same product in two sizes = two line items
   quantity: number
   priceValue: number
+  availability?: "available" | "out_of_stock" | "unavailable"
 }
 
 const INITIAL_CART_ITEMS: CartItem[] = []
@@ -69,6 +71,7 @@ const CartContext = createContext<CartContextValue>({
   updateQuantity: () => {},
   removeItem: () => {},
   clearCart: () => {},
+  hasUnavailableItems: false,
   openCart: () => {},
   closeCart: () => {},
 })
@@ -141,6 +144,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [hydrated, items])
 
+  useEffect(() => {
+    if (!hydrated || items.length === 0) return
+    fetch("/api/products/availability", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ items: items.map(({ name, quantity }) => ({ name, quantity })) }) })
+      .then((response) => response.json()).then((json) => {
+        if (!Array.isArray(json.data)) return
+        const states = new Map<string, CartItem["availability"]>(json.data.map((item: { name: string; status: CartItem["availability"] }) => [item.name.toLowerCase(), item.status]))
+        setItems((current) => current.map((item) => ({ ...item, availability: states.get(item.name.toLowerCase()) ?? "unavailable" })))
+      }).catch(() => undefined)
+  }, [hydrated])
+
   const addItem = useCallback((product?: CartProductInput) => {
     if (product) {
       const id = productId(product.name, product.size)
@@ -203,6 +216,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     (total, item) => total + item.priceValue * item.quantity,
     0
   )
+  const hasUnavailableItems = items.some((item) => item.availability === "out_of_stock" || item.availability === "unavailable")
 
   return (
     <CartContext.Provider
@@ -216,6 +230,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         updateQuantity,
         removeItem,
         clearCart,
+        hasUnavailableItems,
         openCart,
         closeCart,
       }}

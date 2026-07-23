@@ -124,7 +124,7 @@ function RazorpayLogo() {
 /* ── Main checkout page ─────────────────────────────────────── */
 export default function CheckoutPage() {
   const router = useRouter()
-  const { clearCart, items, subtotal, closeCart } = useCart()
+  const { clearCart, hasUnavailableItems, items, subtotal, closeCart } = useCart()
   const { loadingUser, openAuthModal, updateProfile, user } = useAuth()
 
   /* form fields */
@@ -240,6 +240,10 @@ export default function CheckoutPage() {
     setPaymentErr("")
     if (!user) {
       openAuthModal("signin", { redirectTo: "/checkout" })
+      return
+    }
+    if (hasUnavailableItems) {
+      setPaymentErr("Remove products that are out of stock or no longer available before checkout.")
       return
     }
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return }

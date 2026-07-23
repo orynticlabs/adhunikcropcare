@@ -13,6 +13,7 @@ export default function CartDrawer() {
     items,
     count,
     subtotal,
+    hasUnavailableItems,
     isCartOpen,
     updateQuantity,
     removeItem,
@@ -168,6 +169,7 @@ export default function CartDrawer() {
                           </div>
                         </div>
                       </div>
+                      {item.availability && item.availability !== "available" ? <p className="mt-2 text-xs font-semibold text-red-600">{item.availability === "unavailable" ? "No longer available — remove this item to continue." : "Out of stock — remove this item to continue."}</p> : null}
                     </div>
                     </div>
                   </article>
@@ -196,6 +198,7 @@ export default function CartDrawer() {
                     if (loadingUser) {
                       return
                     }
+                    if (hasUnavailableItems) return
                     closeCart()
                     if (!user) {
                       openAuthModal("signin", { redirectTo: "/checkout" })
@@ -203,11 +206,11 @@ export default function CartDrawer() {
                     }
                     router.push("/checkout")
                   }}
-                  disabled={loadingUser}
+                  disabled={loadingUser || hasUnavailableItems}
                   className="group mt-2.5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border !border-[#033927] !bg-[#033927] px-6 text-sm font-semibold !text-white shadow-sm transition-colors hover:!border-[#689c30] hover:!bg-[#689c30] hover:!text-black disabled:cursor-wait disabled:opacity-100"
                 >
                   <CreditCard className="h-4 w-4 !text-white transition-colors group-hover:!text-black" aria-hidden />
-                  {loadingUser ? "Checking..." : "Proceed to checkout"}
+                  {loadingUser ? "Checking..." : hasUnavailableItems ? "Remove unavailable items" : "Proceed to checkout"}
                 </button>
 
                 <div className="mt-1 flex items-center justify-center gap-1.5 text-xs text-[#66756d]">

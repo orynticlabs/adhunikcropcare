@@ -8,7 +8,7 @@ export function Skeleton({ className }: { className?: string }) {
 /** Card placeholder matching the storefront ProductCard shape. */
 export function ProductCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/50 bg-card">
+    <div className="mx-auto h-[34rem] w-full max-w-[20rem] overflow-hidden rounded-2xl border border-border/50 bg-card">
       <Skeleton className="aspect-square w-full rounded-none" />
       <div className="space-y-3 p-4">
         <Skeleton className="h-3 w-16" />

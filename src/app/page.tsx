@@ -264,8 +264,8 @@ export default async function Home() {
                       subtitle={p.shortDescription}
                       reviews={120}
                       rating={4.8}
-                      className="w-[calc(100vw-4rem)] max-w-[280px] basis-[calc(100vw-4rem)] flex-shrink-0 snap-start sm:w-[320px] sm:max-w-none sm:basis-[320px] lg:w-[340px] lg:basis-[340px]"
-                      imageSizes="(max-width: 640px) 75vw, (max-width: 1024px) 45vw, 340px"
+                      className="w-[calc(100vw-4rem)] max-w-[20rem] basis-[calc(100vw-4rem)] flex-shrink-0 snap-start sm:w-[20rem] sm:basis-[20rem]"
+                      imageSizes="(max-width: 640px) 75vw, 320px"
                     />
                   )
                 })
@@ -315,7 +315,7 @@ export default async function Home() {
                   ))}
                 </div>
 
-                <Link href="#knowledge-center" className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-8 h-10 text-sm font-medium shadow transition-shadow hover:shadow-lg">
+                <Link href="/knowledge-center" className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-8 h-10 text-sm font-medium shadow transition-shadow hover:shadow-lg">
                   <BookOpen className="h-4 w-4" aria-hidden /> Open Knowledge Center
                 </Link>
               </div>

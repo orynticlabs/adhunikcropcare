@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client"
+import { revalidateTag, unstable_cache } from "next/cache"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { deleteOryCMSMediaIfUnreferenced } from "@/lib/orycms/media"
 import { sanitizeRichText } from "@/lib/orycms/sanitize-html"
@@ -79,20 +80,33 @@ type OryCMSProductRow = {
 const fallbackImage =
   "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=900&q=80"
 
-export async function listOryCMSProducts(options: { publishedOnly?: boolean } = {}) {
-  await ensureOryCMSProductsSchema()
+const STOREFRONT_PRODUCTS_CACHE_TAG = "storefront-products"
 
-  const products = options.publishedOnly
-    ? await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
-        SELECT * FROM orycms_products
-        WHERE status = 'published' AND deleted_at IS NULL
-        ORDER BY featured DESC, updated_at DESC
-      `
-    : await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
-        SELECT * FROM orycms_products
-        WHERE deleted_at IS NULL
-        ORDER BY featured DESC, updated_at DESC
-      `
+const listPublishedOryCMSProducts = unstable_cache(
+  async () => {
+    await ensureOryCMSProductsSchema()
+
+    const products = await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
+      SELECT * FROM orycms_products
+      WHERE status = 'published' AND deleted_at IS NULL
+      ORDER BY featured DESC, updated_at DESC
+    `
+
+    return products.map(toProductDTO)
+  },
+  ["published-orycms-products"],
+  { revalidate: 60, tags: [STOREFRONT_PRODUCTS_CACHE_TAG] },
+)
+
+export async function listOryCMSProducts(options: { publishedOnly?: boolean } = {}) {
+  if (options.publishedOnly) return listPublishedOryCMSProducts()
+
+  await ensureOryCMSProductsSchema()
+  const products = await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
+    SELECT * FROM orycms_products
+    WHERE deleted_at IS NULL
+    ORDER BY featured DESC, updated_at DESC
+  `
 
   return products.map(toProductDTO)
 }
@@ -208,6 +222,7 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
 
   if (!product) throw new Error("Product not found.")
 
+  revalidateStorefrontProducts()
   return toProductDTO(product)
 }
 
@@ -234,6 +249,12 @@ export async function deleteOryCMSProduct(id: string) {
       await deleteOryCMSMediaIfUnreferenced({ id: image.id, url: image.url })
     }
   }
+
+  revalidateStorefrontProducts()
+}
+
+function revalidateStorefrontProducts() {
+  revalidateTag(STOREFRONT_PRODUCTS_CACHE_TAG, { expire: 0 })
 }
 
 export async function bulkDeleteOryCMSProducts(ids: string[]) {

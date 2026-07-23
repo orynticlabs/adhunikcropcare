@@ -12,13 +12,11 @@ import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const PRODUCT_PAGE_SIZE = 10
-const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "svg", "gif"]
+const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp"]
 const ALLOWED_TYPES = new Set([
-  "image/gif",
   "image/jpeg",
   "image/jpg",
   "image/png",
-  "image/svg+xml",
   "image/webp",
 ])
 
@@ -803,7 +801,7 @@ export function OryCMSProductForm({ id }: { id?: string }) {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".jpg,.jpeg,.png,.webp,.svg,.gif,image/jpeg,image/png,image/webp,image/svg+xml,image/gif"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
               className="hidden"
               onChange={(event) => {
                 void uploadImage(event.target.files?.[0])
@@ -833,6 +831,9 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                 Media
               </button>
             </div>
+            <p className="text-[12px] text-muted-foreground">
+              Product uploads are automatically cropped and saved as 1200 × 1200 px images.
+            </p>
 
             {product.images.length > 0 ? (
               <div className="space-y-2">
@@ -1272,7 +1273,7 @@ function validateImageFile(file: File) {
     return `Only ${ALLOWED_EXTENSIONS.join(", ")} files are allowed.`
   }
 
-  if (!ALLOWED_TYPES.has(file.type) && extension !== "svg") {
+  if (!ALLOWED_TYPES.has(file.type)) {
     return "Unsupported image type."
   }
 
@@ -1298,6 +1299,7 @@ function uploadProductImage(
 
     form.append("file", file)
     form.append("mediaName", mediaName.trim() || file.name)
+    form.append("purpose", "product")
     onProgress(1)
 
     request.upload.onprogress = (event) => {

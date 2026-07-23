@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
     const form = await request.formData()
     const file = form.get("file")
     const mediaName = form.get("mediaName")
+    const purpose = form.get("purpose")
 
     if (!(file instanceof File)) {
       return NextResponse.json(
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
         success: true,
         data: await uploadOryCMSMedia(file, {
           mediaName: typeof mediaName === "string" ? mediaName : undefined,
+          productImage: purpose === "product",
         }),
       },
       { status: 201 },
@@ -63,7 +65,7 @@ function toOryCMSMediaError(error: unknown, fallback: string) {
       ? 503
       : message.includes("Can't reach database") || message.includes("does not exist")
         ? 503
-        : message.includes("allowed") || message.includes("large") || message.includes("Unsupported")
+        : message.includes("allowed") || message.includes("large") || message.includes("Unsupported") || message.includes("Product images")
           ? 422
           : 500
 

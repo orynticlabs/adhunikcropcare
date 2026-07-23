@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Star } from "lucide-react"
+import { WishlistHeartButton } from "@/features/wishlist/wishlist-heart-button"
 
 type ProductCardProps = {
   href: string
@@ -50,10 +51,11 @@ export function ProductCard({
 }: ProductCardProps) {
   const supportingLine = buildSubtitle(badge, subtitle)
   const gallery = useMemo(() => (images && images.length > 0 ? images : [image]), [image, images])
+  const slug = href.match(/^\/products\/([^/?#]+)/)?.[1]
 
   return (
     <article
-      className={`group flex h-full flex-col overflow-hidden rounded-2xl border border-[#e2e7df] bg-white shadow-sm transition-colors duration-200 hover:border-[#b9cdb3] hover:shadow-md ${className}`}
+      className={`group relative mx-auto flex h-[34rem] w-full max-w-[20rem] flex-col overflow-hidden rounded-2xl border border-[#e2e7df] bg-white shadow-sm transition-colors duration-200 hover:border-[#b9cdb3] hover:shadow-md ${className}`}
     >
       <Link href={href} className="relative block aspect-square shrink-0 overflow-hidden bg-white" aria-label={`View ${name}`}>
         <Image
@@ -86,25 +88,26 @@ export function ProductCard({
           </div>
         ) : null}
       </Link>
+      {slug ? <WishlistHeartButton slug={slug} /> : null}
 
-      <div className="flex flex-1 flex-col px-3 pb-3 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
+      <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
         <div className="min-h-[2.75rem] sm:min-h-[3.3rem]">
           <Link
             href={href}
             className="block font-display text-xl leading-[1.1] tracking-[-0.02em] text-[#171717] transition-colors group-hover:text-[#171717] sm:text-[1.55rem] sm:leading-[1.05]"
           >
-            <span className="line-clamp-2">{name}</span>
+            <span className="line-clamp-2 break-words">{name}</span>
           </Link>
         </div>
 
         <div className="mt-3 flex flex-1 flex-col sm:mt-4">
-          <p className="line-clamp-2 min-h-10 text-sm leading-5 text-[#66584a] sm:pr-2 sm:text-[0.98rem]">
+          <p className="line-clamp-2 min-h-10 break-words text-sm leading-5 text-[#66584a] sm:pr-2 sm:text-[0.98rem]">
             {supportingLine}
           </p>
 
-          <div className="mt-3 flex items-end justify-between gap-2 sm:mt-4 sm:gap-3">
+          <div className="mt-auto flex items-end justify-between gap-2 pt-3 sm:pt-4 sm:gap-3">
             <div className="min-w-0 flex-1">
-              <div className="font-sans text-xl font-semibold leading-none text-[#171717] sm:text-[1.65rem]">
+              <div className="truncate font-sans text-xl font-semibold leading-none text-[#171717] sm:text-[1.65rem]">
                 {price}
               </div>
               <div className="mt-1.5 min-h-5">

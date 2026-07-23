@@ -40,6 +40,7 @@ type CloudinaryUploadResponse = {
 
 type UploadOptions = {
   mediaName?: string
+  productImage?: boolean
 }
 
 export function toMediaDTO(asset: {
@@ -115,6 +116,10 @@ export async function uploadOryCMSMedia(file: File, options: UploadOptions = {})
     throw new Error(validationError)
   }
 
+  if (options.productImage && !["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type)) {
+    throw new Error("Product images must be JPG, PNG, or WebP files.")
+  }
+
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME
   const apiKey = process.env.CLOUDINARY_API_KEY
   const apiSecret = process.env.CLOUDINARY_API_SECRET
@@ -129,7 +134,7 @@ export async function uploadOryCMSMedia(file: File, options: UploadOptions = {})
     .createHash("sha256")
     .update(Buffer.from(await file.arrayBuffer()))
     .digest("hex")
-  const publicId = `${folder}/${contentHash}`
+  const publicId = `${folder}/${options.productImage ? "product-" : ""}${contentHash}`
   const existingAsset = await orycmsPrisma.oryCMSMediaAsset.findUnique({ where: { publicId } })
 
   if (existingAsset) {
@@ -137,12 +142,13 @@ export async function uploadOryCMSMedia(file: File, options: UploadOptions = {})
   }
 
   const timestamp = Math.round(Date.now() / 1000).toString()
-  const uploadParams = {
+  const uploadParams: Record<string, string> = {
     folder,
     overwrite: "false",
     public_id: contentHash,
     timestamp,
     unique_filename: "false",
+    ...(options.productImage ? { transformation: "c_fill,g_auto,h_1200,w_1200" } : {}),
   }
   const signature = signCloudinaryParams(uploadParams, apiSecret)
   const form = new FormData()

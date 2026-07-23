@@ -43,10 +43,10 @@ const FOOTER_COLUMNS = [
   {
     heading: "Farmer Support",
     links: [
-      ["Farmer Services", "/#farmer-services"],
-      ["Knowledge Center", "/#knowledge-center"],
+      ["Farmer Services", "/farmer-services"],
+      ["Knowledge Center", "/knowledge-center"],
       ["Soil Care", "/soil-care"],
-      ["Bulk Support", "/#wholesale"],
+      ["Bulk Support", "/bulk-support"],
     ],
   },
 ]

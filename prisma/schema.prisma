@@ -171,10 +171,22 @@ model StorefrontUser {
   deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  wishlistItems   StorefrontWishlistItem[]
 
   @@index([status], map: "storefront_users_status_idx")
   @@index([deletedAt], map: "storefront_users_deleted_at_idx")
   @@map("storefront_users")
+}
+
+model StorefrontWishlistItem {
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String @map("user_id") @db.Uuid
+  productSlug String @map("product_slug")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user        StorefrontUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, productSlug])
+  @@index([userId], map: "storefront_wishlist_items_user_id_idx")
+  @@map("storefront_wishlist_items")
 }
 
 model StorefrontRefreshToken {
