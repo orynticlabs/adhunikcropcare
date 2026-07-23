@@ -57,6 +57,13 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
             slug: "inventory",
             description: "Track stock levels, locations, and low-stock warnings.",
           },
+          {
+            section: "Commerce",
+            label: "Discounts",
+            href: adminHref("/discounts"),
+            slug: "discounts",
+            description: "Create and manage discount codes, offers, and promotions.",
+          },
         ],
       },
       {
@@ -105,13 +112,6 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
             href: adminHref("/payments"),
             slug: "payments",
             description: "Review payment providers, transactions, and payout configuration.",
-          },
-          {
-            section: "Content",
-            label: "Discounts",
-            href: adminHref("/discounts"),
-            slug: "discounts",
-            description: "Create and manage discount codes, offers, and promotions.",
           },
         ],
       },

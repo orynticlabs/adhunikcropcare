@@ -47,7 +47,7 @@ export function ProductCard({
   rating = 4.8,
   reviews = 199,
   className = "",
-  imageSizes = "(max-width: 640px) 100vw, 33vw",
+  imageSizes = "(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(50vw - 2rem), (max-width: 1279px) calc(33vw - 1.5rem), 300px",
 }: ProductCardProps) {
   const supportingLine = buildSubtitle(badge, subtitle)
   const gallery = useMemo(() => (images && images.length > 0 ? images : [image]), [image, images])
@@ -63,7 +63,7 @@ export function ProductCard({
           alt={name}
           fill
           sizes={imageSizes}
-          className="object-contain object-center"
+          className="object-cover object-center transition-transform duration-300 group-hover:scale-[1.07]"
         />
 
         {overlayLabel ? (

@@ -6,7 +6,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   CheckCircle2, ChevronRight, CreditCard,
-  Home, Leaf, Lock, MapPin, Package, Phone, Plus, ShieldCheck, Tag,
+  Home, Leaf, Loader2, Lock, MapPin, Package, Phone, Plus, ShieldCheck, Tag,
   Truck, X,
 } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
@@ -26,10 +26,13 @@ const INDIA_STATES = [
   "West Bengal",
 ]
 
-const COUPONS: Record<string, number> = {
-  ORGANIC20: 20,
-  SOIL15: 15,
-  CROP10: 10,
+type AppliedCoupon = {
+  code: string
+  discountId: string
+  discountAmount: number
+  type: string
+  name: string
+  shortText: string | null
 }
 
 type SavedAddress = {
@@ -144,8 +147,9 @@ export default function CheckoutPage() {
   const [delivery,  setDelivery]    = useState<"standard" | "express">("standard")
   const [payment,   setPayment]     = useState<PaymentMethod>("cash_on_delivery")
   const [coupon,    setCoupon]      = useState("")
-  const [applied,   setApplied]     = useState<{ code: string; pct: number } | null>(null)
+  const [applied,   setApplied]     = useState<AppliedCoupon | null>(null)
   const [couponErr, setCouponErr]   = useState("")
+  const [couponLoading, setCouponLoading] = useState(false)
   const [errors,    setErrors]      = useState<Record<string, string>>({})
   const [placing, setPlacing] = useState(false)
   const [paymentErr, setPaymentErr] = useState("")
@@ -155,7 +159,7 @@ export default function CheckoutPage() {
 
   /* derived totals */
   const shippingCost   = delivery === "express" ? 99 : subtotal >= 999 ? 0 : 49
-  const discountAmount = applied ? Math.round(subtotal * applied.pct / 100) : 0
+  const discountAmount = applied ? applied.discountAmount : 0
   const total          = subtotal + shippingCost - discountAmount
 
   useEffect(() => {
@@ -209,14 +213,31 @@ export default function CheckoutPage() {
   }
 
   /* coupon */
-  function applyCoupon() {
+  async function applyCoupon() {
     const code = coupon.trim().toUpperCase()
-    if (COUPONS[code]) {
-      setApplied({ code, pct: COUPONS[code] })
-      setCouponErr("")
-    } else {
-      setApplied(null)
-      setCouponErr("Invalid coupon code. Try ORGANIC20, SOIL15, or CROP10.")
+    if (!code) return
+    setCouponLoading(true)
+    setCouponErr("")
+    try {
+      const csrfToken = await getCsrfToken()
+      const productSlugs = items.map((item) => (item as { productSlug?: string }).productSlug ?? "")
+      const r = await fetch("/api/auth/checkout/validate-coupon", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
+        body: JSON.stringify({ code, subtotal, shippingTotal: shippingCost, items: productSlugs.map((s) => ({ productSlug: s })) }),
+      })
+      const json = await r.json()
+      if (!json.success) {
+        setApplied(null)
+        setCouponErr(json.error?.message ?? "Invalid coupon code.")
+      } else {
+        setApplied(json.data as AppliedCoupon)
+        setCouponErr("")
+      }
+    } catch {
+      setCouponErr("Could not validate coupon. Please try again.")
+    } finally {
+      setCouponLoading(false)
     }
   }
 
@@ -351,7 +372,7 @@ export default function CheckoutPage() {
   function buildCheckoutPayload() {
     return {
       contact: { email, firstName, lastName, phone },
-      coupon: applied,
+      coupon: applied ? { code: applied.code, discountId: applied.discountId, discountAmount: applied.discountAmount, type: applied.type } : null,
       deliveryMethod: delivery,
       discountTotal: discountAmount,
       items: items.map((item) => ({
@@ -774,6 +795,7 @@ export default function CheckoutPage() {
                       <input
                         value={coupon}
                         onChange={e => { setCoupon(e.target.value.toUpperCase()); setApplied(null); setCouponErr("") }}
+                        onKeyDown={(e) => { if (e.key === "Enter") applyCoupon() }}
                         className="h-10 w-full rounded-xl border border-border/60 bg-background pl-9 pr-3 text-sm font-mono uppercase tracking-wider outline-none transition focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15"
                         placeholder="COUPON CODE"
                       />
@@ -781,15 +803,16 @@ export default function CheckoutPage() {
                     <button
                       type="button"
                       onClick={applyCoupon}
+                      disabled={couponLoading}
                       className={`${primaryButtonCls} h-10 rounded-xl px-4`}
                     >
-                      Apply
+                      {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
                     </button>
                   </div>
                   {applied && (
                     <p className="mt-2 flex items-center gap-1.5 text-xs text-[#033927]">
                       <ShieldCheck className="h-3.5 w-3.5 text-black" aria-hidden />
-                      <strong>{applied.code}</strong> applied — {applied.pct}% off saved!
+                      <strong>{applied.code}</strong> applied — {applied.name}!
                     </p>
                   )}
                   {couponErr && (
@@ -917,20 +940,26 @@ function clearCheckoutAttemptKey() {
 
 async function loadRazorpaySdk() {
   if (window.Razorpay) return
-  await new Promise<void>((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>('script[src="https://checkout.razorpay.com/v1/checkout.js"]')
-    if (existing) {
-      existing.addEventListener("load", () => resolve(), { once: true })
-      existing.addEventListener("error", () => reject(new Error("Unable to load Razorpay Checkout.")), { once: true })
-      return
-    }
-    const script = document.createElement("script")
-    script.src = "https://checkout.razorpay.com/v1/checkout.js"
-    script.async = true
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error("Unable to load Razorpay Checkout."))
-    document.body.appendChild(script)
-  })
+  await Promise.race([
+    new Promise<void>((resolve, reject) => {
+      const existing = document.querySelector<HTMLScriptElement>('script[src="https://checkout.razorpay.com/v1/checkout.js"]')
+      if (existing) {
+        if (window.Razorpay) { resolve(); return }
+        existing.addEventListener("load", () => resolve(), { once: true })
+        existing.addEventListener("error", () => reject(new Error("Unable to load Razorpay Checkout.")), { once: true })
+        return
+      }
+      const script = document.createElement("script")
+      script.src = "https://checkout.razorpay.com/v1/checkout.js"
+      script.async = true
+      script.onload = () => resolve()
+      script.onerror = () => reject(new Error("Unable to load Razorpay Checkout."))
+      document.body.appendChild(script)
+    }),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Razorpay took too long to load. Check your connection and try again.")), 10_000),
+    ),
+  ])
 }
 
 async function openRazorpayCheckout(input: {

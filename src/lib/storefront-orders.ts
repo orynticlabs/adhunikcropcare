@@ -3,6 +3,13 @@ import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { ensureStorefrontAuthSchema, normalizePhone, validateEmail } from "@/lib/storefront-auth"
 import { emailBaseUrl, sendAdminEmail, sendEmail, sendOrderAdminNotifications } from "@/lib/email/mailer"
 import { getEnabledOrderNotificationRecipients } from "@/lib/orycms/order-notification-emails"
+import { validateCouponCode, recordDiscountUsage } from "@/lib/orycms/discounts"
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function assertUuid(value: string, label = "id"): void {
+  if (!UUID_RE.test(value)) throw new Error(`Invalid ${label}.`)
+}
 
 export type StorefrontPaymentMethod = "cash_on_delivery" | "razorpay"
 
@@ -18,7 +25,7 @@ type CheckoutItem = {
 
 type CheckoutPayload = {
   contact: { email: string; firstName: string; lastName: string; phone: string }
-  coupon?: { code: string; pct: number } | null
+  coupon?: { code: string; discountId?: string; discountAmount?: number; type?: string; pct?: number } | null
   deliveryMethod: "standard" | "express"
   discountTotal: number
   items: CheckoutItem[]
@@ -32,6 +39,8 @@ type CheckoutPayload = {
 export type StorefrontOrderRow = {
   cancelled_at: Date | string | null
   contact: unknown
+  coupon_code: string | null
+  coupon_id: string | null
   created_at: Date | string
   delivery_method: string | null
   discount_total: string | number
@@ -71,7 +80,7 @@ type CheckoutOrderResponse = {
 const ORDER_SELECT = `
   id, user_id, number, status, payment_status, payment_method, razorpay_order_id, razorpay_payment_id,
   razorpay_signature, refund_status, invoice_number, contact, shipping_address, delivery_method,
-  subtotal, shipping_total, discount_total, reservation_expires_at, stock_released_at, cancelled_at,
+  subtotal, shipping_total, discount_total, coupon_code, coupon_id, reservation_expires_at, stock_released_at, cancelled_at,
   payment_timeline, tracking, invoice_url, items, total, created_at
 `
 
@@ -86,6 +95,36 @@ export async function createCheckoutOrder(userId: string, input: CheckoutPayload
   }
 
   const payload = normalizeCheckoutPayload(input)
+
+  // Server-side coupon re-validation
+  let validatedCouponId: string | null = null
+  let validatedCouponCode: string | null = null
+  let validatedDiscountAmount = payload.discountTotal
+
+  if (payload.coupon?.code) {
+    const productSlugs = payload.items.map((item) => (item as { productSlug?: string }).productSlug ?? "").filter(Boolean)
+    const [orderCountRow] = await orycmsPrisma.$queryRaw<{ cnt: bigint }[]>`
+      SELECT COUNT(*) AS cnt FROM storefront_orders
+      WHERE user_id = ${userId}::uuid AND payment_status = 'paid'
+    `
+    const orderCount = Number(orderCountRow?.cnt ?? 0)
+    const shippingCost = payload.shippingTotal
+    const result = await validateCouponCode(payload.coupon.code, {
+      userId,
+      subtotal: payload.subtotal,
+      shippingTotal: shippingCost,
+      productSlugs,
+      orderCount,
+    })
+    if (!result.valid) throw new Error(result.message)
+    validatedCouponId = result.discountId
+    validatedCouponCode = result.code
+    validatedDiscountAmount = result.discountAmount
+  }
+
+  // Recompute total using server-validated discount to prevent price manipulation
+  const validatedTotal = money(payload.subtotal + payload.shippingTotal - validatedDiscountAmount)
+
   const number = await uniqueOrderNumber()
   const invoiceNumber = `INV-${number}`
   const initialPaymentStatus = payload.paymentMethod === "cash_on_delivery" ? "pending" : "pending_payment"
@@ -96,7 +135,7 @@ export async function createCheckoutOrder(userId: string, input: CheckoutPayload
 
   try {
     if (payload.paymentMethod === "razorpay") {
-      const razorpayOrder = await createRazorpayOrder({ amount: payload.total, receipt: number })
+      const razorpayOrder = await createRazorpayOrder({ amount: validatedTotal, receipt: number })
       razorpayOrderId = razorpayOrder.id
     }
 
@@ -104,18 +143,23 @@ export async function createCheckoutOrder(userId: string, input: CheckoutPayload
     const [order] = await orycmsPrisma.$queryRaw<StorefrontOrderRow[]>`
       INSERT INTO storefront_orders (
         user_id, number, status, payment_status, payment_method, razorpay_order_id, contact,
-        shipping_address, delivery_method, subtotal, shipping_total, discount_total, invoice_number,
-        reservation_expires_at, payment_timeline, items, total
+        shipping_address, delivery_method, subtotal, shipping_total, discount_total, coupon_code, coupon_id,
+        invoice_number, reservation_expires_at, payment_timeline, items, total
       )
       VALUES (
         ${userId}::uuid, ${number}, ${initialStatus}, ${initialPaymentStatus}, ${payload.paymentMethod},
         ${razorpayOrderId}, ${JSON.stringify(payload.contact)}::jsonb, ${JSON.stringify(payload.shippingAddress)}::jsonb,
-        ${payload.deliveryMethod}, ${payload.subtotal}, ${payload.shippingTotal}, ${payload.discountTotal},
+        ${payload.deliveryMethod}, ${payload.subtotal}, ${payload.shippingTotal}, ${validatedDiscountAmount},
+        ${validatedCouponCode}, ${validatedCouponId}::uuid,
         ${invoiceNumber}, ${reservationExpiresAt}, ${JSON.stringify(timeline)}::jsonb,
-        ${JSON.stringify(reservedItems)}::jsonb, ${payload.total}
+        ${JSON.stringify(reservedItems)}::jsonb, ${validatedTotal}
       )
       RETURNING *
     `
+
+    if (validatedCouponId && validatedCouponCode) {
+      await recordDiscountUsage(validatedCouponId, userId, order.id, validatedDiscountAmount)
+    }
 
     await recordTransaction(order.id, userId, payload.paymentMethod === "razorpay" ? "order.created" : "cod.placed", initialPaymentStatus, payload.total, {
       razorpayOrderId,
@@ -126,7 +170,7 @@ export async function createCheckoutOrder(userId: string, input: CheckoutPayload
     const response = {
       order: serializeOrder(order),
       razorpay: payload.paymentMethod === "razorpay" ? {
-        amount: Math.round(payload.total * 100),
+        amount: Math.round(validatedTotal * 100),
         currency: "INR" as const,
         keyId: getRazorpayKeyId(),
         orderId: razorpayOrderId,
@@ -146,6 +190,7 @@ export async function verifyRazorpayPayment(userId: string, input: {
   razorpayPaymentId: string
   razorpaySignature: string
 }, idempotencyKey?: string | null) {
+  assertUuid(input.orderId, "orderId")
   await ensureStorefrontAuthSchema()
   if (idempotencyKey) {
     const saved = await getIdempotencyResponse(userId, "checkout-verify", idempotencyKey)
@@ -166,6 +211,7 @@ export async function verifyRazorpayPayment(userId: string, input: {
 }
 
 export async function retryRazorpayPayment(userId: string, orderId: string) {
+  assertUuid(orderId, "orderId")
   await ensureStorefrontAuthSchema()
   await releaseExpiredStockReservations()
   const [order] = await selectOrderForUser(orderId, userId)
@@ -411,6 +457,7 @@ export async function restoreOrderInventory(order: StorefrontOrderRow, event = "
 
 /** Loads a raw order row by id without user scoping — for admin/fulfillment use only. */
 export async function selectOrderRowById(orderId: string): Promise<StorefrontOrderRow | null> {
+  if (!UUID_RE.test(orderId)) return null
   await ensureStorefrontAuthSchema()
   const rows = await orycmsPrisma.$queryRawUnsafe<StorefrontOrderRow[]>(
     `SELECT ${ORDER_SELECT} FROM storefront_orders WHERE id = $1::uuid LIMIT 1`,

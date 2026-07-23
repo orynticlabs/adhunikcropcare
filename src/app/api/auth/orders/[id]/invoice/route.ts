@@ -15,6 +15,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   try {
     const user = await requireUser()
     const { id } = await params
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return jsonError("Order not found.", 404, "ORDER_NOT_FOUND")
 
     const [owned] = await orycmsPrisma.$queryRaw<{ id: string; number: string }[]>`
       SELECT id, number FROM storefront_orders WHERE id = ${id}::uuid AND user_id = ${user.id}::uuid LIMIT 1

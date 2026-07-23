@@ -8,7 +8,7 @@ import {
   ChevronLeft, ChevronRight,
   Info,
 } from "lucide-react"
-import Header from "@/components/layout/header"
+import HeaderServer from "@/components/layout/header-server"
 import AnnouncementBar from "@/components/layout/announcement-bar"
 import KnowledgeTabs from "@/components/home/knowledge-tabs"
 import FAQAccordion from "@/components/home/faq-accordion"
@@ -60,6 +60,8 @@ function comparePrice(amount: number, uplift = 1.22) {
   return formatINR(originalAmount)
 }
 
+export const revalidate = 180 // 3-minute ISR
+
 async function getHomeProducts() {
   try {
     return (await listOryCMSProducts({ publishedOnly: true })).slice(0, 8)
@@ -75,7 +77,7 @@ export default async function Home() {
   return (
     <div className="relative min-h-screen overflow-x-hidden">
       <AnnouncementBar />
-      <Header />
+      <HeaderServer />
       <CartDrawer />
 
       <main>

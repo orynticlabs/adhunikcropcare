@@ -588,3 +588,76 @@ model OryCMSOrderView {
 
   @@map("orycms_order_views")
 }
+
+model OryCMSDiscount {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String
+  code                 String?   @unique
+  shortText            String?   @map("short_text")
+  description          String?
+  type                 String    @default("percentage")
+  value                Decimal   @default(0) @db.Decimal(12, 2)
+  minOrderAmount       Decimal?  @map("min_order_amount") @db.Decimal(12, 2)
+  maxDiscountAmount    Decimal?  @map("max_discount_amount") @db.Decimal(12, 2)
+  usageLimit           Int?      @map("usage_limit")
+  perUserLimit         Int?      @map("per_user_limit")
+  usageCount           Int       @default(0) @map("usage_count")
+  startsAt             DateTime? @map("starts_at") @db.Timestamptz(6)
+  endsAt               DateTime? @map("ends_at") @db.Timestamptz(6)
+  active               Boolean   @default(true)
+  autoApply            Boolean   @default(false) @map("auto_apply")
+  showInOffers         Boolean   @default(true) @map("show_in_offers")
+  showInBar            Boolean   @default(false) @map("show_in_bar")
+  priority             Int       @default(0)
+  bgColor              String?   @map("bg_color")
+  textColor            String?   @map("text_color")
+  buttonColor          String?   @map("button_color")
+  buttonText           String?   @map("button_text")
+  badgeText            String?   @map("badge_text")
+  appliesTo            String    @default("entire_store") @map("applies_to")
+  targetIds            Json      @default("[]") @map("target_ids")
+  firstOrderOnly       Boolean   @default(false) @map("first_order_only")
+  loggedInOnly         Boolean   @default(false) @map("logged_in_only")
+  newCustomersOnly     Boolean   @default(false) @map("new_customers_only")
+  existingCustomersOnly Boolean  @default(false) @map("existing_customers_only")
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt            DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([active], map: "orycms_discounts_active_idx")
+  @@index([deletedAt], map: "orycms_discounts_deleted_at_idx")
+  @@map("orycms_discounts")
+}
+
+model OryCMSDiscountUsage {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  discountId String   @map("discount_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  orderId    String   @map("order_id") @db.Uuid
+  amount     Decimal  @default(0) @db.Decimal(12, 2)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([discountId], map: "orycms_discount_usages_discount_id_idx")
+  @@index([userId, discountId], map: "orycms_discount_usages_user_id_discount_id_idx")
+  @@map("orycms_discount_usages")
+}
+
+model OryCMSAnnouncement {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  content   String    @default("")
+  ctaText   String?   @map("cta_text")
+  ctaUrl    String?   @map("cta_url")
+  startsAt  DateTime? @map("starts_at") @db.Timestamptz(6)
+  endsAt    DateTime? @map("ends_at") @db.Timestamptz(6)
+  active    Boolean   @default(true)
+  priority  Int       @default(0)
+  bgColor   String?   @map("bg_color")
+  textColor String?   @map("text_color")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([active, priority], map: "orycms_announcements_active_idx")
+  @@index([deletedAt], map: "orycms_announcements_deleted_at_idx")
+  @@map("orycms_announcements")
+}

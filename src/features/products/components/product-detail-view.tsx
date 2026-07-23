@@ -1,9 +1,11 @@
 "use client"
 
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import Image from "next/image"
 import {
   Check,
+  ChevronLeft,
+  ChevronRight,
   Copy,
   Minus,
   Plus,
@@ -183,6 +185,7 @@ function isHtml(value?: string) {
 
 export default function ProductDetailView({ product }: { product: ProductDetail }) {
   const [activeImage, setActiveImage] = useState(0)
+  const [imgVisible, setImgVisible] = useState(true)
   const [activeOption, setActiveOption] = useState(0)
   const [quantity, setQuantity] = useState(1)
   const [pincode, setPincode] = useState("")
@@ -193,6 +196,13 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
   const [couponCopied, setCouponCopied] = useState(false)
   const [openSpec, setOpenSpec] = useState<string>("Product Specifications")
   const [visibleReviews, setVisibleReviews] = useState(3)
+
+  type LiveOffer = { id: string; name: string; code: string | null; shortText: string | null; bgColor: string | null; textColor: string | null; badgeText: string | null; buttonText: string | null }
+  const [offers, setOffers] = useState<LiveOffer[] | null>(null)
+  const [offerIndex, setOfferIndex] = useState(0)
+  const [copiedCode, setCopiedCode] = useState<string | null>(null)
+  const offerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const offerTextRef  = useRef<HTMLDivElement>(null)
   const { addItem, openCart } = useCart()
 
   const selected = product.options[activeOption]
@@ -201,15 +211,33 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
 
   // Auto-rotate the gallery. Pauses while the user is hovering the image.
   const [paused, setPaused] = useState(false)
+
+  function goToImage(index: number) {
+    if (index === activeImage) return
+    setImgVisible(false)
+    setTimeout(() => {
+      setActiveImage(index)
+      setImgVisible(true)
+    }, 220)
+  }
+
   useEffect(() => {
     if (paused || product.images.length <= 1) return
     const timer = window.setInterval(() => {
-      setActiveImage((i) => (i + 1) % product.images.length)
+      setImgVisible(false)
+      setTimeout(() => {
+        setActiveImage((i) => {
+          const next = (i + 1) % product.images.length
+          return next
+        })
+        setImgVisible(true)
+      }, 220)
     }, 4000)
     return () => window.clearInterval(timer)
   }, [paused, product.images.length])
 
   function addQuantityToCart() {
+    if (product.stockQuantity === 0) return
     for (let index = 0; index < quantity; index += 1) {
       addItem({
         name: product.title,
@@ -227,6 +255,48 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
       navigator.clipboard.writeText("ADHUNIK10").catch(() => {})
     }
     setCouponCopied(true)
+  }
+
+  // Fetch live offers
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (product.slug) params.set("productSlug", product.slug)
+    if (product.category) params.set("categorySlug", product.category)
+    fetch(`/api/storefront/discounts/offers?${params}`)
+      .then((r) => r.json())
+      .then((json) => { if (json.success && Array.isArray(json.data)) setOffers(json.data) })
+      .catch(() => {})
+  }, [product.slug, product.category])
+
+  // Rotate offers carousel
+  useEffect(() => {
+    if (!offers || offers.length <= 1) return
+    if (offerTimerRef.current) clearInterval(offerTimerRef.current)
+    offerTimerRef.current = setInterval(() => {
+      const el = offerTextRef.current
+      if (!el) return
+      el.style.opacity   = "0"
+      el.style.transform = "translateY(-6px)"
+      setTimeout(() => {
+        setOfferIndex((i) => (i + 1) % (offers?.length ?? 1))
+        el.style.transition = "none"
+        el.style.opacity    = "0"
+        el.style.transform  = "translateY(6px)"
+        void el.offsetHeight
+        el.style.transition = "opacity 300ms ease, transform 300ms ease"
+        el.style.opacity    = "1"
+        el.style.transform  = "translateY(0)"
+      }, 300)
+    }, 4000)
+    return () => { if (offerTimerRef.current) clearInterval(offerTimerRef.current) }
+  }, [offers, offerIndex])
+
+  function copyOfferCode(code: string) {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(code).catch(() => {})
+    }
+    setCopiedCode(code)
+    setTimeout(() => setCopiedCode(null), 2000)
   }
 
   async function checkPincode() {
@@ -356,56 +426,81 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
           {/* Left: sticky image */}
           <div className="lg:sticky lg:top-28 lg:self-start">
             <div
-              className="relative overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm"
+              className="relative overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm group"
               onMouseEnter={() => setPaused(true)}
               onMouseLeave={() => setPaused(false)}
             >
               <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 rounded-md bg-[#033927] px-3 py-1 text-xs font-semibold text-white">
                 <Sparkles className="h-3.5 w-3.5" aria-hidden /> Bestseller
               </span>
-              <div className="relative aspect-square">
+
+              {/* Main image with crossfade + hover zoom */}
+              <div className="relative aspect-square w-full overflow-hidden">
                 <Image
                   src={product.images[activeImage].src}
                   alt={product.images[activeImage].alt}
                   fill
                   priority
-                  sizes="(max-width: 1023px) 100vw, 50vw"
-                  className="object-contain"
+                  sizes="(max-width: 1023px) calc(100vw - 2rem), calc(50vw - 3rem)"
+                  className="object-cover transition-all duration-300 group-hover:scale-110"
+                  style={{ opacity: imgVisible ? 1 : 0, transition: "opacity 220ms ease, transform 300ms ease" }}
                 />
               </div>
-              {/* Dot indicators */}
+
+              {/* Prev / Next arrows — only when multiple images */}
               {product.images.length > 1 && (
-                <div className="absolute inset-x-0 bottom-4 flex justify-center gap-1.5">
-                  {product.images.map((_, i) => (
-                    <span
-                      key={i}
-                      className={`h-1.5 w-1.5 rounded-full border border-[#b9cdb3] ${
-                        i === activeImage ? "bg-[#0d5a48]" : "bg-white"
-                      }`}
-                    />
-                  ))}
-                </div>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => goToImage((activeImage - 1 + product.images.length) % product.images.length)}
+                    aria-label="Previous image"
+                    className="absolute left-3 top-1/2 z-10 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-sm backdrop-blur-sm transition hover:bg-white hover:shadow-md"
+                  >
+                    <ChevronLeft className="h-4 w-4 text-[#033927]" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToImage((activeImage + 1) % product.images.length)}
+                    aria-label="Next image"
+                    className="absolute right-3 top-1/2 z-10 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-sm backdrop-blur-sm transition hover:bg-white hover:shadow-md"
+                  >
+                    <ChevronRight className="h-4 w-4 text-[#033927]" />
+                  </button>
+
+                  {/* Dot indicators — clickable */}
+                  <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
+                    {product.images.map((_, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => goToImage(i)}
+                        aria-label={`Show image ${i + 1}`}
+                        className={`rounded-full border border-[#b9cdb3] transition-all duration-300 ${
+                          i === activeImage ? "w-4 h-1.5 bg-[#0d5a48]" : "h-1.5 w-1.5 bg-white/70 hover:bg-white"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 
             {/* Thumbnails */}
             {product.images.length > 1 && (
-              <div className="mt-6 flex items-center justify-center">
-                <div className="flex gap-2 rounded-xl border border-border/60 bg-white p-2 shadow-sm">
-                  {product.images.map((image, i) => (
-                    <button
-                      key={image.src}
-                      type="button"
-                      onClick={() => setActiveImage(i)}
-                      aria-label={`Show product image ${i + 1}`}
-                      className={`relative h-16 w-16 overflow-hidden rounded-lg border-2 transition-colors ${
-                        i === activeImage ? "border-[#033927]" : "border-transparent hover:border-[#689c30]/60"
-                      }`}
-                    >
-                      <Image src={image.src} alt="" fill sizes="64px" className="object-cover" />
-                    </button>
-                  ))}
-                </div>
+              <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
+                {product.images.map((image, i) => (
+                  <button
+                    key={image.src}
+                    type="button"
+                    onClick={() => goToImage(i)}
+                    aria-label={`Show product image ${i + 1}`}
+                    className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 bg-[#f8faf7] transition-all duration-200 ${
+                      i === activeImage ? "border-[#033927] scale-105 shadow-sm" : "border-transparent hover:border-[#689c30]/60"
+                    }`}
+                  >
+                    <Image src={image.src} alt="" fill sizes="64px" className="object-contain p-1.5" />
+                  </button>
+                ))}
               </div>
             )}
           </div>
@@ -550,30 +645,87 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               <button
                 type="button"
                 onClick={addQuantityToCart}
-                className="inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-[#033927] px-6 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-[#689c30] hover:!text-black"
+                disabled={product.stockQuantity === 0}
+                className="inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-[#033927] px-6 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-[#689c30] hover:!text-black disabled:cursor-not-allowed disabled:bg-neutral-400 disabled:hover:!text-white"
               >
                 <ShoppingBag className="h-4 w-4" aria-hidden />
-                Add to Cart
+                {product.stockQuantity === 0 ? "Out of Stock" : "Add to Cart"}
               </button>
             </div>
 
             {/* Offers */}
-            <div>
-              <p className="text-base font-bold">Offers for you</p>
-              <div className="mt-3 rounded-lg border border-dashed border-[#689c30]/50 bg-[#689c30]/10 p-4">
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-[#033927]">10% off unlocked!</p>
-                  <button
-                    type="button"
-                    onClick={copyCoupon}
-                    className="inline-flex items-center gap-1 text-sm font-semibold text-[#033927] transition-colors hover:text-[#689c30]"
-                  >
-                    {couponCopied ? "Copied" : "ADHUNIK10"} <Copy className="h-3.5 w-3.5" aria-hidden />
-                  </button>
+            {(offers === null || offers.length > 0) && (
+              <div>
+                <p className="text-base font-bold">Offers for you</p>
+                <div
+                  ref={offerTextRef}
+                  className="mt-3 rounded-lg border border-dashed border-[#689c30]/50 p-4"
+                  style={{
+                    backgroundColor: offers?.[offerIndex % (offers.length || 1)]?.bgColor ?? "rgba(104,156,48,0.1)",
+                    transition: "opacity 300ms ease, transform 300ms ease",
+                  }}
+                >
+                  {offers && offers.length > 0 ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {offers[offerIndex % offers.length]?.badgeText && (
+                            <span className="rounded bg-[#033927] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+                              {offers[offerIndex % offers.length].badgeText}
+                            </span>
+                          )}
+                          <p
+                            className="font-semibold"
+                            style={{ color: offers[offerIndex % offers.length]?.textColor ?? "#033927" }}
+                          >
+                            {offers[offerIndex % offers.length]?.name}
+                          </p>
+                        </div>
+                        {offers[offerIndex % offers.length]?.code && (
+                          <button
+                            type="button"
+                            onClick={() => copyOfferCode(offers[offerIndex % offers.length].code!)}
+                            className="inline-flex items-center gap-1 text-sm font-semibold text-[#033927] transition-colors hover:text-[#689c30]"
+                          >
+                            {copiedCode === offers[offerIndex % offers.length].code ? "Copied!" : offers[offerIndex % offers.length].code}
+                            <Copy className="h-3.5 w-3.5" aria-hidden />
+                          </button>
+                        )}
+                      </div>
+                      {offers[offerIndex % offers.length]?.shortText && (
+                        <p className="mt-1 text-sm text-foreground/70">{offers[offerIndex % offers.length].shortText}</p>
+                      )}
+                      {offers.length > 1 && (
+                        <div className="mt-2 flex items-center gap-1">
+                          {offers.map((_, i) => (
+                            <button
+                              key={i}
+                              onClick={() => setOfferIndex(i)}
+                              className={`rounded-full transition-all duration-300 ${i === offerIndex % offers.length ? "w-3.5 h-[3px] bg-[#033927]" : "w-[3px] h-[3px] bg-[#033927]/30"}`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    /* Loading / fallback state */
+                    <>
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-[#033927]">10% off unlocked!</p>
+                        <button
+                          type="button"
+                          onClick={copyCoupon}
+                          className="inline-flex items-center gap-1 text-sm font-semibold text-[#033927] transition-colors hover:text-[#689c30]"
+                        >
+                          {couponCopied ? "Copied" : "ADHUNIK10"} <Copy className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                      </div>
+                      <p className="mt-1 text-sm text-foreground/70">Free shipping + Flat 10% off unlocked!</p>
+                    </>
+                  )}
                 </div>
-                <p className="mt-1 text-sm text-foreground/70">Free shipping + Flat 10% off unlocked!</p>
               </div>
-            </div>
+            )}
 
             {/* Description */}
             {product.description.trim() &&
@@ -728,7 +880,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                   subtitle={item.desc}
                   rating={Number(item.rating)}
                   reviews={Number(item.rating) * 40}
-                  imageSizes="(max-width: 1023px) 50vw, 25vw"
+                  imageSizes="(max-width: 639px) calc(50vw - 1rem), (max-width: 1023px) calc(50vw - 1.5rem), 25vw"
                 />
               ))}
             </div>

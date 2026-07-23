@@ -227,12 +227,6 @@ function ProductsPageContent() {
                   </div>
                 ))}
               </div>
-              <Link
-                href="/admin/products/new"
-                className="mt-5 inline-flex h-10 items-center rounded-full bg-[#033927] px-5 text-sm font-semibold text-white shadow-soft transition-colors hover:bg-[#689c30] hover:!text-black"
-              >
-                Add Product
-              </Link>
             </div>
           </div>
         </div>
@@ -449,7 +443,7 @@ function ProductsPageContent() {
                     subtitle={p.shortDescription || `${p.category} solution for better crop outcomes`}
                     rating={p.rating}
                     reviews={p.reviews}
-                    imageSizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    imageSizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(50vw - 2rem), (max-width: 1279px) calc(33vw - 1.5rem), 300px"
                   />
                 )
               })}

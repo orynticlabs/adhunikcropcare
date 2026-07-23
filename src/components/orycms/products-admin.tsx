@@ -626,7 +626,7 @@ export function OryCMSProductForm({ id }: { id?: string }) {
       {productLoading ? <ProductFormSkeleton /> : null}
 
       {!productLoading ? (
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-5">
           <Card title="Product details">
             <Field label="Product Name*" value={product.name} onChange={(name) => patch({ name })} />
@@ -849,10 +849,10 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                         if (dragIndex !== null) moveImage(dragIndex, index)
                         setDragIndex(null)
                       }}
-                      className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-surface-muted"
+                      className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-white"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={image.url} alt={image.name ?? "Product image"} className="h-full w-full object-cover" />
+                      <img src={image.url} alt={image.name ?? "Product image"} className="h-full w-full object-contain p-2" />
                       <span className="absolute left-1 top-1 grid h-6 w-6 cursor-grab place-items-center rounded-full bg-background/90 text-muted-foreground shadow-xs">
                         <GripVertical className="h-3.5 w-3.5" />
                       </span>
@@ -895,6 +895,9 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                 Upload or select images to build this product gallery.
               </div>
             )}
+            <p className="text-[11px] text-muted-foreground">
+              Recommended: <strong>1200 × 1200 px</strong>, 1:1 square, JPG or PNG, max 500 KB. Images are displayed with <code>object-contain</code> — the full product is always visible.
+            </p>
           </Card>
         </div>
       </div>
@@ -936,7 +939,7 @@ function Card({ children, title }: { children: ReactNode; title: string }) {
 
 function ProductFormSkeleton() {
   return (
-    <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="space-y-5">
         {[220, 190, 170].map((height, index) => (
           <div key={index} className="rounded-xl border border-border bg-surface p-5 shadow-xs">
@@ -988,7 +991,7 @@ function ProductDeleteDialog({
 
   return (
     <div className="fixed inset-0 z-[55] grid place-items-center bg-background/85 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-surface shadow-pop">
+      <div className="mx-4 w-full max-w-md overflow-hidden rounded-xl border border-border bg-surface shadow-pop sm:mx-auto">
         <div className="flex gap-3 border-b border-border bg-surface-muted p-5">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive">
             <Trash2 className="h-5 w-5" />
@@ -1040,7 +1043,7 @@ function ProductThumb({ product }: { product: Product }) {
           onError={(event) => {
             event.currentTarget.style.display = "none"
           }}
-          className="relative h-full w-full object-cover"
+          className="relative h-full w-full object-contain p-0.5"
         />
       ) : null}
     </div>
@@ -1131,7 +1134,7 @@ function ProductToast({ toast }: { toast: Toast | null }) {
   if (!toast) return null
 
   return (
-    <div className="fixed bottom-4 right-4 z-[60] w-[min(360px,calc(100vw-2rem))] rounded-xl border border-border bg-surface p-3 text-[12.5px] shadow-pop">
+    <div className="fixed bottom-4 right-4 z-[60] w-[min(360px,calc(100vw-2rem))] rounded-xl border border-border bg-white p-3 text-[12.5px] shadow-pop">
       <div className="flex items-start gap-3">
         {toast.type === "success" ? (
           <CheckCircle2 className="mt-0.5 h-4 w-4 text-chart-3" />
@@ -1161,7 +1164,7 @@ function MediaPickerDialog({
 
   return (
     <div className="fixed inset-0 z-50 bg-background/85 p-4 backdrop-blur-sm">
-      <div className="mx-auto flex h-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-pop">
+      <div className="mx-2 flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-pop sm:mx-auto">
         <div className="flex items-center justify-between gap-3 border-b border-border bg-surface-muted px-5 py-4">
           <div>
             <div className="text-[13.5px] font-semibold">Select from Media</div>
@@ -1202,7 +1205,7 @@ function MediaPickerDialog({
                   )}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={image.url} alt={image.name ?? "Media"} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+                  <img src={image.url} alt={image.name ?? "Media"} className="h-full w-full object-contain p-1.5 transition-transform duration-300 group-hover:scale-[1.03]" />
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
                     <div className="truncate text-[11px] font-medium text-white">{image.name ?? "Media image"}</div>
                   </div>
@@ -1245,7 +1248,7 @@ function ProductImagePreview({
 
   return (
     <div className="fixed inset-0 z-[55] grid place-items-center bg-background/85 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-4xl overflow-hidden rounded-xl border border-border bg-surface shadow-pop">
+      <div className="mx-4 w-full max-w-4xl overflow-hidden rounded-xl border border-border bg-surface shadow-pop sm:mx-auto">
         <div className="flex items-center justify-between gap-3 border-b border-border bg-surface-muted px-4 py-3">
           <div className="truncate text-[13.5px] font-semibold">{image.name ?? "Product image"}</div>
           <button
