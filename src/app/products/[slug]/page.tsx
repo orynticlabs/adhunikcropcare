@@ -1,7 +1,7 @@
 import AnnouncementBar from "@/components/layout/announcement-bar"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import CropSuccessStories from "@/components/home/crop-success-stories"
-import Header from "@/components/layout/header"
+import HeaderServer from "@/components/layout/header-server"
 import ProductDetailView, { ProductDetail } from "@/features/products/components/product-detail-view"
 import SiteFooter from "@/components/layout/site-footer"
 import TestimonialsCarousel from "@/components/home/testimonials-carousel"
@@ -15,11 +15,7 @@ import {
 } from "@/lib/orycms/products"
 import { notFound } from "next/navigation"
 
-export const dynamic = "force-dynamic"
-
-export function generateStaticParams() {
-  return []
-}
+export const revalidate = 300 // 5-minute ISR — serves cached HTML, re-renders in background
 
 const inr = new Intl.NumberFormat("en-IN", {
   currency: "INR",
@@ -127,14 +123,14 @@ function mapOryCMSProductToDetail(
 
 async function loadProduct(slug: string) {
   try {
-    const product = await getPublishedOryCMSProductBySlug(slug)
+    const [product, allProducts] = await Promise.all([
+      getPublishedOryCMSProductBySlug(slug),
+      listOryCMSProducts({ publishedOnly: true }),
+    ])
     if (!product) return null
-
-    const allProducts = await listOryCMSProducts({ publishedOnly: true })
-    return mapOryCMSProductToDetail(
-      product,
-      allProducts.filter((item) => item.id !== product.id),
-    )
+    // Limit recommendations to 8 candidates — no need to pass the full catalog
+    const recommendations = allProducts.filter((item) => item.id !== product.id).slice(0, 8)
+    return mapOryCMSProductToDetail(product, recommendations)
   } catch {
     return null
   }
@@ -153,7 +149,7 @@ export default async function ProductPage({
   return (
     <div className="min-h-screen bg-background text-foreground">
       <AnnouncementBar />
-      <Header />
+      <HeaderServer />
       <CartDrawer />
       <ProductDetailView product={product} />
 

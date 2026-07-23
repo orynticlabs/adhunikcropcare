@@ -3,7 +3,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Atom, ChevronRight, Dna, FlaskConical, Leaf, Network, Orbit, Sparkles } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
-import Header from "@/components/layout/header"
+import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 
@@ -19,7 +19,7 @@ const CULTURES = [
 export default function BioProductsPage() {
   return (
     <div className="min-h-screen overflow-hidden bg-[#eff5ef] text-[#17382d]">
-      <AnnouncementBar /><Header /><CartDrawer />
+      <AnnouncementBar /><HeaderServer /><CartDrawer />
       <main>
       <section className="relative isolate overflow-hidden bg-[#062f24] pb-16 pt-32 text-white sm:pb-20 sm:pt-40 lg:min-h-[760px] lg:pb-24 lg:pt-44">
           <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_center,white_1px,transparent_1px)] [background-size:34px_34px]" />

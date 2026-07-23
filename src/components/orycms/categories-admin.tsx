@@ -663,7 +663,7 @@ function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-[55] grid place-items-center bg-background/85 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-surface shadow-pop">
+      <div className="mx-4 w-full max-w-md overflow-hidden rounded-xl border border-border bg-surface shadow-pop sm:mx-auto">
         <div className="flex gap-3 border-b border-border bg-surface-muted p-5">
           <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive">
             <Trash2 className="h-5 w-5" />
@@ -755,7 +755,7 @@ function MediaDialog({
 
   return (
     <div className="fixed inset-0 z-50 bg-background/85 p-4 backdrop-blur-sm">
-      <div className="mx-auto flex h-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-pop">
+      <div className="mx-2 flex h-full w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-pop sm:mx-auto">
         <div className="flex items-center justify-between gap-3 border-b border-border bg-surface-muted px-5 py-4">
           <div>
             <div className="text-[13.5px] font-semibold">Select from Media</div>
@@ -804,7 +804,7 @@ function OryToast({ toast }: { toast: Toast | null }) {
   if (!toast) return null
 
   return (
-    <div className="fixed bottom-4 right-4 z-[60] w-[min(360px,calc(100vw-2rem))] rounded-xl border border-border bg-surface p-3 text-[12.5px] shadow-pop">
+    <div className="fixed bottom-4 right-4 z-[60] w-[min(360px,calc(100vw-2rem))] rounded-xl border border-border bg-white p-3 text-[12.5px] shadow-pop">
       <div className="flex items-start gap-3">
         {toast.type === "success" ? (
           <CheckCircle2 className="mt-0.5 h-4 w-4 text-chart-3" />

@@ -9,6 +9,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
   try {
     const user = await requireUser()
     const { id } = await params
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return jsonError("Order not found.", 404, "ORDER_NOT_FOUND")
     await ensureStorefrontAuthSchema()
     const rows = await orycmsPrisma.$queryRaw<Record<string, unknown>[]>`
       SELECT id, number, status, payment_status, payment_method, razorpay_order_id, razorpay_payment_id,

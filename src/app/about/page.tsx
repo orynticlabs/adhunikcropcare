@@ -16,7 +16,7 @@ import {
   Users,
 } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
-import Header from "@/components/layout/header"
+import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 
@@ -62,7 +62,7 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen overflow-hidden bg-background text-foreground">
       <AnnouncementBar />
-      <Header />
+      <HeaderServer />
       <CartDrawer />
 
       <main>

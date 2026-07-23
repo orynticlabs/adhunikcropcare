@@ -450,7 +450,7 @@ function ConfirmModal({ action, count, onClose, onConfirm, saving }: { action: N
 function Modal({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) {
   return (
     <div className="fixed inset-0 z-[90] grid place-items-center bg-background/85 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-white text-foreground shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
+      <div className="mx-4 max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-white text-foreground shadow-[0_24px_80px_rgba(15,23,42,0.22)] sm:mx-auto">
         <div className="flex items-center justify-between gap-4 border-b border-border bg-white px-5 py-4">
           <h2 className="text-[16px] font-semibold">{title}</h2>
           <button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg text-[18px] text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground">×</button>
@@ -508,7 +508,7 @@ function Info({ label: key, value }: { label: string; value: string }) {
 }
 
 function ToastStack({ toasts }: { toasts: Toast[] }) {
-  return <div className="fixed bottom-4 right-4 z-[100] space-y-2">{toasts.map((toast) => <div key={toast.id} className={cn("rounded-xl border bg-surface px-4 py-3 text-[13px] shadow-lg", toast.tone === "success" ? "border-success/30 text-success" : "border-destructive/30 text-destructive")}>{toast.message}</div>)}</div>
+  return <div className="fixed bottom-4 right-4 z-[100] space-y-2">{toasts.map((toast) => <div key={toast.id} className={cn("rounded-xl border bg-white px-4 py-3 text-[13px] shadow-lg", toast.tone === "success" ? "border-success/30 text-success" : "border-destructive/30 text-destructive")}>{toast.message}</div>)}</div>
 }
 
 function initials(user: Pick<AdminUser, "email" | "fullName">) {
