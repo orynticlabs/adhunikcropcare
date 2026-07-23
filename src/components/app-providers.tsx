@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { AuthModal } from "@/components/auth/auth-modal"
 import { CartProvider } from "@/features/cart/cart-context"
 import { AuthProvider } from "@/features/auth/auth-context"
+import { WishlistProvider } from "@/features/wishlist/wishlist-context"
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -15,10 +16,10 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthProvider>
-      <CartProvider>
+      <WishlistProvider><CartProvider>
         {children}
         <Suspense fallback={null}><AuthModal /></Suspense>
-      </CartProvider>
+      </CartProvider></WishlistProvider>
     </AuthProvider>
   )
 }

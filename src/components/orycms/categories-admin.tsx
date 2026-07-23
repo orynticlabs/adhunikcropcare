@@ -60,10 +60,6 @@ export function OryCMSCategoriesList() {
   const [statusFilter, setStatusFilter] = useState<"all" | CategoryStatus>("all")
   const [toast, setToast] = useState<Toast | null>(null)
 
-  useEffect(() => {
-    void loadCategories()
-  }, [])
-
   async function loadCategories() {
     setLoading(true)
     const json = await fetch("/api/orycms/categories").then((response) => response.json())
@@ -71,6 +67,10 @@ export function OryCMSCategoriesList() {
     setCategories(json.success ? json.data : [])
     setLoading(false)
   }
+
+  useEffect(() => {
+    void loadCategories()
+  }, [])
 
   async function deleteCategory(category: Category) {
     const json = await fetch(`/api/orycms/categories/${category.id}`, { method: "DELETE" }).then((r) => r.json())

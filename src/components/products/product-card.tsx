@@ -20,6 +20,7 @@ type ProductCardProps = {
   reviews?: number
   className?: string
   imageSizes?: string
+  slug?: string
 }
 
 function buildSubtitle(badge?: string, subtitle?: string) {
@@ -48,14 +49,15 @@ export function ProductCard({
   reviews = 199,
   className = "",
   imageSizes = "(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(50vw - 2rem), (max-width: 1279px) calc(33vw - 1.5rem), 300px",
+  slug,
 }: ProductCardProps) {
   const supportingLine = buildSubtitle(badge, subtitle)
   const gallery = useMemo(() => (images && images.length > 0 ? images : [image]), [image, images])
-  const slug = href.match(/^\/products\/([^/?#]+)/)?.[1]
+  const productSlug = slug ?? href.match(/^\/products\/([^/?#]+)/)?.[1]
 
   return (
     <article
-      className={`group relative mx-auto flex h-[34rem] w-full max-w-[20rem] flex-col overflow-hidden rounded-2xl border border-[#e2e7df] bg-white shadow-sm transition-colors duration-200 hover:border-[#b9cdb3] hover:shadow-md ${className}`}
+      className={`group relative flex h-full min-h-[28rem] w-full flex-col overflow-hidden rounded-2xl border border-[#e2e7df] bg-white shadow-sm transition-all duration-200 hover:border-[#b9cdb3] hover:shadow-md ${className}`}
     >
       <Link href={href} className="relative block aspect-square shrink-0 overflow-hidden bg-white" aria-label={`View ${name}`}>
         <Image
@@ -63,16 +65,16 @@ export function ProductCard({
           alt={name}
           fill
           sizes={imageSizes}
-          className="object-cover object-center transition-transform duration-300 group-hover:scale-[1.07]"
+          className="object-cover object-center transition-transform duration-300 group-hover:scale-[1.05]"
         />
 
         {overlayLabel ? (
-          <div className="absolute right-3 top-3 rounded-full border border-[#d7e0da] bg-white px-3 py-1 text-[11px] font-semibold text-[#173c31]">
+          <div className="absolute left-3 top-3 z-10 rounded-full border border-[#d7e0da] bg-white/95 backdrop-blur-sm px-2.5 py-1 text-[11px] font-semibold text-[#173c31] shadow-sm">
             {overlayLabel}
           </div>
         ) : null}
 
-        <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md border border-[#d7e0da] bg-white px-2.5 py-1 text-xs font-medium text-[#173c31]">
+        <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md border border-[#d7e0da] bg-white/95 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-[#173c31] shadow-sm">
           <span>{rating.toFixed(1)}</span>
           <Star className="h-3.5 w-3.5 fill-[#1d6b57] text-[#1d6b57]" />
           <span className="text-[#947f69]">| {reviews}</span>
@@ -88,31 +90,31 @@ export function ProductCard({
           </div>
         ) : null}
       </Link>
-      {slug ? <WishlistHeartButton slug={slug} /> : null}
+      {productSlug ? <WishlistHeartButton slug={productSlug} /> : null}
 
-      <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-4 sm:px-5 sm:pb-5 sm:pt-5">
-        <div className="min-h-[2.75rem] sm:min-h-[3.3rem]">
+      <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
+        <div className="min-h-[2.5rem]">
           <Link
             href={href}
-            className="block font-display text-xl leading-[1.1] tracking-[-0.02em] text-[#171717] transition-colors group-hover:text-[#171717] sm:text-[1.55rem] sm:leading-[1.05]"
+            className="block font-display text-base sm:text-lg font-bold leading-snug tracking-[-0.01em] text-[#171717] transition-colors group-hover:text-[#689c30]"
           >
             <span className="line-clamp-2 break-words">{name}</span>
           </Link>
         </div>
 
-        <div className="mt-3 flex flex-1 flex-col sm:mt-4">
-          <p className="line-clamp-2 min-h-10 break-words text-sm leading-5 text-[#66584a] sm:pr-2 sm:text-[0.98rem]">
+        <div className="mt-2 flex flex-1 flex-col justify-between">
+          <p className="line-clamp-2 text-xs sm:text-sm leading-relaxed text-[#66584a]">
             {supportingLine}
           </p>
 
-          <div className="mt-auto flex items-end justify-between gap-2 pt-3 sm:pt-4 sm:gap-3">
+          <div className="mt-4 flex items-center justify-between gap-2 pt-3 border-t border-border/40">
             <div className="min-w-0 flex-1">
-              <div className="truncate font-sans text-xl font-semibold leading-none text-[#171717] sm:text-[1.65rem]">
+              <div className="truncate font-sans text-base sm:text-lg font-bold leading-none text-[#171717]">
                 {price}
               </div>
-              <div className="mt-1.5 min-h-5">
+              <div className="mt-1 min-h-[1.25rem]">
                 {originalPrice ? (
-                  <span className="text-sm font-medium text-[#908272] line-through decoration-[#b8a48f] decoration-[1.5px]">
+                  <span className="text-xs font-medium text-[#908272] line-through decoration-[#b8a48f] decoration-[1.5px]">
                     {originalPrice}
                   </span>
                 ) : null}
@@ -121,7 +123,7 @@ export function ProductCard({
 
             <Link
               href={href}
-              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#033927] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black sm:h-10 sm:px-4.5 sm:text-sm"
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#033927] px-3.5 text-xs font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black"
             >
               View Product
             </Link>

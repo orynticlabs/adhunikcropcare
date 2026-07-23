@@ -61,12 +61,6 @@ export function OryCMSUsersList() {
   const [users, setUsers] = useState<AdminUser[]>([])
   const isSuper = roleName === "Owner" || roleName === "Super Admin"
 
-  useEffect(() => {
-    void loadUsers(true)
-    const interval = window.setInterval(() => void loadUsers(false), 15000)
-    return () => window.clearInterval(interval)
-  }, [])
-
   async function loadUsers(showLoader: boolean) {
     if (showLoader) setLoading(true)
     setError("")
@@ -82,6 +76,12 @@ export function OryCMSUsersList() {
       if (showLoader) setLoading(false)
     }
   }
+
+  useEffect(() => {
+    void loadUsers(true)
+    const interval = window.setInterval(() => void loadUsers(false), 15000)
+    return () => window.clearInterval(interval)
+  }, [])
 
   const filtered = useMemo(() => {
     const search = query.trim().toLowerCase()

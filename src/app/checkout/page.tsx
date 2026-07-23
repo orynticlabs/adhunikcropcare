@@ -140,6 +140,7 @@ export default function CheckoutPage() {
   const [city,      setCity]        = useState("")
   const [state,     setState]       = useState("")
   const [pincode,   setPincode]     = useState("")
+  const [pincodeLoading, setPincodeLoading] = useState(false)
   const [selectedAddressId, setSelectedAddressId] = useState("new")
   const [saveAddress, setSaveAddress] = useState(true)
   const [saveAsDefault, setSaveAsDefault] = useState(true)
@@ -176,22 +177,6 @@ export default function CheckoutPage() {
     setPhone((value) => value || user.phone)
   }, [user])
 
-  useEffect(() => {
-    if (!user || savedAddresses.length === 0) return
-    const defaultAddress = savedAddresses.find((address) => address.isDefault) ?? savedAddresses[0]
-    setSelectedAddressId((current) => (current === "new" ? defaultAddress.id : current))
-  }, [savedAddresses, user])
-
-  useEffect(() => {
-    if (selectedAddressId === "new") return
-    const selected = savedAddresses.find((address) => address.id === selectedAddressId)
-    if (!selected) return
-    applyAddress(selected)
-    setSaveAddress(false)
-    setSaveAsDefault(Boolean(selected.isDefault))
-    setAddressLabel(selected.label)
-  }, [savedAddresses, selectedAddressId])
-
   function applyAddress(address: SavedAddress) {
     setAddress1(address.address1)
     setAddress2(address.address2 ?? "")
@@ -211,6 +196,32 @@ export default function CheckoutPage() {
     setSaveAddress(true)
     setSaveAsDefault(savedAddresses.length === 0)
   }
+
+  useEffect(() => {
+    if (!user || savedAddresses.length === 0) return
+    const defaultAddress = savedAddresses.find((address) => address.isDefault) ?? savedAddresses[0]
+    setSelectedAddressId((current) => (current === "new" ? defaultAddress.id : current))
+  }, [savedAddresses, user])
+
+  useEffect(() => {
+    if (selectedAddressId === "new") return
+    const selected = savedAddresses.find((address) => address.id === selectedAddressId)
+    if (!selected) return
+    applyAddress(selected)
+    setSaveAddress(false)
+    setSaveAsDefault(Boolean(selected.isDefault))
+    setAddressLabel(selected.label)
+  }, [savedAddresses, selectedAddressId])
+
+  useEffect(() => {
+    if (!/^\d{6}$/.test(pincode)) return
+    setPincodeLoading(true)
+    fetch(`/api/pincode?pincode=${pincode}`).then((response) => response.json()).then((json) => {
+      if (!json.success) return
+      setCity(json.data.city)
+      setState(json.data.state)
+    }).catch(() => undefined).finally(() => setPincodeLoading(false))
+  }, [pincode])
 
   /* coupon */
   async function applyCoupon() {
@@ -586,22 +597,22 @@ export default function CheckoutPage() {
                       className={inputCls()} placeholder="Landmark, Area (optional)" />
                   </Field>
                   <div className="grid gap-4 sm:grid-cols-3">
-                    <Field label="City" required error={errors.city}>
-                      <input value={city} onChange={e => setCity(e.target.value)}
-                        className={inputCls(errors.city)} placeholder="Pune" />
-                    </Field>
-                    <Field label="State" required error={errors.state}>
-                      <select value={state} onChange={e => setState(e.target.value)}
-                        className={`${inputCls(errors.state)} appearance-none text-black [color-scheme:light]`}>
-                        <option value="">Select state</option>
-                        {INDIA_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </Field>
-                    <Field label="Pincode" required error={errors.pincode}>
+                    <Field label={pincodeLoading ? "Pincode (Detecting...)" : "Pincode"} required error={errors.pincode}>
                       <input value={pincode} maxLength={6}
                         onChange={e => setPincode(e.target.value.replace(/\D/g, ""))}
                         className={inputCls(errors.pincode)} placeholder="411001" />
                     </Field>
+                    <Field label="City" required error={errors.city}>
+                      <input value={city} readOnly
+                        className={`${inputCls(errors.city)} bg-muted/40 text-muted-foreground cursor-not-allowed border-border/40 select-none`} placeholder="Auto-detected from pincode" />
+                    </Field>
+                    <Field label="State" required error={errors.state}>
+                      <input value={state} readOnly
+                        className={`${inputCls(errors.state)} bg-muted/40 text-muted-foreground cursor-not-allowed border-border/40 select-none`} placeholder="Auto-detected from pincode" />
+                    </Field>
+                    <p className="sm:col-span-3 text-xs text-muted-foreground bg-[#689c30]/10 p-2.5 rounded-xl border border-[#689c30]/20">
+                      City and state are automatically detected by pincode and are not editable.
+                    </p>
                   </div>
                   <div className="flex flex-col gap-3 rounded-2xl border border-border/50 bg-white p-4">
                     <label className="flex cursor-pointer items-start gap-3 text-sm">

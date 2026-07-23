@@ -5,23 +5,19 @@ import {
   Sprout, FlaskConical, Droplets, Tractor, Bug,
   BookOpen, Recycle, ShieldCheck, Heart, Award,
   ChevronDown,
-  ChevronLeft, ChevronRight,
   Info,
 } from "lucide-react"
 import HeaderServer from "@/components/layout/header-server"
 import AnnouncementBar from "@/components/layout/announcement-bar"
 import KnowledgeTabs from "@/components/home/knowledge-tabs"
+import { MarketplaceProductsSection } from "@/components/home/marketplace-products-section"
 import FAQAccordion from "@/components/home/faq-accordion"
-import { ProductCard } from "@/components/products/product-card"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import TestimonialsCarousel from "@/components/home/testimonials-carousel"
 import CropSuccessStories from "@/components/home/crop-success-stories"
 import SiteFooter from "@/components/layout/site-footer"
 import {
-  ensureProductImages,
   listOryCMSProducts,
-  productPrimaryImage,
-  type OryCMSProductDTO,
 } from "@/lib/orycms/products"
 
 /* ─── Data ───────────────────────────────────────────────── */
@@ -46,19 +42,6 @@ const SUSTAINABILITY = [
   { icon: Heart,       title: "Fair-trade sourced", desc: "Farmer-first procurement." },
   { icon: Award,       title: "Carbon-neutral ops", desc: "Verified by SGS, 2024." },
 ]
-
-function formatINR(amount: number) {
-  return new Intl.NumberFormat("en-IN", {
-    currency: "INR",
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(amount)
-}
-
-function comparePrice(amount: number, uplift = 1.22) {
-  const originalAmount = Math.ceil((amount * uplift) / 10) * 10
-  return formatINR(originalAmount)
-}
 
 export const revalidate = 180 // 3-minute ISR
 
@@ -226,59 +209,7 @@ export default async function Home() {
         </section>
 
         {/* ══ Marketplace ═════════════════════════════════════ */}
-        <section id="marketplace" className="relative py-10 sm:py-16">
-          <div className="mx-auto max-w-7xl px-4">
-            <div className="flex items-end justify-between gap-4 flex-wrap">
-              <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
-                  <Leaf className="h-3 w-3" aria-hidden /> Marketplace
-                </div>
-                <h2 className="mt-4 sm:mt-5 font-display text-3xl sm:text-4xl lg:text-5xl leading-[1.1] tracking-tight">
-                  Trusted by farmers, loved for results.
-                </h2>
-              </div>
-              <div className="flex gap-2">
-                <button className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-input bg-white text-black shadow-sm transition-colors hover:border-[#689c30] hover:bg-[#689c30] hover:!text-black">
-                  <ChevronLeft className="h-4 w-4" aria-label="Previous" />
-                </button>
-                <button className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-input bg-white text-black shadow-sm transition-colors hover:border-[#689c30] hover:bg-[#689c30] hover:!text-black">
-                  <ChevronRight className="h-4 w-4" aria-label="Next" />
-                </button>
-              </div>
-            </div>
-
-            <div className="mx-0 sm:-mx-4 mt-7 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-5 scrollbar-none sm:mt-10 sm:gap-5 sm:pb-6">
-              {products.length > 0 ? (
-                products.map((p) => {
-                  const price = p.salePrice ?? p.price
-
-                  return (
-                    <ProductCard
-                      key={p.id}
-                      href={`/products/${p.slug}`}
-                      name={p.name}
-                      image={productPrimaryImage(p)}
-                      images={ensureProductImages(p).map((image) => image.url)}
-                      overlayLabel={p.category}
-                      price={formatINR(price)}
-                      originalPrice={comparePrice(price)}
-                      badge={p.featured ? "Featured" : p.category}
-                      subtitle={p.shortDescription}
-                      reviews={120}
-                      rating={4.8}
-                      className="w-[calc(100vw-4rem)] max-w-[20rem] basis-[calc(100vw-4rem)] flex-shrink-0 snap-start sm:w-[20rem] sm:basis-[20rem]"
-                      imageSizes="(max-width: 640px) 75vw, 320px"
-                    />
-                  )
-                })
-              ) : (
-                <div className="min-w-full rounded-3xl border border-dashed border-border bg-card p-10 text-center text-muted-foreground">
-                  Publish products from OryCMS to show marketplace items here.
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
+        <MarketplaceProductsSection products={products} />
 
         {/* ══ Farmer Services ═════════════════════════════════ */}
         <section

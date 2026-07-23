@@ -3,7 +3,14 @@ import type { NextConfig } from 'next'
 
 // orycms — managed by `orycms init`
 const nextConfig: NextConfig = {
+  compress: true,
+  reactStrictMode: true,
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'date-fns'],
+  },
   images: {
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 86400,
     remotePatterns: [
       {
         protocol: 'https',

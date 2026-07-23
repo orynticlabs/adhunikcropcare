@@ -103,10 +103,6 @@ export function OryCMSProductsList() {
   const [statusFilter, setStatusFilter] = useState<"all" | ProductStatus>("all")
   const [toast, setToast] = useState<Toast | null>(null)
 
-  useEffect(() => {
-    loadProducts()
-  }, [])
-
   async function loadProducts() {
     setLoading(true)
     const json = await fetch("/api/orycms/products").then((response) => response.json())
@@ -114,6 +110,10 @@ export function OryCMSProductsList() {
     setProducts(json.success ? json.data : [])
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadProducts()
+  }, [])
 
   async function deleteProduct(product: Product) {
     const json = await fetch(`/api/orycms/products/${product.id}`, { method: "DELETE" }).then((r) =>

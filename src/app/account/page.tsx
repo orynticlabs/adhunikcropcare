@@ -13,6 +13,7 @@ import {
 import { ProductCard } from "@/components/products/product-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/features/auth/auth-context"
+import { useWishlist } from "@/features/wishlist/wishlist-context"
 import AnnouncementBar from "@/components/layout/announcement-bar"
 import Header from "@/components/layout/header"
 import CartDrawer from "@/features/cart/components/cart-drawer"
@@ -426,6 +427,24 @@ function AddressesView() {
   const [editing, setEditing] = useState<Address | null>(null)
   const [error, setError] = useState("")
   const [saving, setSaving] = useState(false)
+  const [pincodeLoading, setPincodeLoading] = useState(false)
+
+  useEffect(() => {
+    if (!editing || !/^\d{6}$/.test(editing.pincode)) return
+    setPincodeLoading(true)
+    fetch(`/api/pincode?pincode=${editing.pincode}`)
+      .then((response) => response.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          setEditing((current) => current ? { ...current, city: json.data.city, state: json.data.state } : null)
+          setError("")
+        } else {
+          setError(json.error?.message ?? "We could not find this pincode.")
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => setPincodeLoading(false))
+  }, [editing?.pincode])
 
   useEffect(() => {
     if (editing) return
@@ -510,11 +529,19 @@ function AddressesView() {
             <AddressInput label="Label" value={editing.label} onChange={(label) => setEditing({ ...editing, label })} />
             <AddressInput label="Full name" value={editing.name} onChange={(name) => setEditing({ ...editing, name })} />
             <AddressInput label="Mobile number" value={editing.phone} maxLength={10} onChange={(phone) => setEditing({ ...editing, phone: phone.replace(/\D/g, "") })} />
-            <AddressInput label="Pincode" value={editing.pincode} maxLength={6} onChange={(pincode) => setEditing({ ...editing, pincode: pincode.replace(/\D/g, "") })} />
+            <AddressInput
+              label={pincodeLoading ? "Pincode (Detecting...)" : "Pincode"}
+              value={editing.pincode}
+              maxLength={6}
+              onChange={(pincode) => setEditing({ ...editing, pincode: pincode.replace(/\D/g, "") })}
+            />
             <AddressInput label="Address line 1" value={editing.line1} onChange={(line1) => setEditing({ ...editing, line1 })} className="sm:col-span-2" />
             <AddressInput label="Address line 2" value={editing.line2 ?? ""} onChange={(line2) => setEditing({ ...editing, line2 })} className="sm:col-span-2" />
-            <AddressInput label="City" value={editing.city} onChange={(city) => setEditing({ ...editing, city })} />
-            <AddressInput label="State" value={editing.state} onChange={(state) => setEditing({ ...editing, state })} />
+            <AddressInput label="City" value={editing.city} onChange={() => {}} readOnly placeholder="Auto-detected from pincode" />
+            <AddressInput label="State" value={editing.state} onChange={() => {}} readOnly placeholder="Auto-detected from pincode" />
+            <p className="sm:col-span-2 text-xs text-muted-foreground bg-[#689c30]/10 p-2.5 rounded-xl border border-[#689c30]/20">
+              City and state are automatically detected by pincode and are not editable.
+            </p>
           </div>
           <label className="mt-4 flex items-center gap-3 text-sm font-semibold">
             <input
@@ -602,34 +629,85 @@ function AddressInput({
   label,
   maxLength,
   onChange,
+  placeholder,
+  readOnly = false,
   value,
 }: {
   className?: string
   label: string
   maxLength?: number
   onChange: (value: string) => void
+  placeholder?: string
+  readOnly?: boolean
   value: string
 }) {
   return (
     <label className={`flex flex-col gap-1.5 ${className}`}>
-      <span className="text-sm font-medium text-foreground/80">{label}</span>
+      <span className="text-xs font-semibold text-foreground/80">{label}</span>
       <input
         value={value}
         maxLength={maxLength}
+        readOnly={readOnly}
+        placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="h-11 w-full rounded-xl border border-border/60 bg-background px-4 text-sm outline-none transition focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15"
+        className={`h-11 w-full rounded-xl border border-border/60 px-4 text-sm outline-none transition ${
+          readOnly
+            ? "bg-muted/40 text-muted-foreground cursor-not-allowed border-border/40 select-none"
+            : "bg-background focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15"
+        }`}
       />
     </label>
   )
 }
 
 function WishlistView() {
+  const { savedSlugs } = useWishlist()
   const [wishlist, setWishlist] = useState<WishlistItem[]>(INITIAL_WISHLIST)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch("/api/auth/wishlist", { credentials: "include" })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!Array.isArray(json.data)) return
+        setWishlist(
+          json.data.map(
+            (item: {
+              slug: string
+              name: string | null
+              price: number | null
+              sale_price: number | null
+              images: unknown
+              status: string | null
+              stock_quantity: number | null
+            }) => ({
+              id: item.slug,
+              name: item.name ?? "Unavailable product",
+              price: item.sale_price ?? item.price ?? 0,
+              img:
+                Array.isArray(item.images) && typeof item.images[0] === "object" && item.images[0] && "url" in item.images[0]
+                  ? String((item.images[0] as { url: string }).url)
+                  : "/placeholder.svg",
+              inStock: item.status === "published" && Number(item.stock_quantity) > 0,
+            })
+          )
+        )
+      })
+      .catch(() => undefined)
+      .finally(() => setLoading(false))
+  }, [])
+
+  const activeWishlist = useMemo(() => {
+    return wishlist.filter((item) => savedSlugs.has(item.id))
+  }, [wishlist, savedSlugs])
 
   return (
     <div className="space-y-5">
-      <h3 className="font-display text-2xl">My Wishlist ({wishlist.length})</h3>
-      {wishlist.length === 0 && (
+      <div className="flex items-center justify-between">
+        <h3 className="font-display text-2xl">My Wishlist ({activeWishlist.length})</h3>
+      </div>
+      {!loading && activeWishlist.length === 0 && (
         <div className="flex flex-col items-center gap-3 py-12 text-center">
           <Heart className="h-12 w-12 text-muted-foreground/30" strokeWidth={1} />
           <p className="text-muted-foreground">Your wishlist is empty.</p>
@@ -638,18 +716,12 @@ function WishlistView() {
           </Link>
         </div>
       )}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {wishlist.map(item => (
-          <div key={item.id} className="relative">
-            <button
-              onClick={() => setWishlist(prev => prev.filter(w => w.id !== item.id))}
-              className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-card/90 text-muted-foreground shadow transition hover:bg-destructive/10 hover:text-destructive"
-              aria-label="Remove from wishlist"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
+      <div className="grid gap-6 sm:grid-cols-2">
+        {activeWishlist.map((item) => (
+          <div key={item.id} className="flex flex-col">
             <ProductCard
-              href={productHref(item.name)}
+              slug={item.id}
+              href={`/products/${item.id}`}
               name={item.name}
               image={item.img}
               price={fmt(item.price)}

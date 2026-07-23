@@ -1,28 +1,22 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Heart } from "lucide-react"
 import { useAuth } from "@/features/auth/auth-context"
+import { useWishlist } from "@/features/wishlist/wishlist-context"
 
 export function WishlistHeartButton({ slug }: { slug: string }) {
   const { loadingUser, openAuthModal, user } = useAuth()
-  const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    if (!user) { setSaved(false); return }
-    fetch("/api/auth/wishlist", { credentials: "include" }).then((r) => r.json()).then((json) => setSaved(Boolean(json.data?.some((item: { slug: string }) => item.slug === slug)))).catch(() => undefined)
-  }, [slug, user])
+  const { savedSlugs, toggle: toggleWishlist } = useWishlist()
+  const saved = savedSlugs.has(slug)
 
   async function toggle() {
     if (loadingUser || saving) return
     if (!user) { openAuthModal("signin"); return }
     setSaving(true)
     try {
-      const csrf = await fetch("/api/auth/csrf", { credentials: "include" }).then((r) => r.json())
-      const response = await fetch("/api/auth/wishlist", { method: saved ? "DELETE" : "POST", credentials: "include", headers: { "content-type": "application/json", "x-csrf-token": csrf.data?.csrfToken }, body: JSON.stringify({ slug }) })
-      if (!response.ok) throw new Error()
-      setSaved((value) => !value)
+      await toggleWishlist(slug)
     } finally { setSaving(false) }
   }
 

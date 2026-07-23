@@ -29,6 +29,12 @@ export default function RootLayout({
       lang="en"
       className="h-full antialiased [--font-fraunces:Georgia,serif] [--font-geist-mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace] [--font-inter:Inter,ui-sans-serif,system-ui,sans-serif]"
     >
+      <head>
+        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+      </head>
       <body className="min-h-full">
         <AppProviders>{children}</AppProviders>
       </body>

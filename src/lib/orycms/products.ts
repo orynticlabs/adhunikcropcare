@@ -3,52 +3,15 @@ import { revalidateTag, unstable_cache } from "next/cache"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { deleteOryCMSMediaIfUnreferenced } from "@/lib/orycms/media"
 import { sanitizeRichText } from "@/lib/orycms/sanitize-html"
+import {
+  fallbackProductImage as fallbackImage,
+  type OryCMSProductDTO,
+  type PackSizeInput,
+  type ProductImageInput,
+  type ProductStatus,
+} from "./product-utils"
 
-export const PRODUCT_STATUSES = ["draft", "published"] as const
-
-export type ProductStatus = (typeof PRODUCT_STATUSES)[number]
-
-export type ProductImageInput = {
-  id?: string
-  url: string
-  name?: string
-}
-
-export type PackSizeInput = {
-  size: string
-  price: number
-}
-
-export type OryCMSProductInput = {
-  brand?: string
-  category: string
-  featured: boolean
-  fullDescription?: string
-  howToUse?: string
-  images: ProductImageInput[]
-  metaDescription?: string
-  metaTitle?: string
-  name: string
-  packSizes: PackSizeInput[]
-  price: number
-  salePrice?: number | null
-  shippingReturns?: string
-  shortDescription: string
-  sku: string
-  slug?: string
-  specifications?: string
-  status: ProductStatus
-  stockQuantity: number
-  tags: string[]
-  unit: string
-}
-
-export type OryCMSProductDTO = OryCMSProductInput & {
-  createdAt: string
-  id: string
-  slug: string
-  updatedAt: string
-}
+export * from "./product-utils"
 
 type OryCMSProductRow = {
   brand: string | null
