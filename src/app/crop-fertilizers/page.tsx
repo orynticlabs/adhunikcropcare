@@ -19,6 +19,7 @@ import AnnouncementBar from "@/components/layout/announcement-bar"
 import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
+import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 
 export const metadata: Metadata = {
   title: "Crop Fertilizers | Adhunik Crop Care",
@@ -282,6 +283,8 @@ export default function CropFertilizersPage() {
             </div>
           </div>
         </section>
+
+        <FarmersNotCustomersSection />
       </main>
 
       <SiteFooter />

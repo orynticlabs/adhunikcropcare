@@ -4,8 +4,9 @@ import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { deleteOryCMSMediaIfUnreferenced } from "@/lib/orycms/media"
 import { sanitizeRichText } from "@/lib/orycms/sanitize-html"
 import {
-  fallbackProductImage as fallbackImage,
+  PRODUCT_STATUSES,
   type OryCMSProductDTO,
+  type OryCMSProductInput,
   type PackSizeInput,
   type ProductImageInput,
   type ProductStatus,
@@ -423,4 +424,54 @@ export function ensureProductImages(product: OryCMSProductDTO) {
 
 export async function ensureOryCMSProductsSchema() {
   // Database structure is managed by Prisma migrations.
+}
+
+export async function getBestSellingProducts(allProducts: OryCMSProductDTO[]): Promise<OryCMSProductDTO[]> {
+  try {
+    const orders = await orycmsPrisma.$queryRaw<Array<{ items: Prisma.JsonValue }>>`
+      SELECT items FROM storefront_orders
+      WHERE status NOT IN ('cancelled', 'refunded')
+    `
+
+    const salesMap = new Map<string, number>()
+
+    for (const order of orders) {
+      if (!Array.isArray(order.items)) continue
+      for (const rawItem of order.items) {
+        if (typeof rawItem === "object" && rawItem !== null && !Array.isArray(rawItem)) {
+          const item = rawItem as Record<string, unknown>
+          const qty = typeof item.quantity === "number" ? item.quantity : 1
+          const keys = [
+            typeof item.productId === "string" ? item.productId.trim().toLowerCase() : "",
+            typeof item.slug === "string" ? item.slug.trim().toLowerCase() : "",
+            typeof item.id === "string" ? item.id.trim().toLowerCase() : "",
+            typeof item.name === "string" ? item.name.trim().toLowerCase() : "",
+          ].filter(Boolean)
+
+          for (const key of keys) {
+            salesMap.set(key, (salesMap.get(key) || 0) + qty)
+          }
+        }
+      }
+    }
+
+    const sorted = [...allProducts].sort((a, b) => {
+      const salesA =
+        (salesMap.get(a.id.toLowerCase()) || 0) +
+        (salesMap.get(a.slug.toLowerCase()) || 0) +
+        (salesMap.get(a.name.toLowerCase()) || 0)
+      const salesB =
+        (salesMap.get(b.id.toLowerCase()) || 0) +
+        (salesMap.get(b.slug.toLowerCase()) || 0) +
+        (salesMap.get(b.name.toLowerCase()) || 0)
+
+      if (salesB !== salesA) return salesB - salesA
+      if (a.featured !== b.featured) return a.featured ? -1 : 1
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+
+    return sorted
+  } catch {
+    return [...allProducts].sort((a, b) => (a.featured !== b.featured ? (a.featured ? -1 : 1) : 0))
+  }
 }

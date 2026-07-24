@@ -13,6 +13,7 @@ import { ProductCard } from "@/components/products/product-card"
 import { ProductGridSkeleton } from "@/components/ui/skeleton"
 import Header from "@/components/layout/header"
 import CartDrawer from "@/features/cart/components/cart-drawer"
+import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 import SiteFooter from "@/components/layout/site-footer"
 import { formatCurrency } from "@/features/cart/cart-context"
 import { matchesSearchQuery } from "@/lib/search"
@@ -451,6 +452,7 @@ function ProductsPageContent() {
           )}
         </div>
 
+        <FarmersNotCustomersSection />
       </main>
 
       <SiteFooter />

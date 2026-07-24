@@ -93,7 +93,7 @@ export function ProductCard({
       {productSlug ? <WishlistHeartButton slug={productSlug} /> : null}
 
       <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
-        <div className="min-h-[2.5rem]">
+        <div className="h-[3.25rem] flex items-start overflow-hidden">
           <Link
             href={href}
             className="block font-display text-base sm:text-lg font-bold leading-snug tracking-[-0.01em] text-[#171717] transition-colors group-hover:text-[#689c30]"
@@ -102,32 +102,32 @@ export function ProductCard({
           </Link>
         </div>
 
-        <div className="mt-2 flex flex-1 flex-col justify-between">
-          <p className="line-clamp-2 text-xs sm:text-sm leading-relaxed text-[#66584a]">
+        <div className="mt-1.5 h-[2.75rem] overflow-hidden">
+          <p className="line-clamp-2 text-xs sm:text-sm leading-snug sm:leading-snug text-[#66584a]">
             {supportingLine}
           </p>
+        </div>
 
-          <div className="mt-4 flex items-center justify-between gap-2 pt-3 border-t border-border/40">
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-sans text-base sm:text-lg font-bold leading-none text-[#171717]">
-                {price}
-              </div>
-              <div className="mt-1 min-h-[1.25rem]">
-                {originalPrice ? (
-                  <span className="text-xs font-medium text-[#908272] line-through decoration-[#b8a48f] decoration-[1.5px]">
-                    {originalPrice}
-                  </span>
-                ) : null}
-              </div>
+        <div className="mt-auto pt-3 border-t border-border/40 flex items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-sans text-base sm:text-lg font-bold leading-none text-[#171717]">
+              {price}
             </div>
-
-            <Link
-              href={href}
-              className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#033927] px-3.5 text-xs font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black"
-            >
-              View Product
-            </Link>
+            <div className="mt-1 h-4">
+              {originalPrice ? (
+                <span className="text-xs font-medium text-[#908272] line-through decoration-[#b8a48f] decoration-[1.5px]">
+                  {originalPrice}
+                </span>
+              ) : null}
+            </div>
           </div>
+
+          <Link
+            href={href}
+            className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#033927] px-3.5 text-xs font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black"
+          >
+            View Product
+          </Link>
         </div>
       </div>
     </article>

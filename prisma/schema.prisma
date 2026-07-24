@@ -213,6 +213,21 @@ model StorefrontWishlistItem {
   @@map("storefront_wishlist_items")
 }
 
+model StorefrontProductReview {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productSlug   String   @map("product_slug")
+  reviewerName  String   @map("reviewer_name")
+  reviewerEmail String   @map("reviewer_email")
+  rating        Int
+  title         String
+  comment       String
+  verified      Boolean  @default(false)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([productSlug, createdAt], map: "storefront_product_reviews_product_slug_created_at_idx")
+  @@map("storefront_product_reviews")
+}
+
 model StorefrontRefreshToken {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   userId    String   @map("user_id") @db.Uuid

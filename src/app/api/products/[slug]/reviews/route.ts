@@ -1,0 +1,77 @@
+import { NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
+import { addProductReview, getProductReviewSummary } from "@/lib/orycms/reviews"
+
+export const runtime = "nodejs"
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> },
+) {
+  const { slug } = await params
+  if (!slug) {
+    return NextResponse.json({ success: false, error: { message: "Invalid product slug." } }, { status: 400 })
+  }
+
+  try {
+    const summary = await getProductReviewSummary(slug)
+    return NextResponse.json({ success: true, data: summary })
+  } catch {
+    return NextResponse.json({
+      success: true,
+      data: { averageRating: 0, totalReviews: 0, breakdown: [], reviews: [] },
+    })
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> },
+) {
+  const { slug } = await params
+  if (!slug) {
+    return NextResponse.json({ success: false, error: { message: "Invalid product slug." } }, { status: 400 })
+  }
+
+  try {
+    const body = await request.json()
+    const { name, email, rating, title, comment, verified } = body
+
+    if (!name || typeof name !== "string" || !name.trim()) {
+      return NextResponse.json({ success: false, error: { message: "Please enter your name." } }, { status: 400 })
+    }
+
+    if (!title || typeof title !== "string" || !title.trim()) {
+      return NextResponse.json({ success: false, error: { message: "Please enter a review title." } }, { status: 400 })
+    }
+
+    if (!comment || typeof comment !== "string" || !comment.trim()) {
+      return NextResponse.json({ success: false, error: { message: "Please enter review comments." } }, { status: 400 })
+    }
+
+    const numRating = Number(rating)
+    if (isNaN(numRating) || numRating < 1 || numRating > 5) {
+      return NextResponse.json({ success: false, error: { message: "Please select a valid rating (1 to 5 stars)." } }, { status: 400 })
+    }
+
+    const review = await addProductReview({
+      productSlug: slug,
+      reviewerName: name,
+      reviewerEmail: email || "",
+      rating: Math.round(numRating),
+      title,
+      comment,
+      verified: Boolean(verified),
+    })
+
+    const updatedSummary = await getProductReviewSummary(slug)
+
+    return NextResponse.json({
+      success: true,
+      data: { review, summary: updatedSummary },
+    })
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to submit review."
+    return NextResponse.json({ success: false, error: { message } }, { status: 500 })
+  }
+}

@@ -3,19 +3,25 @@
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import Image from "next/image"
 import {
+  Award,
   Check,
   ChevronLeft,
   ChevronRight,
   Copy,
+  Heart,
+  Leaf,
   Minus,
   Plus,
   ShoppingBag,
   Sparkles,
   Star,
   Truck,
+  X,
 } from "lucide-react"
 import { ProductCard } from "@/components/products/product-card"
 import { useCart } from "@/features/cart/cart-context"
+import { useAuth } from "@/features/auth/auth-context"
+import { useWishlist } from "@/features/wishlist/wishlist-context"
 
 type ProductImage = {
   src: string
@@ -50,6 +56,9 @@ export type ProductDetail = {
   options: ProductOption[]
   rating: number
   recommended: RecommendedProduct[]
+  similarProducts?: RecommendedProduct[]
+  differentCategoryProducts?: RecommendedProduct[]
+  bestSellerProducts?: RecommendedProduct[]
   reviews: number
   safety: string[]
   sku?: string
@@ -73,6 +82,7 @@ export type ProductDetail = {
 }
 
 type Review = {
+  id?: string
   name: string
   date: string
   stars: number
@@ -168,7 +178,11 @@ function ratingBreakdown(total: number, rating: number) {
     ? [0.87, 0.09, 0.02, 0.015, 0.005]
     : [0.6, 0.25, 0.1, 0.03, 0.02]
   const counts = weights.map((w) => Math.round(total * w))
-  return [5, 4, 3, 2, 1].map((stars, i) => ({ stars, count: counts[i] }))
+  return [5, 4, 3, 2, 1].map((stars, i) => ({
+    stars,
+    count: counts[i],
+    percentage: total > 0 ? Math.round((counts[i] / total) * 100) : 0,
+  }))
 }
 
 // Split free-text admin content into lines for list rendering.
@@ -203,11 +217,129 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const offerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const offerTextRef  = useRef<HTMLDivElement>(null)
+  const { user, openAuthModal } = useAuth()
   const { addItem, openCart } = useCart()
+  const { savedSlugs, toggle: toggleWishlist } = useWishlist()
+  const targetSlug = product.slug || productHref(product.title).replace("/products/", "")
+  const isSaved = targetSlug ? savedSlugs.has(targetSlug) : false
+
+  function handleWishlistClick() {
+    if (!user) {
+      openAuthModal("signin")
+      return
+    }
+    if (targetSlug) {
+      void toggleWishlist(targetSlug)
+    }
+  }
+  const [liveReviews, setLiveReviews] = useState<Review[]>([])
+  const [liveAverageRating, setLiveAverageRating] = useState<number>(0)
+  const [liveTotalReviews, setLiveTotalReviews] = useState<number>(0)
+  const [liveBreakdown, setLiveBreakdown] = useState<Array<{ stars: number; count: number; percentage: number }>>([
+    { stars: 5, count: 0, percentage: 0 },
+    { stars: 4, count: 0, percentage: 0 },
+    { stars: 3, count: 0, percentage: 0 },
+    { stars: 2, count: 0, percentage: 0 },
+    { stars: 1, count: 0, percentage: 0 },
+  ])
+  const [reviewsLoading, setReviewsLoading] = useState(true)
+
+  // Write a review modal state
+  const [showReviewModal, setShowReviewModal] = useState(false)
+  const [ratingInput, setRatingInput] = useState(5)
+  const [nameInput, setNameInput] = useState("")
+  const [emailInput, setEmailInput] = useState("")
+  const [titleInput, setTitleInput] = useState("")
+  const [commentInput, setCommentInput] = useState("")
+  const [submittingReview, setSubmittingReview] = useState(false)
+  const [reviewError, setReviewError] = useState("")
+  const [reviewSuccess, setReviewSuccess] = useState(false)
+
+  // Pre-fill user details if logged in
+  useEffect(() => {
+    if (user) {
+      const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim()
+      if (fullName) setNameInput(fullName)
+      if (user.email) setEmailInput(user.email)
+    }
+  }, [user])
+
+  // Load live reviews from database API
+  useEffect(() => {
+    if (!product.slug) return
+    setReviewsLoading(true)
+    fetch(`/api/products/${product.slug}/reviews`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          const { averageRating, totalReviews, breakdown, reviews } = json.data
+          setLiveAverageRating(averageRating)
+          setLiveTotalReviews(totalReviews)
+          if (Array.isArray(breakdown) && breakdown.length > 0) setLiveBreakdown(breakdown)
+          if (Array.isArray(reviews)) setLiveReviews(reviews)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setReviewsLoading(false))
+  }, [product.slug])
+
+  async function submitReview(e: React.FormEvent) {
+    e.preventDefault()
+    if (!nameInput.trim()) { setReviewError("Please enter your name."); return }
+    if (!titleInput.trim()) { setReviewError("Please enter a review title."); return }
+    if (!commentInput.trim()) { setReviewError("Please enter your review comment."); return }
+    if (ratingInput < 1 || ratingInput > 5) { setReviewError("Please select a rating from 1 to 5 stars."); return }
+
+    setSubmittingReview(true)
+    setReviewError("")
+    try {
+      const response = await fetch(`/api/products/${product.slug}/reviews`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: nameInput,
+          email: emailInput,
+          rating: ratingInput,
+          title: titleInput,
+          comment: commentInput,
+          verified: Boolean(user),
+        }),
+      })
+      const json = await response.json()
+      if (!json.success) throw new Error(json.error?.message ?? "Failed to submit review.")
+
+      if (json.data?.summary) {
+        setLiveAverageRating(json.data.summary.averageRating)
+        setLiveTotalReviews(json.data.summary.totalReviews)
+        setLiveBreakdown(json.data.summary.breakdown)
+        setLiveReviews(json.data.summary.reviews)
+      }
+
+      setReviewSuccess(true)
+      setTimeout(() => {
+        setShowReviewModal(false)
+        setReviewSuccess(false)
+        setTitleInput("")
+        setCommentInput("")
+      }, 1500)
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : "Failed to submit review.")
+    } finally {
+      setSubmittingReview(false)
+    }
+  }
 
   const selected = product.options[activeOption]
-  const totalReviews = product.reviews
-  const breakdown = ratingBreakdown(totalReviews, product.rating)
+  const displayRating = liveTotalReviews > 0 ? liveAverageRating : (reviewsLoading ? product.rating : 0)
+  const displayTotalReviews = liveTotalReviews > 0 ? liveTotalReviews : (reviewsLoading ? product.reviews : 0)
+  const displayBreakdown = liveTotalReviews > 0 ? liveBreakdown : (reviewsLoading ? ratingBreakdown(product.reviews, product.rating) : [
+    { stars: 5, count: 0, percentage: 0 },
+    { stars: 4, count: 0, percentage: 0 },
+    { stars: 3, count: 0, percentage: 0 },
+    { stars: 2, count: 0, percentage: 0 },
+    { stars: 1, count: 0, percentage: 0 },
+  ])
+  const displayReviewsList = liveTotalReviews > 0 ? liveReviews : (reviewsLoading ? SAMPLE_REVIEWS : [])
 
   // Auto-rotate the gallery. Pauses while the user is hovering the image.
   const [paused, setPaused] = useState(false)
@@ -419,6 +551,13 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
     },
   ]
 
+  const isNotCurrentProduct = (item: RecommendedProduct) =>
+    item.slug !== product.slug && item.name?.trim().toLowerCase() !== product.title?.trim().toLowerCase()
+
+  const similarList = (product.similarProducts ?? []).filter(isNotCurrentProduct)
+  const differentList = (product.differentCategoryProducts ?? []).filter(isNotCurrentProduct)
+  const bestSellerList = (product.bestSellerProducts ?? []).filter(isNotCurrentProduct)
+
   return (
     <main className="pt-36 sm:pt-40">
       <div className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
@@ -514,9 +653,9 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
 
               <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-foreground/80">
                 <span className="inline-flex items-center gap-1 font-semibold text-[#033927]">
-                  <Star className="h-4 w-4 fill-current text-[#e9c46a]" aria-hidden /> {product.rating.toFixed(1)}
+                  <Star className="h-4 w-4 fill-current text-[#e9c46a]" aria-hidden /> {displayRating > 0 ? displayRating.toFixed(1) : "0.0"}
                 </span>
-                <span>({totalReviews} reviews)</span>
+                <span>({displayTotalReviews} reviews)</span>
                 <span className="text-foreground/30">|</span>
                 <span className="text-sm font-semibold uppercase tracking-widest text-[#033927]">
                   {product.category}
@@ -650,6 +789,20 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               >
                 <ShoppingBag className="h-4 w-4" aria-hidden />
                 {product.stockQuantity === 0 ? "Out of Stock" : "Add to Cart"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleWishlistClick}
+                className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+                  isSaved
+                    ? "border-red-500 bg-red-50 text-red-500 shadow-xs"
+                    : "border-border/80 bg-white text-foreground/70 hover:border-red-500 hover:text-red-500"
+                }`}
+                aria-label={isSaved ? "Remove from wishlist" : "Add to wishlist"}
+                title={isSaved ? "Remove from wishlist" : "Add to wishlist"}
+              >
+                <Heart className={`h-5 w-5 ${isSaved ? "fill-red-500 text-red-500" : ""}`} />
               </button>
             </div>
 
@@ -790,13 +943,18 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
             <div>
               <h2 className="font-display text-2xl font-bold">Customer Reviews</h2>
               <div className="mt-2 flex items-center gap-2 text-sm text-foreground/70">
-                <Stars rating={product.rating} />
-                <span className="font-semibold text-foreground">{product.rating.toFixed(1)} out of 5</span>
-                <span>· Based on {totalReviews} reviews</span>
+                <Stars rating={displayRating} />
+                <span className="font-semibold text-foreground">{displayRating > 0 ? displayRating.toFixed(1) : "0.0"} out of 5</span>
+                <span>· Based on {displayTotalReviews} reviews</span>
               </div>
             </div>
             <button
               type="button"
+              onClick={() => {
+                setShowReviewModal(true)
+                setReviewError("")
+                setReviewSuccess(false)
+              }}
               className="rounded-md border-2 border-[#033927] bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-[#033927] transition-colors hover:bg-[#033927] hover:text-white"
             >
               Write a Review
@@ -805,13 +963,13 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
 
           {/* Rating breakdown */}
           <div className="mt-8 grid max-w-md gap-2">
-            {breakdown.map((row) => (
+            {displayBreakdown.map((row) => (
               <div key={row.stars} className="flex items-center gap-3 text-sm">
                 <span className="w-12 text-foreground/70">{row.stars} star</span>
                 <div className="h-2 flex-1 overflow-hidden rounded-full bg-black/10">
                   <div
-                    className="h-full bg-[#033927]"
-                    style={{ width: `${totalReviews ? (row.count / totalReviews) * 100 : 0}%` }}
+                    className="h-full bg-[#033927] transition-all duration-500"
+                    style={{ width: `${row.percentage}%` }}
                   />
                 </div>
                 <span className="w-8 text-right text-foreground/60">{row.count}</span>
@@ -820,56 +978,250 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
           </div>
 
           {/* Reviews list */}
-          <div className="mt-10 space-y-6">
-            {SAMPLE_REVIEWS.slice(0, visibleReviews).map((r) => (
-              <div key={r.name} className="rounded-xl border border-border/60 bg-white p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#033927]/10 text-sm font-bold text-[#033927]">
-                      {r.name.split(" ").map((w) => w[0]).join("")}
+          {displayReviewsList.length === 0 ? (
+            <div className="mt-10 rounded-2xl border border-dashed border-border/70 bg-card/40 p-8 text-center">
+              <p className="text-base font-semibold text-foreground">No reviews yet for this product.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Be the first to share your experience!</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReviewModal(true)
+                  setReviewError("")
+                  setReviewSuccess(false)
+                }}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#033927] px-5 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#689c30] hover:text-black"
+              >
+                Write First Review
+              </button>
+            </div>
+          ) : (
+            <div className="mt-10 space-y-6">
+              {displayReviewsList.slice(0, visibleReviews).map((r, i) => (
+                <div key={r.id || `${r.name}-${i}`} className="rounded-xl border border-border/60 bg-white p-5 shadow-xs">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#033927]/10 text-sm font-bold text-[#033927]">
+                        {r.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{r.name}</p>
+                        {r.verified && (
+                          <p className="text-xs font-medium text-[#689c30]">✓ Verified Buyer</p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold">{r.name}</p>
-                      {r.verified && (
-                        <p className="text-xs font-medium text-[#689c30]">✓ Verified Buyer</p>
-                      )}
-                    </div>
+                    <span className="text-xs text-foreground/50">{r.date}</span>
                   </div>
-                  <span className="text-xs text-foreground/50">{r.date}</span>
+                  <div className="mt-3">
+                    <Stars rating={r.stars} />
+                  </div>
+                  <p className="mt-2 font-semibold text-foreground">{r.title}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-foreground/75">{r.body}</p>
                 </div>
-                <div className="mt-3">
-                  <Stars rating={r.stars} />
-                </div>
-                <p className="mt-2 font-semibold">{r.title}</p>
-                <p className="mt-1 text-sm leading-relaxed text-foreground/75">{r.body}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          {visibleReviews < SAMPLE_REVIEWS.length && (
+          {visibleReviews < displayReviewsList.length && (
             <div className="mt-8 flex justify-center">
               <button
                 type="button"
-                onClick={() => setVisibleReviews(SAMPLE_REVIEWS.length)}
+                onClick={() => setVisibleReviews(displayReviewsList.length)}
                 className="rounded-md border border-border/60 bg-white px-6 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-black/5"
               >
-                Load more reviews
+                Load more reviews ({displayReviewsList.length - visibleReviews} remaining)
               </button>
             </div>
           )}
         </section>
 
-        {/* Recommended */}
-        {product.recommended.length > 0 && (
+        {/* Write a Review Modal */}
+        {showReviewModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+            <div className="relative w-full max-w-lg rounded-2xl border border-border/80 bg-white p-6 shadow-2xl sm:p-8">
+              <button
+                type="button"
+                onClick={() => setShowReviewModal(false)}
+                className="absolute right-4 top-4 rounded-full p-2 text-foreground/50 hover:bg-black/5 hover:text-foreground"
+                aria-label="Close modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+
+              <h3 className="font-display text-2xl font-bold text-[#033927]">Write a Product Review</h3>
+              <p className="mt-1 text-xs text-foreground/60">Sharing your honest feedback helps fellow farmers make informed choices.</p>
+
+              {reviewSuccess ? (
+                <div className="mt-6 rounded-xl border border-[#689c30]/40 bg-[#689c30]/10 p-5 text-center">
+                  <p className="font-bold text-[#033927]">Thank you for your review!</p>
+                  <p className="mt-1 text-xs text-foreground/75">Your review has been submitted and added successfully.</p>
+                </div>
+              ) : (
+                <form onSubmit={submitReview} className="mt-5 space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-foreground/70">Rating *</label>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setRatingInput(star)}
+                          className="p-1 text-2xl transition hover:scale-110"
+                          aria-label={`Rate ${star} stars`}
+                        >
+                          <Star
+                            className={`h-7 w-7 ${star <= ratingInput ? "fill-[#e9c46a] text-[#e9c46a]" : "text-border"}`}
+                          />
+                        </button>
+                      ))}
+                      <span className="ml-2 text-sm font-semibold text-[#033927]">{ratingInput} Star{ratingInput > 1 ? "s" : ""}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-foreground/70">Your Name *</label>
+                      <input
+                        required
+                        type="text"
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
+                        placeholder="e.g. Ramesh Patil"
+                        className="mt-1 w-full rounded-lg border border-border/80 bg-background px-3.5 py-2 text-sm outline-none focus:border-[#033927]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-foreground/70">Email Address</label>
+                      <input
+                        type="email"
+                        value={emailInput}
+                        onChange={(e) => setEmailInput(e.target.value)}
+                        placeholder="e.g. ramesh@example.com"
+                        className="mt-1 w-full rounded-lg border border-border/80 bg-background px-3.5 py-2 text-sm outline-none focus:border-[#033927]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-foreground/70">Review Title *</label>
+                    <input
+                      required
+                      type="text"
+                      value={titleInput}
+                      onChange={(e) => setTitleInput(e.target.value)}
+                      placeholder="e.g. Visible results within two weeks"
+                      className="mt-1 w-full rounded-lg border border-border/80 bg-background px-3.5 py-2 text-sm outline-none focus:border-[#033927]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-foreground/70">Your Review *</label>
+                    <textarea
+                      required
+                      rows={4}
+                      value={commentInput}
+                      onChange={(e) => setCommentInput(e.target.value)}
+                      placeholder="Share details about crop performance, application ease, or yield improvement..."
+                      className="mt-1 w-full rounded-lg border border-border/80 bg-background px-3.5 py-2 text-sm outline-none focus:border-[#033927]"
+                    />
+                  </div>
+
+                  {reviewError && (
+                    <p className="text-xs font-semibold text-red-600">{reviewError}</p>
+                  )}
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowReviewModal(false)}
+                      className="rounded-lg border border-border/80 px-4 py-2 text-xs font-bold uppercase tracking-wider text-foreground/70 hover:bg-black/5"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submittingReview}
+                      className="rounded-lg bg-[#033927] px-6 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#689c30] hover:text-black disabled:opacity-50"
+                    >
+                      {submittingReview ? "Submitting…" : "Submit Review"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Section 1: Similar Products (Same Category) */}
+        {similarList.length > 0 && (
           <section className="mt-20 border-t border-border/50 pt-12">
             <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
-              Recommended Products
+              <Sparkles className="h-3.5 w-3.5 text-[#689c30]" aria-hidden /> Similar Products
             </div>
-            <h2 className="mt-5 font-display text-3xl leading-tight sm:text-4xl">You May Also Like</h2>
+            <h2 className="mt-4 font-display text-3xl leading-tight sm:text-4xl">Products of Similar Kind</h2>
+            <p className="mt-1 text-sm text-foreground/70">Formulated for similar crop care, soil health, and protection needs</p>
             <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {product.recommended.map((item) => (
+              {similarList.map((item, idx) => (
                 <ProductCard
-                  key={item.name}
+                  key={`sim-${item.name}-${idx}`}
+                  href={item.slug ? `/products/${item.slug}` : productHref(item.name)}
+                  name={item.name}
+                  image={item.img}
+                  images={item.images}
+                  price={item.price}
+                  originalPrice={comparePrice(item.price)}
+                  badge={item.badge}
+                  subtitle={item.desc}
+                  rating={Number(item.rating)}
+                  reviews={Number(item.rating) * 40}
+                  imageSizes="(max-width: 639px) calc(50vw - 1rem), (max-width: 1023px) calc(50vw - 1.5rem), 25vw"
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Section 2: Explore Other Categories */}
+        {differentList.length > 0 && (
+          <section className="mt-16 border-t border-border/50 pt-12">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
+              <Leaf className="h-3.5 w-3.5 text-[#689c30]" aria-hidden /> Explore Other Categories
+            </div>
+            <h2 className="mt-4 font-display text-3xl leading-tight sm:text-4xl">You May Also Like</h2>
+            <p className="mt-1 text-sm text-foreground/70">Discover complementary agricultural solutions across our full organic product line</p>
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {differentList.map((item, idx) => (
+                <ProductCard
+                  key={`diff-${item.name}-${idx}`}
+                  href={item.slug ? `/products/${item.slug}` : productHref(item.name)}
+                  name={item.name}
+                  image={item.img}
+                  images={item.images}
+                  price={item.price}
+                  originalPrice={comparePrice(item.price)}
+                  badge={item.badge}
+                  subtitle={item.desc}
+                  rating={Number(item.rating)}
+                  reviews={Number(item.rating) * 40}
+                  imageSizes="(max-width: 639px) calc(50vw - 1rem), (max-width: 1023px) calc(50vw - 1.5rem), 25vw"
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Section 3: Best Sellers */}
+        {bestSellerList.length > 0 && (
+          <section className="mt-16 border-t border-border/50 pt-12">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
+              <Award className="h-3.5 w-3.5 text-[#689c30]" aria-hidden /> Best Sellers
+            </div>
+            <h2 className="mt-4 font-display text-3xl leading-tight sm:text-4xl">Top Rated Farmers&apos; Choice</h2>
+            <p className="mt-1 text-sm text-foreground/70">Our most trusted and highly rated crop care inputs chosen by farmers across India</p>
+            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+              {bestSellerList.map((item, idx) => (
+                <ProductCard
+                  key={`best-${item.name}-${idx}`}
                   href={item.slug ? `/products/${item.slug}` : productHref(item.name)}
                   name={item.name}
                   image={item.img}

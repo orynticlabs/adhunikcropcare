@@ -13,11 +13,12 @@ import KnowledgeTabs from "@/components/home/knowledge-tabs"
 import { MarketplaceProductsSection } from "@/components/home/marketplace-products-section"
 import FAQAccordion from "@/components/home/faq-accordion"
 import CartDrawer from "@/features/cart/components/cart-drawer"
-import TestimonialsCarousel from "@/components/home/testimonials-carousel"
+import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 import CropSuccessStories from "@/components/home/crop-success-stories"
 import SiteFooter from "@/components/layout/site-footer"
 import {
   listOryCMSProducts,
+  type OryCMSProductDTO,
 } from "@/lib/orycms/products"
 import { listOryCMSReelVideos } from "@/lib/orycms/reel-videos"
 
@@ -360,21 +361,8 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* ══ Testimonials carousel ═══════════════════════════ */}
-        <section className="relative overflow-hidden py-12 sm:py-16 bg-gradient-to-b from-accent/20 to-transparent">
-          <div className="mx-auto max-w-7xl px-4">
-            <div className="text-center mx-auto max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
-                <Leaf className="h-3 w-3" aria-hidden /> Voices from the field
-              </div>
-              <h2 className="mt-5 font-display text-4xl sm:text-5xl leading-[1.1] tracking-tight">
-                Farmers, not customers.
-              </h2>
-            </div>
-
-            <TestimonialsCarousel />
-          </div>
-        </section>
+        {/* ══ Farmers, not customers (Database Testimonials) ══ */}
+        <FarmersNotCustomersSection />
 
         {/* ══ FAQ ═════════════════════════════════════════════ */}
         <section id="contact-us" className="relative py-12 sm:py-16">

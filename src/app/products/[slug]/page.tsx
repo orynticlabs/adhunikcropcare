@@ -4,10 +4,9 @@ import CropSuccessStories from "@/components/home/crop-success-stories"
 import HeaderServer from "@/components/layout/header-server"
 import ProductDetailView, { ProductDetail } from "@/features/products/components/product-detail-view"
 import SiteFooter from "@/components/layout/site-footer"
-import TestimonialsCarousel from "@/components/home/testimonials-carousel"
-import { Leaf } from "lucide-react"
 import {
   ensureProductImages,
+  getBestSellingProducts,
   getPublishedOryCMSProductBySlug,
   listOryCMSProducts,
   productPrimaryImage,
@@ -122,6 +121,19 @@ function mapOryCMSProductToDetail(
   }
 }
 
+function mapToRecommendedDTO(item: OryCMSProductDTO) {
+  return {
+    badge: item.featured ? "Featured" : item.category,
+    desc: item.shortDescription,
+    img: productPrimaryImage(item),
+    images: ensureProductImages(item).map((image) => image.url),
+    name: item.name,
+    price: formatINR(item.salePrice ?? item.price),
+    rating: "4.8",
+    slug: item.slug,
+  }
+}
+
 async function loadProduct(slug: string) {
   try {
     const [product, allProducts] = await Promise.all([
@@ -129,9 +141,34 @@ async function loadProduct(slug: string) {
       listOryCMSProducts({ publishedOnly: true }),
     ])
     if (!product) return null
-    // Limit recommendations to 8 candidates — no need to pass the full catalog
-    const recommendations = allProducts.filter((item) => item.id !== product.id).slice(0, 8)
-    return mapOryCMSProductToDetail(product, recommendations)
+
+    // Ensure current product is strictly excluded from all recommendation sections
+    const otherProducts = allProducts.filter((item) => item.id !== product.id && item.slug !== product.slug)
+
+    const currentCat = product.category?.trim().toLowerCase() || ""
+
+    // 1. Similar products: same category from database
+    const similar = otherProducts
+      .filter((item) => (item.category?.trim().toLowerCase() || "") === currentCat)
+      .map(mapToRecommendedDTO)
+
+    // 2. You May Also Like: different categories from database
+    const different = otherProducts
+      .filter((item) => (item.category?.trim().toLowerCase() || "") !== currentCat)
+      .map(mapToRecommendedDTO)
+
+    // 3. Top Rated Farmers' Choice: best sellers sorted by highest order sales from storefront_orders table
+    const sortedBestSellers = await getBestSellingProducts(otherProducts)
+    const bestSellers = sortedBestSellers.map(mapToRecommendedDTO)
+
+    const baseDetail = mapOryCMSProductToDetail(product, otherProducts)
+
+    return {
+      ...baseDetail,
+      similarProducts: similar,
+      differentCategoryProducts: different,
+      bestSellerProducts: bestSellers,
+    }
   } catch {
     return null
   }
@@ -168,22 +205,6 @@ export default async function ProductPage({
       <HeaderServer />
       <CartDrawer />
       <ProductDetailView product={product} />
-
-      {/* Testimonials — "Farmers, not customers." */}
-      <section className="relative overflow-hidden py-12 sm:py-16 bg-gradient-to-b from-accent/20 to-transparent">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="text-center mx-auto max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
-              <Leaf className="h-3 w-3" aria-hidden /> Voices from the field
-            </div>
-            <h2 className="mt-5 font-display text-4xl sm:text-5xl leading-[1.1] tracking-tight">
-              Farmers, not customers.
-            </h2>
-          </div>
-
-          <TestimonialsCarousel />
-        </div>
-      </section>
 
       {/* "Watch Results. Trust Performance." */}
       <CropSuccessStories stories={reels} />
