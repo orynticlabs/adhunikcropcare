@@ -4,64 +4,28 @@ import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight, Leaf, Play } from "lucide-react"
 
-const STORIES = [
-  {
-    product: "Field Story 01",
-    result: "Increased Yield by 28%",
-    farmer: "Ramesh Patel",
-    location: "Nashik, Maharashtra",
-    thumbnail: "https://cdn.shopify.com/s/files/1/0579/7924/0580/files/ebd18c8c-45b7-46f7-ae6b-875404629700_thumbnail.jpg?v=1777898677",
-    video: "https://cdn.shopify.com/videos/c/vp/1fd4b8e04f13460c9ebea85425f8bbba/1fd4b8e04f13460c9ebea85425f8bbba.SD-480p-0.9Mbps-83328126.mp4",
-  },
-  {
-    product: "Field Story 02",
-    result: "Reduced Pest Damage",
-    farmer: "Kavita Sharma",
-    location: "Kota, Rajasthan",
-    thumbnail: "https://cdn.shopify.com/s/files/1/0579/7924/0580/files/d160b558-f001-4b4c-bd6a-6b60570fe6a1_thumbnail.jpg?v=1777898683",
-    video: "https://cdn.shopify.com/videos/c/vp/8cdae9552e114b3a98617dcf2ba809af/8cdae9552e114b3a98617dcf2ba809af.SD-480p-0.9Mbps-83328136.mp4",
-  },
-  {
-    product: "Field Story 03",
-    result: "Improved Soil Health",
-    farmer: "Harpreet Singh",
-    location: "Ludhiana, Punjab",
-    thumbnail: "https://cdn.shopify.com/s/files/1/0579/7924/0580/files/f5b9959a-1bad-4627-9f06-5f029e5c3145_thumbnail.jpg?v=1777898685",
-    video: "https://cdn.shopify.com/videos/c/vp/c30ef9875a0342cfa57d149f4c8b7938/c30ef9875a0342cfa57d149f4c8b7938.SD-480p-0.9Mbps-83328138.mp4",
-  },
-  {
-    product: "Field Story 04",
-    result: "Stronger Root Growth",
-    farmer: "Meena Reddy",
-    location: "Guntur, Andhra Pradesh",
-    thumbnail: "https://cdn.shopify.com/s/files/1/0579/7924/0580/files/888b6123-0f4f-4ed1-9d2e-b80f85b3dfa7_thumbnail.jpg?v=1776429462",
-    video: "https://cdn.shopify.com/videos/c/vp/fdeb9a03e2db43f7a0b98e7fe191c81e/fdeb9a03e2db43f7a0b98e7fe191c81e.SD-480p-0.9Mbps-81870814.mp4",
-  },
-  {
-    product: "Field Story 05",
-    result: "Healthier Crop Stand",
-    farmer: "Imran Khan",
-    location: "Bharuch, Gujarat",
-    thumbnail: "https://cdn.shopify.com/s/files/1/0579/7924/0580/files/ebd18c8c-45b7-46f7-ae6b-875404629700_thumbnail.jpg?v=1777898677",
-    video: "https://cdn.shopify.com/videos/c/vp/1fd4b8e04f13460c9ebea85425f8bbba/1fd4b8e04f13460c9ebea85425f8bbba.SD-480p-0.9Mbps-83328126.mp4",
-  },
-  {
-    product: "Field Story 06",
-    result: "Better Field Recovery",
-    farmer: "Sunita Yadav",
-    location: "Indore, Madhya Pradesh",
-    thumbnail: "https://cdn.shopify.com/s/files/1/0579/7924/0580/files/d160b558-f001-4b4c-bd6a-6b60570fe6a1_thumbnail.jpg?v=1777898683",
-    video: "https://cdn.shopify.com/videos/c/vp/8cdae9552e114b3a98617dcf2ba809af/8cdae9552e114b3a98617dcf2ba809af.SD-480p-0.9Mbps-83328136.mp4",
-  },
-]
+export type CropSuccessStory = {
+  farmer: string
+  location: string
+  product: string
+  result: string
+  thumbnail?: string
+  video: string
+}
 
-export default function CropSuccessStories() {
+export default function CropSuccessStories({ stories }: { stories: CropSuccessStory[] }) {
+  if (stories.length === 0) return null
+
+  return <CropSuccessStoriesCarousel stories={stories} />
+}
+
+function CropSuccessStoriesCarousel({ stories: reelStories }: { stories: CropSuccessStory[] }) {
   const [active, setActive] = useState(0)
   const [visibleSlots, setVisibleSlots] = useState(5)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const directionRef = useRef(0)
   const touchX = useRef(0)
-  const total = STORIES.length
+  const total = reelStories.length
 
   useEffect(() => {
     const updateSlots = () => {
@@ -164,7 +128,7 @@ export default function CropSuccessStories() {
               className="mx-auto aspect-[9/16] w-[min(19rem,calc(100vw-2rem))] sm:w-[min(20rem,calc((100vw-5rem)/3))] xl:w-[calc((min(100vw,90rem)-9rem)/5)]"
             />
 
-            {STORIES.map((story, storyIndex) => {
+            {reelStories.map((story, storyIndex) => {
               let offset = (storyIndex - active + total) % total
               if (offset > total / 2) offset -= total
 
@@ -202,13 +166,21 @@ export default function CropSuccessStories() {
                         loop
                         playsInline
                       />
-                    ) : (
+                    ) : story.thumbnail ? (
                       <Image
                         src={story.thumbnail}
                         alt={`${story.result} field demonstration preview`}
                         fill
                         sizes="(max-width: 639px) 304px, (max-width: 1279px) 320px, 20vw"
                         className="object-cover"
+                      />
+                    ) : (
+                      <video
+                        className="absolute inset-0 h-full w-full object-cover"
+                        src={story.video}
+                        muted
+                        playsInline
+                        preload="metadata"
                       />
                     )}
 
@@ -231,7 +203,7 @@ export default function CropSuccessStories() {
                         {story.result}
                       </h3>
                       <p className="mt-1.5 text-[11px] leading-snug text-white/78 sm:text-xs lg:text-sm">
-                        {story.farmer} · {story.location}
+                        {[story.farmer, story.location].filter(Boolean).join(" · ") || "Adhunik Crop Care"}
                       </p>
                     </div>
                   </div>
@@ -254,7 +226,7 @@ export default function CropSuccessStories() {
           </button>
 
           <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
-            {STORIES.map((story, index) => (
+            {reelStories.map((story, index) => (
               <button
                 key={story.product}
                 type="button"

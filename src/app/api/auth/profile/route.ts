@@ -10,7 +10,6 @@ export async function PATCH(request: NextRequest) {
     const user = await requireUser()
     const body = await request.json()
     const updated = await updateUserProfile(user.id, {
-      avatar: body.avatar,
       defaultAddress: body.defaultAddress,
       firstName: body.firstName,
       lastName: body.lastName,

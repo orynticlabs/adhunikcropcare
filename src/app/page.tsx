@@ -19,6 +19,7 @@ import SiteFooter from "@/components/layout/site-footer"
 import {
   listOryCMSProducts,
 } from "@/lib/orycms/products"
+import { listOryCMSReelVideos } from "@/lib/orycms/reel-videos"
 
 /* ─── Data ───────────────────────────────────────────────── */
 const CATEGORIES = [
@@ -53,9 +54,25 @@ async function getHomeProducts() {
   }
 }
 
+async function getHomeReels() {
+  try {
+    return (await listOryCMSReelVideos({ publishedOnly: true })).map((reel) => ({
+      farmer: reel.farmer,
+      location: reel.location,
+      product: reel.title,
+      result: reel.result,
+      thumbnail: reel.posterUrl,
+      video: reel.videoUrl,
+    }))
+  } catch {
+    return []
+  }
+}
+
 /* ─── Page ───────────────────────────────────────────────── */
 export default async function Home() {
   const products = await getHomeProducts()
+  const reels = await getHomeReels()
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
@@ -374,7 +391,7 @@ export default async function Home() {
           </div>
         </section>
 
-        <CropSuccessStories />
+        <CropSuccessStories stories={reels} />
       </main>
 
       <SiteFooter />

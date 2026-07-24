@@ -180,11 +180,7 @@ function ProfileView({ onEdit }: { onEdit: () => void }) {
       <div className="flex items-center gap-5">
         <div className="relative">
           <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-[#689c30]/15 text-3xl font-display font-bold text-[#689c30]">
-            {user.avatar ? (
-              <Image src={user.avatar} alt="" width={80} height={80} className="h-full w-full object-cover" />
-            ) : (
-              <DefaultMemojiAvatar seed={`${user.id}:${user.email}`} className="h-full w-full object-cover" />
-            )}
+            <DefaultMemojiAvatar seed={`${user.id}:${user.email}`} className="h-full w-full object-cover" />
           </div>
           <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#689c30] text-white shadow">
             <BadgeCheck className="h-3.5 w-3.5" />
@@ -252,7 +248,6 @@ function EditProfileView({ onBack }: { onBack: () => void }) {
   const [firstName, setFirstName] = useState(user?.firstName ?? "")
   const [lastName,  setLastName]  = useState(user?.lastName  ?? "")
   const [phone,     setPhone]     = useState(user?.phone     ?? "")
-  const [avatar, setAvatar] = useState(user?.avatar ?? "")
   const [saved,     setSaved]     = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -261,7 +256,7 @@ function EditProfileView({ onBack }: { onBack: () => void }) {
   async function save() {
     setSaving(true)
     try {
-      await updateProfile({ avatar, defaultAddress: user?.defaultAddress ?? null, firstName, lastName, phone })
+      await updateProfile({ defaultAddress: user?.defaultAddress ?? null, firstName, lastName, phone })
       setSaved(true)
       setTimeout(() => { setSaved(false); onBack() }, 900)
     } finally {
@@ -287,10 +282,6 @@ function EditProfileView({ onBack }: { onBack: () => void }) {
         <div className="flex flex-col gap-1.5 sm:col-span-2">
           <label className="text-sm font-medium text-foreground/80">Email (cannot change)</label>
           <input value={user?.email} disabled className={`${inputCls} opacity-50 cursor-not-allowed`} />
-        </div>
-        <div className="flex flex-col gap-1.5 sm:col-span-2">
-          <label className="text-sm font-medium text-foreground/80">Profile photo URL</label>
-          <input value={avatar} onChange={e => setAvatar(e.target.value)} className={inputCls} placeholder="https://..." />
         </div>
         <div className="flex flex-col gap-1.5 sm:col-span-2">
           <label className="text-sm font-medium text-foreground/80">Mobile number</label>
@@ -457,7 +448,6 @@ function AddressesView() {
       ? nextAddresses.map((address, index) => ({ ...address, isDefault: index === 0 }))
       : nextAddresses
     await updateProfile({
-      avatar: user.avatar,
       defaultAddress: addressesJson(normalized),
       firstName: user.firstName,
       lastName: user.lastName,
@@ -842,11 +832,7 @@ export default function AccountPage() {
               <div className="rounded-2xl border border-border/50 bg-card p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#689c30]/15 font-display text-lg font-bold text-[#689c30]">
-                    {user.avatar ? (
-                      <Image src={user.avatar} alt="" width={48} height={48} className="h-full w-full rounded-xl object-cover" />
-                    ) : (
-                      <DefaultMemojiAvatar seed={`${user.id}:${user.email}`} className="h-full w-full rounded-xl object-cover" />
-                    )}
+                    <DefaultMemojiAvatar seed={`${user.id}:${user.email}`} className="h-full w-full rounded-xl object-cover" />
                   </div>
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{user.firstName} {user.lastName}</p>

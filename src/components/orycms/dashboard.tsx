@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useRouter } from "next/navigation"
@@ -39,6 +39,7 @@ import {
   User,
   UserCog,
   Users,
+  Video,
   X,
 } from "lucide-react"
 import { OryCMSSessionProvider, useOryCMSSession } from "../../../orycms/hooks"
@@ -119,6 +120,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Payments: CreditCard,
   Plugins: Puzzle,
   Products: Package,
+  Reels: Video,
   Roles: Shield,
   SEO: SearchCheck,
   Settings,
@@ -142,6 +144,11 @@ const SEARCH_ITEMS: MenuChild[] = ORYCMS_ADMIN_SEARCH_ITEMS.map((item) => ({
   ...item,
   icon: ICONS[item.label] ?? LayoutDashboard,
 }))
+
+const ADMIN_ACTIVITY_KEY = "orycms-last-activity"
+const ADMIN_LOGOUT_KEY = "orycms-logout"
+const ADMIN_WARNING_MS = 4 * 60 * 1000
+const ADMIN_TIMEOUT_MS = 5 * 60 * 1000
 
 export function OryCMSDashboard({
   children,
@@ -177,6 +184,19 @@ function DashboardShell({
   const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [headerProfile, setHeaderProfile] = useState<OryCMSHeaderProfile | null>(null)
+  const [sessionWarningSeconds, setSessionWarningSeconds] = useState<number | null>(null)
+  const logoutInProgress = useRef(false)
+
+  const logout = useCallback(async () => {
+    if (logoutInProgress.current) return
+    logoutInProgress.current = true
+    try {
+      await fetch("/api/orycms/auth/logout", { method: "POST" })
+    } finally {
+      window.localStorage.setItem(ADMIN_LOGOUT_KEY, String(Date.now()))
+      window.location.assign("/admin")
+    }
+  }, [router])
 
   useEffect(() => {
     if (!loaded || (user && roleName)) return
@@ -266,10 +286,46 @@ function DashboardShell({
     return () => document.removeEventListener("pointerdown", onPointerDown)
   }, [])
 
-  async function logout() {
-    await fetch("/api/orycms/auth/logout", { method: "POST" })
-    router.replace("/admin")
-  }
+  useEffect(() => {
+    if (!user || !roleName) return
+
+    let lastBroadcast = 0
+    const markActivity = () => {
+      const now = Date.now()
+      setSessionWarningSeconds(null)
+      if (now - lastBroadcast < 1000) return
+      lastBroadcast = now
+      window.localStorage.setItem(ADMIN_ACTIVITY_KEY, String(now))
+    }
+    const checkInactivity = () => {
+      const lastActivity = Number(window.localStorage.getItem(ADMIN_ACTIVITY_KEY)) || Date.now()
+      const inactiveFor = Date.now() - lastActivity
+      if (inactiveFor >= ADMIN_TIMEOUT_MS) {
+        void logout()
+        return
+      }
+      setSessionWarningSeconds(
+        inactiveFor >= ADMIN_WARNING_MS
+          ? Math.ceil((ADMIN_TIMEOUT_MS - inactiveFor) / 1000)
+          : null,
+      )
+    }
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === ADMIN_LOGOUT_KEY) window.location.assign("/admin")
+      if (event.key === ADMIN_ACTIVITY_KEY) checkInactivity()
+    }
+    const activityEvents: (keyof WindowEventMap)[] = ["pointermove", "keydown", "click", "scroll"]
+
+    markActivity()
+    activityEvents.forEach((eventName) => window.addEventListener(eventName, markActivity, { passive: true }))
+    window.addEventListener("storage", onStorage)
+    const interval = window.setInterval(checkInactivity, 1000)
+    return () => {
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, markActivity))
+      window.removeEventListener("storage", onStorage)
+      window.clearInterval(interval)
+    }
+  }, [logout, roleName, router, user])
 
   if (!loaded) {
     return (
@@ -405,6 +461,49 @@ function DashboardShell({
       </div>
 
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <SessionTimeoutModal
+        seconds={sessionWarningSeconds}
+        onLogout={() => void logout()}
+        onStay={() => {
+          window.localStorage.setItem(ADMIN_ACTIVITY_KEY, String(Date.now()))
+          setSessionWarningSeconds(null)
+        }}
+      />
+    </div>
+  )
+}
+
+function SessionTimeoutModal({
+  onLogout,
+  onStay,
+  seconds,
+}: {
+  onLogout: () => void
+  onStay: () => void
+  seconds: number | null
+}) {
+  if (seconds === null) return null
+
+  return (
+    <div className="fixed inset-0 z-[130] grid place-items-center bg-background/85 px-4 py-6 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-labelledby="session-timeout-title" aria-describedby="session-timeout-description">
+      <div className="w-full max-w-md rounded-2xl border border-border bg-white p-6 text-center text-foreground shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-warning/10 text-warning">
+          <Clock className="h-6 w-6" />
+        </div>
+        <h2 id="session-timeout-title" className="mt-4 text-xl font-semibold tracking-tight">Session expiring</h2>
+        <p id="session-timeout-description" className="mt-2 text-[13.5px] leading-6 text-muted-foreground">
+          Your session is about to expire due to inactivity.
+        </p>
+        <div className="num mt-4 text-3xl font-semibold tabular-nums">{seconds}s</div>
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row">
+          <button type="button" onClick={onLogout} className="h-10 flex-1 rounded-lg border border-border px-4 text-[13px] font-semibold transition-colors hover:bg-accent">
+            Logout Now
+          </button>
+          <button type="button" onClick={onStay} autoFocus className="h-10 flex-1 rounded-lg bg-foreground px-4 text-[13px] font-semibold text-background transition-colors hover:bg-[var(--orycms-color-primary)] hover:text-white">
+            Stay Logged In
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -971,6 +1070,7 @@ function sectionHref(section: string) {
     Media: "/admin/media",
     Overview: "/admin",
     Products: "/admin/products",
+    Reels: "/admin/collections/reels",
   }
 
   return routes[section] ?? `/admin/${section.toLowerCase().replace(/\s+/g, "-")}`
@@ -978,7 +1078,7 @@ function sectionHref(section: string) {
 
 function OryCMSFooter() {
   return (
-    <footer className="border-t border-border bg-surface">
+    <footer className="orycms-footer border-t border-border bg-surface">
       <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-2 px-6 py-3 text-[11.5px] text-muted-foreground lg:px-8">
         <span>© 2026 OrynticLabs Private Limited. All rights reserved.</span>
         <span>OryCMS v1.0.0</span>

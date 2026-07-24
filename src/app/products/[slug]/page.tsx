@@ -13,6 +13,7 @@ import {
   productPrimaryImage,
   type OryCMSProductDTO,
 } from "@/lib/orycms/products"
+import { listOryCMSReelVideos } from "@/lib/orycms/reel-videos"
 import { notFound } from "next/navigation"
 
 export const revalidate = 300 // 5-minute ISR — serves cached HTML, re-renders in background
@@ -136,13 +137,28 @@ async function loadProduct(slug: string) {
   }
 }
 
+async function getPublishedReels() {
+  try {
+    return (await listOryCMSReelVideos({ publishedOnly: true })).map((reel) => ({
+      farmer: reel.farmer,
+      location: reel.location,
+      product: reel.title,
+      result: reel.result,
+      thumbnail: reel.posterUrl,
+      video: reel.videoUrl,
+    }))
+  } catch {
+    return []
+  }
+}
+
 export default async function ProductPage({
   params,
 }: {
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const product = await loadProduct(slug)
+  const [product, reels] = await Promise.all([loadProduct(slug), getPublishedReels()])
 
   if (!product) notFound()
 
@@ -170,7 +186,7 @@ export default async function ProductPage({
       </section>
 
       {/* "Watch Results. Trust Performance." */}
-      <CropSuccessStories />
+      <CropSuccessStories stories={reels} />
 
       <SiteFooter />
     </div>

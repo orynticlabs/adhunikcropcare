@@ -14,7 +14,6 @@ const AUTH_SECRET = process.env.STOREFRONT_AUTH_SECRET ?? process.env.NEXTAUTH_S
 const rateHits = new Map<string, { count: number; resetAt: number }>()
 
 export type StorefrontUserDTO = {
-  avatar?: string | null
   defaultAddress?: Record<string, unknown> | null
   email: string
   emailVerified: boolean
@@ -27,7 +26,6 @@ export type StorefrontUserDTO = {
 }
 
 type UserRow = {
-  avatar: string | null
   created_at: Date
   default_address: Prisma.JsonValue | null
   deleted_at: Date | null
@@ -60,6 +58,10 @@ export function validatePassword(password: string) {
 
 export function normalizePhone(phone: string) {
   return phone.replace(/\D/g, "").slice(0, 15)
+}
+
+export function validateStorefrontPhone(phone: string) {
+  return /^[6-9]\d{9}$/.test(phone)
 }
 
 export async function rateLimit(key: string, limit = 8, windowMs = 60_000) {
@@ -107,7 +109,7 @@ export async function createUser(input: {
   if (!firstName || !lastName) throw new Error("Name is required.")
   if (!validateEmail(email)) throw new Error("Enter a valid email.")
   if (!validatePassword(input.password)) throw new Error("Password must include 8 characters, an uppercase letter, and a number.")
-  if (phone.length < 10) throw new Error("Enter a valid mobile number.")
+  if (!validateStorefrontPhone(phone)) throw new Error("Enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.")
   if (!input.emailVerificationToken) throw new Error("Verify your email with the OTP before creating your account.")
 
   const [existing] = await orycmsPrisma.$queryRaw<{ id: string }[]>`
@@ -161,7 +163,9 @@ export async function verifySignupOtp(emailInput: string, otpInput: string) {
   const verificationToken = randomToken(32)
   const [verified] = await orycmsPrisma.$queryRaw<{ id: string }[]>`
     UPDATE storefront_signup_otps
-    SET verified_at = now(), verification_token_hash = ${hash(verificationToken)}
+    SET verified_at = now(),
+        verification_token_hash = ${hash(verificationToken)},
+        expires_at = now() + interval '10 minutes'
     WHERE id = (
       SELECT id FROM storefront_signup_otps
       WHERE email = ${email} AND consumed_at IS NULL AND verified_at IS NULL
@@ -233,20 +237,18 @@ export async function updateUserProfile(userId: string, input: Partial<Storefron
   const firstName = input.firstName?.trim() ?? current.first_name
   const lastName = input.lastName?.trim() ?? current.last_name
   const phone = input.phone === undefined ? current.phone : normalizePhone(input.phone)
-  const avatar = input.avatar === undefined ? current.avatar : input.avatar?.trim() || null
   const defaultAddress = input.defaultAddress === undefined
     ? current.default_address
     : input.defaultAddress
 
   if (!firstName || !lastName) throw new Error("Name is required.")
-  if (phone && phone.length < 10) throw new Error("Enter a valid mobile number.")
+  if (phone && !validateStorefrontPhone(phone)) throw new Error("Enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.")
 
   const [user] = await orycmsPrisma.$queryRaw<UserRow[]>`
     UPDATE storefront_users
     SET first_name = ${firstName},
         last_name = ${lastName},
         phone = ${phone ?? null},
-        avatar = ${avatar},
         default_address = ${JSON.stringify(defaultAddress)}::jsonb,
         updated_at = now()
     WHERE id = ${userId}::uuid
@@ -460,7 +462,6 @@ export async function requestKey(prefix: string) {
 
 export function toUserDTO(user: UserRow): StorefrontUserDTO {
   return {
-    avatar: user.avatar,
     defaultAddress: user.default_address && typeof user.default_address === "object" && !Array.isArray(user.default_address)
       ? (user.default_address as Record<string, unknown>)
       : null,
