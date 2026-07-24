@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client"
+import { revalidateTag, unstable_cache } from "next/cache"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 
 export const CATEGORY_STATUSES = ["active", "inactive"] as const
@@ -47,28 +48,39 @@ type OryCMSCategoryRow = {
   updated_at: Date
 }
 
-export async function listOryCMSCategories(options: { activeOnly?: boolean } = {}) {
-  await ensureOryCMSCategoriesSchema()
+const STOREFRONT_CATEGORIES_CACHE_TAG = "storefront-categories"
 
-  const categories = options.activeOnly
-    ? await orycmsPrisma.$queryRaw<OryCMSCategoryRow[]>`
-        SELECT c.*, p.name AS parent_name, COUNT(pr.id) AS product_count
-        FROM orycms_categories c
-        LEFT JOIN orycms_categories p ON p.id = c.parent_id
-        LEFT JOIN orycms_products pr ON pr.category = c.name
-        WHERE c.deleted_at IS NULL AND c.status = 'active'
-        GROUP BY c.id, p.name
-        ORDER BY c.display_order ASC, c.name ASC
-      `
-    : await orycmsPrisma.$queryRaw<OryCMSCategoryRow[]>`
-        SELECT c.*, p.name AS parent_name, COUNT(pr.id) AS product_count
-        FROM orycms_categories c
-        LEFT JOIN orycms_categories p ON p.id = c.parent_id
-        LEFT JOIN orycms_products pr ON pr.category = c.name
-        WHERE c.deleted_at IS NULL
-        GROUP BY c.id, p.name
-        ORDER BY c.display_order ASC, c.name ASC
-      `
+const listActiveCategoriesCached = unstable_cache(
+  async () => {
+    await ensureOryCMSCategoriesSchema()
+    const categories = await orycmsPrisma.$queryRaw<OryCMSCategoryRow[]>`
+      SELECT c.*, p.name AS parent_name, COUNT(pr.id) AS product_count
+      FROM orycms_categories c
+      LEFT JOIN orycms_categories p ON p.id = c.parent_id
+      LEFT JOIN orycms_products pr ON pr.category = c.name
+      WHERE c.deleted_at IS NULL AND c.status = 'active'
+      GROUP BY c.id, p.name
+      ORDER BY c.display_order ASC, c.name ASC
+    `
+    return categories.map(toCategoryDTO)
+  },
+  ["active-orycms-categories"],
+  { revalidate: 300, tags: [STOREFRONT_CATEGORIES_CACHE_TAG] },
+)
+
+export async function listOryCMSCategories(options: { activeOnly?: boolean } = {}) {
+  if (options.activeOnly) return listActiveCategoriesCached()
+
+  await ensureOryCMSCategoriesSchema()
+  const categories = await orycmsPrisma.$queryRaw<OryCMSCategoryRow[]>`
+    SELECT c.*, p.name AS parent_name, COUNT(pr.id) AS product_count
+    FROM orycms_categories c
+    LEFT JOIN orycms_categories p ON p.id = c.parent_id
+    LEFT JOIN orycms_products pr ON pr.category = c.name
+    WHERE c.deleted_at IS NULL
+    GROUP BY c.id, p.name
+    ORDER BY c.display_order ASC, c.name ASC
+  `
 
   return categories.map(toCategoryDTO)
 }
@@ -100,23 +112,23 @@ export async function saveOryCMSCategory(input: OryCMSCategoryInput, id?: string
   const payload = validateCategoryInput(input)
   const duplicate = await findDuplicateCategory(payload.name, payload.slug, id)
 
-  if (duplicate?.nameMatch) throw new Error("Category already exist this name.")
-  if (duplicate?.slugMatch) throw new Error("Category already exist this slug.")
+  if (duplicate?.nameMatch) throw new Error("A category with this name already exists.")
+  if (duplicate?.slugMatch) throw new Error("A category with this slug already exists.")
 
   const [category] = id
     ? await orycmsPrisma.$queryRaw<OryCMSCategoryRow[]>`
         UPDATE orycms_categories
-        SET
-          display_order = ${payload.displayOrder},
-          image = ${JSON.stringify(payload.image)}::jsonb,
-          meta_description = ${payload.metaDescription || null},
-          meta_title = ${payload.metaTitle || null},
-          name = ${payload.name},
-          parent_id = ${payload.parentId}::uuid,
-          slug = ${payload.slug},
-          status = ${payload.status},
-          updated_at = now()
-        WHERE id = ${id}::uuid AND deleted_at IS NULL
+        SET display_order = ${payload.displayOrder},
+            image = ${JSON.stringify(payload.image)}::jsonb,
+            meta_description = ${payload.metaDescription || null},
+            meta_title = ${payload.metaTitle || null},
+            name = ${payload.name},
+            parent_id = ${payload.parentId}::uuid,
+            slug = ${payload.slug},
+            status = ${payload.status},
+            updated_at = now()
+        WHERE id = ${id}::uuid
+          AND deleted_at IS NULL
         RETURNING *, NULL::text AS parent_name, 0 AS product_count
       `
     : await orycmsPrisma.$queryRaw<OryCMSCategoryRow[]>`
@@ -145,6 +157,12 @@ export async function saveOryCMSCategory(input: OryCMSCategoryInput, id?: string
 
   if (!category) throw new Error("Category not found.")
 
+  try {
+    revalidateTag(STOREFRONT_CATEGORIES_CACHE_TAG, { expire: 0 })
+  } catch {
+    // Ignore outside request context
+  }
+
   return getOryCMSCategory(category.id)
 }
 
@@ -158,6 +176,12 @@ export async function deleteOryCMSCategory(id: string) {
     WHERE id = ${id}::uuid
       AND deleted_at IS NULL
   `
+
+  try {
+    revalidateTag(STOREFRONT_CATEGORIES_CACHE_TAG, { expire: 0 })
+  } catch {
+    // Ignore outside request context
+  }
 }
 
 export async function bulkDeleteOryCMSCategories(ids: string[]) {

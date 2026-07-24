@@ -88,6 +88,10 @@ export async function getOryCMSProduct(id: string) {
 }
 
 export async function getPublishedOryCMSProductBySlug(slug: string) {
+  const publishedProducts = await listPublishedOryCMSProducts()
+  const match = publishedProducts.find((p) => p.slug === slug)
+  if (match) return match
+
   await ensureOryCMSProductsSchema()
 
   const [product] = await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`

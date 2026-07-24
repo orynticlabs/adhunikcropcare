@@ -11,7 +11,7 @@ import HeaderServer from "@/components/layout/header-server"
 import AnnouncementBar from "@/components/layout/announcement-bar"
 import KnowledgeTabs from "@/components/home/knowledge-tabs"
 import { MarketplaceProductsSection } from "@/components/home/marketplace-products-section"
-import FAQAccordion from "@/components/home/faq-accordion"
+import FAQSection from "@/components/home/faq-section"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 import CropSuccessStories from "@/components/home/crop-success-stories"
@@ -364,20 +364,8 @@ export default async function Home() {
         {/* ══ Farmers, not customers (Database Testimonials) ══ */}
         <FarmersNotCustomersSection />
 
-        {/* ══ FAQ ═════════════════════════════════════════════ */}
-        <section id="contact-us" className="relative py-12 sm:py-16">
-          <div className="mx-auto max-w-3xl px-4">
-            <div className="text-center mx-auto max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
-                <Leaf className="h-3 w-3" aria-hidden /> FAQ
-              </div>
-              <h2 className="mt-5 font-display text-4xl sm:text-5xl leading-[1.1] tracking-tight">
-                Questions, answered.
-              </h2>
-            </div>
-            <FAQAccordion />
-          </div>
-        </section>
+        {/* ══ FAQ (Database FAQs) ═══════════════════════════════ */}
+        <FAQSection />
 
         <CropSuccessStories stories={reels} />
       </main>

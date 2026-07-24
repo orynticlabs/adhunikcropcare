@@ -108,6 +108,13 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
           },
           {
             section: "Content",
+            label: "FAQs",
+            href: adminHref("/collections/faqs"),
+            slug: "collections/faqs",
+            description: "Manage frequently asked questions and display order.",
+          },
+          {
+            section: "Content",
             label: "Payments",
             href: adminHref("/payments"),
             slug: "payments",

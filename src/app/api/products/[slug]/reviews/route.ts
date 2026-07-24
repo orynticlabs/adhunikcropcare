@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { addProductReview, getProductReviewSummary } from "@/lib/orycms/reviews"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 export const runtime = "nodejs"
 
@@ -15,7 +16,14 @@ export async function GET(
 
   try {
     const summary = await getProductReviewSummary(slug)
-    return NextResponse.json({ success: true, data: summary })
+    return NextResponse.json(
+      { success: true, data: summary },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=15, stale-while-revalidate=30",
+        },
+      }
+    )
   } catch {
     return NextResponse.json({
       success: true,
@@ -28,6 +36,14 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
+  const { allowed } = await checkRateLimit("review-submit", 5, 300_000)
+  if (!allowed) {
+    return NextResponse.json(
+      { success: false, error: { message: "Too many review submissions. Please wait a few minutes." } },
+      { status: 429 }
+    )
+  }
+
   const { slug } = await params
   if (!slug) {
     return NextResponse.json({ success: false, error: { message: "Invalid product slug." } }, { status: 400 })

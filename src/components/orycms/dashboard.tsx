@@ -121,6 +121,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Plugins: Puzzle,
   Products: Package,
   Reels: Video,
+  FAQs: FileText,
   Roles: Shield,
   SEO: SearchCheck,
   Settings,
@@ -1071,6 +1072,7 @@ function sectionHref(section: string) {
     Overview: "/admin",
     Products: "/admin/products",
     Reels: "/admin/collections/reels",
+    FAQs: "/admin/collections/faqs",
   }
 
   return routes[section] ?? `/admin/${section.toLowerCase().replace(/\s+/g, "-")}`
@@ -1446,8 +1448,34 @@ function OryCMSMenuLink({
   )
 }
 
+const ALL_MENU_HREFS: string[] = ORYCMS_ADMIN_MENU.flatMap((group) =>
+  group.items.flatMap((item) => {
+    const hrefs: string[] = []
+    if (item.href) hrefs.push(item.href)
+    if (item.children) {
+      for (const child of item.children) {
+        if (child.href) hrefs.push(child.href)
+      }
+    }
+    return hrefs
+  })
+)
+
 function isActiveAdminPath(pathname: string, href: string) {
-  return href === "/admin" ? pathname === href : pathname === href || pathname.startsWith(`${href}/`)
+  if (href === "/admin") return pathname === href
+  if (pathname === href) return true
+  if (!pathname.startsWith(`${href}/`)) return false
+
+  // If another menu link matches pathname with a longer/more specific path,
+  // this shorter link should not be active (e.g. /admin/collections vs /admin/collections/faqs).
+  const hasMoreSpecificMatch = ALL_MENU_HREFS.some(
+    (otherHref) =>
+      otherHref !== href &&
+      otherHref.length > href.length &&
+      (pathname === otherHref || pathname.startsWith(`${otherHref}/`))
+  )
+
+  return !hasMoreSpecificMatch
 }
 
 function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {

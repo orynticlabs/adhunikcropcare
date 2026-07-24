@@ -1,3 +1,4 @@
+import { revalidateTag, unstable_cache } from "next/cache"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { uploadOryCMSReelVideo, type OryCMSMediaAssetDTO } from "@/lib/orycms/media"
 
@@ -43,18 +44,37 @@ type ReelInput = {
   title?: string
 }
 
+const STOREFRONT_REELS_CACHE_TAG = "storefront-reels"
+
+const listPublishedReelsCached = unstable_cache(
+  async () => {
+    const rows = await orycmsPrisma.$queryRaw<ReelRow[]>`
+      SELECT * FROM orycms_reel_videos
+      WHERE deleted_at IS NULL AND status = 'published'
+      ORDER BY display_order ASC, created_at DESC
+    `
+    return rows.map(toDTO)
+  },
+  ["published-orycms-reels"],
+  { revalidate: 300, tags: [STOREFRONT_REELS_CACHE_TAG] },
+)
+
+function invalidateReelsCache() {
+  try {
+    revalidateTag(STOREFRONT_REELS_CACHE_TAG, { expire: 0 })
+  } catch {
+    // Ignore outside request context
+  }
+}
+
 export async function listOryCMSReelVideos(options: { publishedOnly?: boolean } = {}) {
-  const rows = options.publishedOnly
-    ? await orycmsPrisma.$queryRaw<ReelRow[]>`
-        SELECT * FROM orycms_reel_videos
-        WHERE deleted_at IS NULL AND status = 'published'
-        ORDER BY display_order ASC, created_at DESC
-      `
-    : await orycmsPrisma.$queryRaw<ReelRow[]>`
-        SELECT * FROM orycms_reel_videos
-        WHERE deleted_at IS NULL
-        ORDER BY display_order ASC, created_at DESC
-      `
+  if (options.publishedOnly) return listPublishedReelsCached()
+
+  const rows = await orycmsPrisma.$queryRaw<ReelRow[]>`
+    SELECT * FROM orycms_reel_videos
+    WHERE deleted_at IS NULL
+    ORDER BY display_order ASC, created_at DESC
+  `
 
   return rows.map(toDTO)
 }
@@ -72,6 +92,7 @@ export async function createOryCMSReelVideo(file: File, input: ReelInput) {
     RETURNING *
   `
 
+  invalidateReelsCache()
   return toDTO(row)
 }
 
@@ -84,6 +105,7 @@ export async function deleteOryCMSReelVideo(id: string) {
   `
 
   if (!row) throw new Error("Reel video not found.")
+  invalidateReelsCache()
 }
 
 function validate(input: ReelInput) {
@@ -93,7 +115,7 @@ function validate(input: ReelInput) {
     location: input.location?.trim() ?? "",
     prompt: input.prompt?.trim() ?? "",
     result: input.result?.trim() ?? "",
-    status: input.status === "draft" ? "draft" as const : "published" as const,
+    status: input.status === "draft" ? ("draft" as const) : ("published" as const),
     title: input.title?.trim() ?? "",
   }
 
@@ -130,7 +152,5 @@ function toDTO(row: ReelRow): OryCMSReelVideoDTO {
 
 function cloudinaryVideoPoster(url: OryCMSMediaAssetDTO["secure_url"]) {
   if (!url.includes("/video/upload/")) return ""
-  return url
-    .replace("/video/upload/", "/video/upload/so_0,f_jpg/")
-    .replace(/\.[a-z0-9]+($|\?)/i, ".jpg$1")
+  return url.replace(/\/video\/upload\/(?:v\d+\/)?/, "/video/upload/so_0,f_jpg/").replace(/\.[^/.]+$/, ".jpg")
 }

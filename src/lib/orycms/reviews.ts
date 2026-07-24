@@ -27,8 +27,25 @@ export type ProductReviewSummary = {
 }
 
 const memoryReviewsStore: Record<string, ProductReview[]> = {}
+const summaryCache: Map<string, { data: ProductReviewSummary; timestamp: number }> = new Map()
+let topReviewsCache: { data: ProductReview[]; timestamp: number } | null = null
+const CACHE_TTL_MS = 30_000 // 30 seconds cache for lightning fast responses
+
+export function invalidateReviewCaches(productSlug?: string) {
+  topReviewsCache = null
+  if (productSlug) {
+    summaryCache.delete(productSlug)
+  } else {
+    summaryCache.clear()
+  }
+}
 
 export async function getProductReviewSummary(productSlug: string): Promise<ProductReviewSummary> {
+  const cached = summaryCache.get(productSlug)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data
+  }
+
   let reviews: ProductReview[] = []
 
   try {
@@ -94,12 +111,15 @@ export async function getProductReviewSummary(productSlug: string): Promise<Prod
     }
   })
 
-  return {
+  const summary: ProductReviewSummary = {
     averageRating,
     totalReviews,
     breakdown,
     reviews,
   }
+
+  summaryCache.set(productSlug, { data: summary, timestamp: Date.now() })
+  return summary
 }
 
 export async function checkProductOrderVerification(email: string, productSlug: string): Promise<boolean> {
@@ -184,10 +204,15 @@ export async function addProductReview(input: {
     memoryReviewsStore[input.productSlug].unshift(newReview)
   }
 
+  invalidateReviewCaches(input.productSlug)
   return newReview
 }
 
 export async function getTopProductReviews(limit = 10): Promise<ProductReview[]> {
+  if (topReviewsCache && Date.now() - topReviewsCache.timestamp < CACHE_TTL_MS) {
+    return topReviewsCache.data.slice(0, limit)
+  }
+
   try {
     const dbReviews = await orycmsPrisma.$queryRaw<
       Array<{
@@ -208,7 +233,7 @@ export async function getTopProductReviews(limit = 10): Promise<ProductReview[]>
     `
 
     if (dbReviews.length > 0) {
-      return dbReviews.map((r) => ({
+      const formatted = dbReviews.map((r) => ({
         id: r.id,
         productSlug: r.product_slug,
         name: r.reviewer_name,
@@ -224,13 +249,19 @@ export async function getTopProductReviews(limit = 10): Promise<ProductReview[]>
         }),
         createdAt: new Date(r.created_at).toISOString(),
       }))
+
+      topReviewsCache = { data: formatted, timestamp: Date.now() }
+      return formatted
     }
   } catch {
     const allMemoryReviews = Object.values(memoryReviewsStore).flat()
     if (allMemoryReviews.length > 0) {
-      return allMemoryReviews
+      const formatted = allMemoryReviews
         .sort((a, b) => b.stars - a.stars || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
         .slice(0, limit)
+
+      topReviewsCache = { data: formatted, timestamp: Date.now() }
+      return formatted
     }
   }
 
