@@ -185,6 +185,7 @@ function SetupForm() {
                   placeholder="you@company.com"
                   autoComplete="email"
                   autoFocus
+                  suppressHydrationWarning
                 />
               </span>
             </label>

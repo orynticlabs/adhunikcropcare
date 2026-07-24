@@ -141,11 +141,7 @@ export default function Header({ initialCategories }: { initialCategories?: Stor
                     title={`${user.firstName} ${user.lastName}`}
                   >
                     <span className="flex h-7 w-7 items-center justify-center overflow-hidden rounded-full bg-[#689c30]/15 text-xs font-bold text-[#689c30]">
-                      {user.avatar ? (
-                        <Image src={user.avatar} alt="" width={28} height={28} className="h-full w-full object-cover" />
-                      ) : (
-                        <DefaultMemojiAvatar seed={`${user.id}:${user.email}`} className="h-full w-full object-cover" />
-                      )}
+                      <DefaultMemojiAvatar seed={`${user.id}:${user.email}`} className="h-full w-full object-cover" />
                     </span>
                   </button>
                   <div

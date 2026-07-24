@@ -317,6 +317,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
   const [globalErr, setGlobalErr] = useState("")
   const [otp, setOtp] = useState("")
   const [otpMessage, setOtpMessage] = useState("")
+  const [resendIn, setResendIn] = useState(0)
   const [sendingOtp, setSendingOtp] = useState(false)
   const [verifyingOtp, setVerifyingOtp] = useState(false)
   const [emailVerificationToken, setEmailVerificationToken] = useState("")
@@ -327,7 +328,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
     if (!lastName.trim()) nextErrors.lastName = "Required"
     if (!/\S+@\S+\.\S+/.test(email)) nextErrors.email = "Enter a valid email"
     if (!emailVerificationToken) nextErrors.otp = "Verify your email OTP first"
-    if (!/^\d{10}$/.test(phone)) nextErrors.phone = "Enter a valid 10-digit number"
+    if (!/^[6-9]\d{9}$/.test(phone)) nextErrors.phone = "Enter 10 digits starting with 6, 7, 8, or 9"
     if (password.length < 8) nextErrors.password = "Minimum 8 characters"
     if (password !== confirm) nextErrors.confirm = "Passwords do not match"
     if (!agree) nextErrors.agree = "Please accept the terms"
@@ -347,7 +348,14 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
       closeAuthModal()
       if (redirectPath) router.push(redirectPath)
     } catch (error) {
-      setGlobalErr(error instanceof Error ? error.message : "Could not create account. Please try again.")
+      const errorMessage = error instanceof Error ? error.message : "Could not create account. Please try again."
+      if (errorMessage.includes("Email verification has expired")) {
+        setEmailVerificationToken("")
+        setOtp("")
+        setOtpMessage("")
+        setResendIn(0)
+      }
+      setGlobalErr(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -363,6 +371,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
     setSendingOtp(true)
     try {
       setOtpMessage(await sendSignupOtp(email))
+      setResendIn(10)
       setOtp("")
       setEmailVerificationToken("")
     } catch (error) {
@@ -389,6 +398,12 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
       setVerifyingOtp(false)
     }
   }
+
+  useEffect(() => {
+    if (resendIn <= 0) return
+    const timer = window.setTimeout(() => setResendIn((seconds) => seconds - 1), 1000)
+    return () => window.clearTimeout(timer)
+  }, [resendIn])
 
   return (
     <>
@@ -444,14 +459,14 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
             <input
               type="email"
               value={email}
-              onChange={(event) => { setEmail(event.target.value); setEmailVerificationToken(""); setOtp(""); setOtpMessage("") }}
+              onChange={(event) => { setEmail(event.target.value); setEmailVerificationToken(""); setResendIn(0); setOtp(""); setOtpMessage("") }}
               className={`${inputCls(errors.email)} pl-10`}
               placeholder="you@example.com"
               autoComplete="email"
             />
             </div>
-            <button type="button" onClick={handleSendOtp} disabled={sendingOtp || verifyingOtp || Boolean(emailVerificationToken)} className="h-11 w-full shrink-0 rounded-xl bg-[#033927] px-4 text-xs font-bold text-white disabled:opacity-60 min-[420px]:w-auto">
-              {sendingOtp ? "Sending..." : emailVerificationToken ? "Verified" : otpMessage ? "Resend OTP" : "Send OTP"}
+            <button type="button" onClick={handleSendOtp} disabled={sendingOtp || verifyingOtp || resendIn > 0 || Boolean(emailVerificationToken)} className="h-11 w-full shrink-0 rounded-xl bg-[#033927] px-4 text-xs font-bold text-white disabled:opacity-60 min-[420px]:w-auto">
+              {sendingOtp ? "Sending..." : emailVerificationToken ? "Verified" : resendIn > 0 ? `Resend OTP (${resendIn}s)` : otpMessage ? "Resend OTP" : "Send OTP"}
             </button>
           </div>
           {errors.email ? <p className="text-xs text-red-500">{errors.email}</p> : null}

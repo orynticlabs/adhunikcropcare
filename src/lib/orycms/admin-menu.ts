@@ -87,13 +87,6 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
     items: [
       {
         section: "Content",
-        label: "Certificates",
-        href: adminHref("/certificates"),
-        slug: "certificates",
-        description: "Add, order, publish, and maintain company certificates.",
-      },
-      {
-        section: "Content",
         label: "Collections",
         href: adminHref("/collections"),
         slug: "collections",
@@ -105,6 +98,13 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
             href: adminHref("/collections"),
             slug: "collections",
             description: "Define content schemas and manage collection structure.",
+          },
+          {
+            section: "Content",
+            label: "Reels",
+            href: adminHref("/collections/reels"),
+            slug: "collections/reels",
+            description: "Upload videos for the storefront reels area.",
           },
           {
             section: "Content",
@@ -208,13 +208,6 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
         href: adminHref("/settings"),
         slug: "settings",
         description: "Configure workspace identity, storage, auth, hooks, and security.",
-      },
-      {
-        section: "System",
-        label: "Setup",
-        href: adminHref("/setup"),
-        slug: "setup",
-        description: "Run first-time owner setup once against the configured Neon database.",
       },
     ],
   },

@@ -35,6 +35,7 @@ function AuthFlow({ mode }: { mode: Mode }) {
   const [otp, setOtp] = useState("")
   const [otpSent, setOtpSent] = useState(false)
   const [otpLoading, setOtpLoading] = useState(false)
+  const [resendIn, setResendIn] = useState(0)
   const [emailVerificationToken, setEmailVerificationToken] = useState("")
   const [form, setForm] = useState({
     confirm: "",
@@ -54,6 +55,7 @@ function AuthFlow({ mode }: { mode: Mode }) {
     try {
       setMessage(await sendSignupOtp(form.email))
       setOtpSent(true)
+      setResendIn(10)
       setOtp("")
       setEmailVerificationToken("")
     } catch (error) {
@@ -75,6 +77,12 @@ function AuthFlow({ mode }: { mode: Mode }) {
       setOtpLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (resendIn <= 0) return
+    const timer = window.setTimeout(() => setResendIn((seconds) => seconds - 1), 1000)
+    return () => window.clearTimeout(timer)
+  }, [resendIn])
 
   useEffect(() => {
     if (mode !== "logout") return
@@ -130,6 +138,7 @@ function AuthFlow({ mode }: { mode: Mode }) {
       if (mode === "signup") {
         if (form.password !== form.confirm) throw new Error("Passwords do not match.")
         if (!emailVerificationToken) throw new Error("Verify your email OTP before creating your account.")
+        if (!/^[6-9]\d{9}$/.test(form.phone)) throw new Error("Enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.")
         await signup({ ...form, emailVerificationToken })
         router.push(from)
       }
@@ -143,7 +152,14 @@ function AuthFlow({ mode }: { mode: Mode }) {
         router.push("/login")
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Something went wrong.")
+      const errorMessage = error instanceof Error ? error.message : "Something went wrong."
+      if (mode === "signup" && errorMessage.includes("Email verification has expired")) {
+        setEmailVerificationToken("")
+        setOtp("")
+        setOtpSent(false)
+        setResendIn(0)
+      }
+      setMessage(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -181,8 +197,8 @@ function AuthFlow({ mode }: { mode: Mode }) {
 
             {mode !== "reset" ? (
               <div className="space-y-2">
-                <Field icon={Mail} label="Email" type="email" value={form.email} onChange={(email) => { setForm((p) => ({ ...p, email })); setOtpSent(false); setOtp(""); setEmailVerificationToken(""); setMessage("") }} required />
-                {mode === "signup" ? <button type="button" onClick={sendOtp} disabled={otpLoading || !form.email || Boolean(emailVerificationToken)} className="text-sm font-semibold text-[#689c30] hover:underline disabled:opacity-60">{otpLoading ? "Sending..." : emailVerificationToken ? "Email verified" : otpSent ? "Resend OTP" : "Send OTP"}</button> : null}
+                <Field icon={Mail} label="Email" type="email" value={form.email} onChange={(email) => { setForm((p) => ({ ...p, email })); setOtpSent(false); setResendIn(0); setOtp(""); setEmailVerificationToken(""); setMessage("") }} required />
+                {mode === "signup" ? <button type="button" onClick={sendOtp} disabled={otpLoading || resendIn > 0 || !form.email || Boolean(emailVerificationToken)} className="text-sm font-semibold text-[#689c30] hover:underline disabled:opacity-60">{otpLoading ? "Sending..." : emailVerificationToken ? "Email verified" : resendIn > 0 ? `Resend OTP (${resendIn}s)` : otpSent ? "Resend OTP" : "Send OTP"}</button> : null}
               </div>
             ) : null}
 

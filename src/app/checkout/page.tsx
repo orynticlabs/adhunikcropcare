@@ -352,7 +352,6 @@ export default function CheckoutPage() {
     const defaultId = (saveAsDefault || addresses.length === 1) ? nextAddress.id : addresses.find((address) => address.isDefault)?.id ?? addresses[0].id
     await updateProfile({
       defaultAddress: { addresses: addresses.map((address) => ({ ...address, isDefault: address.id === defaultId })), defaultId },
-      avatar: user.avatar,
       firstName,
       lastName,
       phone,

@@ -4,7 +4,6 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { CheckCircle2, X } from "lucide-react"
 
 export interface AuthUser {
-  avatar?: string | null
   defaultAddress?: Record<string, unknown> | null
   email: string
   emailVerified: boolean

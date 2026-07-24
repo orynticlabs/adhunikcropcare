@@ -92,3 +92,52 @@
   height: 0;
   pointer-events: none;
 }
+
+/* Keep the admin shell usable on narrow phones without duplicating mobile
+   classes across every module. Wide data tables remain horizontally scrollable. */
+.orycms-admin {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+.orycms-admin main,
+.orycms-admin main > div {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 639px) {
+  .orycms-admin main > div > section,
+  .orycms-admin main > div > div {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .orycms-admin main [class*="min-w-64"],
+  .orycms-admin main [class*="min-w-[200px]"],
+  .orycms-admin main [class*="min-w-[240px]"] {
+    min-width: 100% !important;
+  }
+
+  .orycms-admin main input:not([type="checkbox"]):not([type="radio"]),
+  .orycms-admin main select,
+  .orycms-admin main textarea {
+    max-width: 100%;
+  }
+
+  .orycms-admin main [class*="overflow-x-auto"] {
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .orycms-admin .orycms-footer > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.875rem 1rem;
+  }
+
+  .orycms-admin .orycms-footer span {
+    line-height: 1.45;
+  }
+}

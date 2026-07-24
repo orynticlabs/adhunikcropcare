@@ -142,6 +142,30 @@ model OryCMSCertificate {
   @@map("orycms_certificates")
 }
 
+model OryCMSReelVideo {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title        String
+  result       String
+  farmer       String?
+  location     String?
+  prompt       String?
+  videoUrl     String    @map("video_url")
+  posterUrl    String?   @map("poster_url")
+  assetId      String?   @map("asset_id")
+  publicId     String    @map("public_id")
+  format       String
+  bytes        Int       @default(0)
+  status       String    @default("published")
+  displayOrder Int       @default(0) @map("display_order")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  @@index([status, displayOrder], map: "orycms_reel_videos_status_display_order_idx")
+  @@index([deletedAt], map: "orycms_reel_videos_deleted_at_idx")
+  @@map("orycms_reel_videos")
+}
+
 model OryCMSInventoryEvent {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   productId String?  @map("product_id") @db.Uuid

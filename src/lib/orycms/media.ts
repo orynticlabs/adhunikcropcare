@@ -3,6 +3,8 @@ import { orycmsPrisma } from "@/lib/orycms/prisma"
 
 export const ORYCMS_MEDIA_MAX_BYTES = 10 * 1024 * 1024
 export const ORYCMS_MEDIA_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "svg", "gif"] as const
+export const ORYCMS_REEL_VIDEO_MAX_BYTES = 50 * 1024 * 1024
+export const ORYCMS_REEL_VIDEO_EXTENSIONS = ["mp4", "mov", "webm", "m4v"] as const
 
 const allowedTypes = new Set([
   "image/gif",
@@ -11,6 +13,13 @@ const allowedTypes = new Set([
   "image/png",
   "image/svg+xml",
   "image/webp",
+])
+
+const allowedVideoTypes = new Set([
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+  "video/x-m4v",
 ])
 
 export type OryCMSMediaAssetDTO = {
@@ -22,6 +31,7 @@ export type OryCMSMediaAssetDTO = {
   id: string
   original_filename: string | null
   public_id: string
+  resource_type: string
   secure_url: string
   width: number | null
 }
@@ -52,6 +62,7 @@ export function toMediaDTO(asset: {
   id: string
   originalFilename: string | null
   publicId: string
+  resourceType: string
   secureUrl: string
   width: number | null
 }): OryCMSMediaAssetDTO {
@@ -64,6 +75,7 @@ export function toMediaDTO(asset: {
     id: asset.id,
     original_filename: asset.originalFilename,
     public_id: asset.publicId,
+    resource_type: asset.resourceType,
     secure_url: asset.secureUrl,
     width: asset.width,
   }
@@ -87,6 +99,24 @@ export function validateOryCMSMediaFile(file: File) {
   return null
 }
 
+export function validateOryCMSReelVideoFile(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase() ?? ""
+
+  if (!ORYCMS_REEL_VIDEO_EXTENSIONS.includes(extension as (typeof ORYCMS_REEL_VIDEO_EXTENSIONS)[number])) {
+    return `Only ${ORYCMS_REEL_VIDEO_EXTENSIONS.join(", ")} video files are allowed.`
+  }
+
+  if (!allowedVideoTypes.has(file.type)) {
+    return "Unsupported video type."
+  }
+
+  if (file.size > ORYCMS_REEL_VIDEO_MAX_BYTES) {
+    return "Video is too large. Maximum size is 50 MB."
+  }
+
+  return null
+}
+
 export async function listOryCMSMedia(search: string) {
   await ensureOryCMSMediaSchema()
 
@@ -95,13 +125,14 @@ export async function listOryCMSMedia(search: string) {
     take: 100,
     where: search
       ? {
+          resourceType: "image",
           OR: [
             { originalFilename: { contains: search, mode: "insensitive" } },
             { publicId: { contains: search, mode: "insensitive" } },
             { format: { contains: search, mode: "insensitive" } },
           ],
         }
-      : undefined,
+      : { resourceType: "image" },
   })
 
   return assets.map(toMediaDTO)
@@ -120,6 +151,34 @@ export async function uploadOryCMSMedia(file: File, options: UploadOptions = {})
     throw new Error("Product images must be JPG, PNG, or WebP files.")
   }
 
+  return uploadToCloudinary(file, {
+    folder: process.env.CLOUDINARY_ORYCMS_FOLDER ?? "orycms/media",
+    mediaName: options.mediaName,
+    productImage: options.productImage,
+    resourceType: "image",
+  })
+}
+
+export async function uploadOryCMSReelVideo(file: File, options: UploadOptions = {}) {
+  await ensureOryCMSMediaSchema()
+
+  const validationError = validateOryCMSReelVideoFile(file)
+
+  if (validationError) {
+    throw new Error(validationError)
+  }
+
+  return uploadToCloudinary(file, {
+    folder: process.env.CLOUDINARY_ORYCMS_REELS_FOLDER ?? "orycms/reels",
+    mediaName: options.mediaName,
+    resourceType: "video",
+  })
+}
+
+async function uploadToCloudinary(
+  file: File,
+  options: UploadOptions & { folder: string; resourceType: "image" | "video" },
+) {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME
   const apiKey = process.env.CLOUDINARY_API_KEY
   const apiSecret = process.env.CLOUDINARY_API_SECRET
@@ -128,7 +187,7 @@ export async function uploadOryCMSMedia(file: File, options: UploadOptions = {})
     throw new Error("Cloudinary is not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.")
   }
 
-  const folder = (process.env.CLOUDINARY_ORYCMS_FOLDER ?? "orycms/media").replace(/^\/+|\/+$/g, "")
+  const folder = options.folder.replace(/^\/+|\/+$/g, "")
   const mediaName = cleanMediaName(options.mediaName) || file.name
   const contentHash = crypto
     .createHash("sha256")
@@ -158,7 +217,7 @@ export async function uploadOryCMSMedia(file: File, options: UploadOptions = {})
   Object.entries(uploadParams).forEach(([key, value]) => form.append(key, value))
   form.append("signature", signature)
 
-  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${options.resourceType}/upload`, {
     body: form,
     method: "POST",
   })
@@ -177,6 +236,7 @@ export async function uploadOryCMSMedia(file: File, options: UploadOptions = {})
       height: json.height ?? null,
       originalFilename: mediaName,
       publicId: json.public_id,
+      resourceType: options.resourceType,
       secureUrl: json.secure_url,
       width: json.width ?? null,
     },
@@ -186,6 +246,7 @@ export async function uploadOryCMSMedia(file: File, options: UploadOptions = {})
       format: json.format,
       height: json.height ?? null,
       originalFilename: mediaName,
+      resourceType: options.resourceType,
       secureUrl: json.secure_url,
       width: json.width ?? null,
     },
