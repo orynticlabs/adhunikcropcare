@@ -53,8 +53,9 @@ export async function getProductReviewSummary(productSlug: string): Promise<Prod
       Array<{
         id: string
         product_slug: string
-        reviewer_name: string
-        reviewer_email: string
+        user_id: string
+        first_name: string | null
+        last_name: string | null
         rating: number
         title: string
         comment: string
@@ -62,16 +63,28 @@ export async function getProductReviewSummary(productSlug: string): Promise<Prod
         created_at: Date
       }>
     >`
-      SELECT * FROM storefront_product_reviews
-      WHERE product_slug = ${productSlug}
-      ORDER BY created_at DESC
+      SELECT
+        r.id,
+        r.product_slug,
+        r.user_id,
+        r.rating,
+        r.title,
+        r.comment,
+        r.verified,
+        r.created_at,
+        u.first_name,
+        u.last_name
+      FROM storefront_product_reviews r
+      JOIN storefront_users u ON r.user_id = u.id
+      WHERE r.product_slug = ${productSlug}
+      ORDER BY r.created_at DESC
     `
 
     reviews = dbReviews.map((r) => ({
       id: r.id,
       productSlug: r.product_slug,
-      name: r.reviewer_name,
-      email: r.reviewer_email,
+      name: [r.first_name, r.last_name].filter(Boolean).join(" ").trim() || "Verified Farmer",
+      email: "",
       stars: Math.min(5, Math.max(1, Math.round(Number(r.rating)))),
       title: r.title,
       body: r.comment,
@@ -84,7 +97,7 @@ export async function getProductReviewSummary(productSlug: string): Promise<Prod
       createdAt: new Date(r.created_at).toISOString(),
     }))
   } catch {
-    // If DB table doesn't exist yet, fallback to in-memory store
+    // If DB query fails or table structure is changing, fallback to in-memory store
     reviews = memoryReviewsStore[productSlug] ?? []
   }
 
@@ -122,65 +135,38 @@ export async function getProductReviewSummary(productSlug: string): Promise<Prod
   return summary
 }
 
-export async function checkProductOrderVerification(email: string, productSlug: string): Promise<boolean> {
-  if (!email || !email.trim()) return false
-  try {
-    const orders = await orycmsPrisma.storefrontOrder.findMany({
-      where: {
-        OR: [
-          { contact: { path: ["email"], equals: email.trim().toLowerCase() } },
-          { shippingAddress: { path: ["email"], equals: email.trim().toLowerCase() } },
-        ],
-      },
-      select: { items: true, status: true, paymentStatus: true },
-    })
-
-    return orders.some((order) => {
-      if (Array.isArray(order.items)) {
-        return order.items.some((item) => {
-          if (item && typeof item === "object" && !Array.isArray(item)) {
-            const record = item as Record<string, unknown>
-            return record.slug === productSlug || record.id === productSlug
-          }
-          return false
-        })
-      }
-      return false
-    })
-  } catch {
-    return false
-  }
-}
-
 export async function addProductReview(input: {
   productSlug: string
-  reviewerName: string
-  reviewerEmail: string
+  userId: string
   rating: number
-  title: string
+  title?: string
   comment: string
-  verified?: boolean
 }): Promise<ProductReview> {
   const stars = Math.min(5, Math.max(1, Math.round(input.rating)))
-  const name = input.reviewerName.trim() || "Anonymous Farmer"
-  const email = input.reviewerEmail.trim().toLowerCase()
-  const title = input.title.trim()
+  const title = (input.title ?? "").trim() || `${stars} Star Review`
   const comment = input.comment.trim()
-  let verified = Boolean(input.verified)
 
-  if (!verified && email) {
-    verified = await checkProductOrderVerification(email, input.productSlug)
+  let reviewerName = "Verified Farmer"
+  try {
+    const userRows = await orycmsPrisma.$queryRaw<Array<{ first_name: string; last_name: string }>>`
+      SELECT first_name, last_name FROM storefront_users WHERE id = ${input.userId}::uuid LIMIT 1
+    `
+    if (userRows[0]) {
+      reviewerName = [userRows[0].first_name, userRows[0].last_name].filter(Boolean).join(" ").trim() || reviewerName
+    }
+  } catch {
+    // Ignore user lookup error if table fallback is used
   }
 
   const newReview: ProductReview = {
     id: `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     productSlug: input.productSlug,
-    name,
-    email,
+    name: reviewerName,
+    email: "",
     stars,
     title,
     body: comment,
-    verified,
+    verified: true,
     date: new Date().toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "short",
@@ -192,9 +178,9 @@ export async function addProductReview(input: {
   try {
     await orycmsPrisma.$executeRaw`
       INSERT INTO storefront_product_reviews
-        (product_slug, reviewer_name, reviewer_email, rating, title, comment, verified)
+        (product_slug, user_id, rating, title, comment, verified)
       VALUES
-        (${input.productSlug}, ${name}, ${email}, ${stars}, ${title}, ${comment}, ${verified})
+        (${input.productSlug}, ${input.userId}::uuid, ${stars}, ${title}, ${comment}, true)
     `
   } catch {
     // Fallback to in-memory store if table is missing in live DB
@@ -218,8 +204,9 @@ export async function getTopProductReviews(limit = 10): Promise<ProductReview[]>
       Array<{
         id: string
         product_slug: string
-        reviewer_name: string
-        reviewer_email: string
+        user_id: string
+        first_name: string | null
+        last_name: string | null
         rating: number
         title: string
         comment: string
@@ -227,8 +214,20 @@ export async function getTopProductReviews(limit = 10): Promise<ProductReview[]>
         created_at: Date
       }>
     >`
-      SELECT * FROM storefront_product_reviews
-      ORDER BY rating DESC, created_at DESC
+      SELECT
+        r.id,
+        r.product_slug,
+        r.user_id,
+        r.rating,
+        r.title,
+        r.comment,
+        r.verified,
+        r.created_at,
+        u.first_name,
+        u.last_name
+      FROM storefront_product_reviews r
+      JOIN storefront_users u ON r.user_id = u.id
+      ORDER BY r.rating DESC, r.created_at DESC
       LIMIT ${limit}
     `
 
@@ -236,8 +235,8 @@ export async function getTopProductReviews(limit = 10): Promise<ProductReview[]>
       const formatted = dbReviews.map((r) => ({
         id: r.id,
         productSlug: r.product_slug,
-        name: r.reviewer_name,
-        email: r.reviewer_email,
+        name: [r.first_name, r.last_name].filter(Boolean).join(" ").trim() || "Verified Farmer",
+        email: "",
         stars: Math.min(5, Math.max(1, Math.round(Number(r.rating)))),
         title: r.title,
         body: r.comment,

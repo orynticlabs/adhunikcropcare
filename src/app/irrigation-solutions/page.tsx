@@ -6,6 +6,8 @@ import AnnouncementBar from "@/components/layout/announcement-bar"
 import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
+import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
+import CropSuccessStories from "@/components/home/crop-success-stories"
 
 export const metadata: Metadata = { title: "Irrigation Solutions | Adhunik Crop Care", description: "Explore drip, sprinkler, and water-management solutions for efficient irrigation." }
 
@@ -60,6 +62,9 @@ export default function IrrigationPage() {
         </section>
 
       <section className="pb-16 sm:pb-24"><div className="mx-auto max-w-7xl px-4"><div className="rounded-[2rem] bg-[#d8eee8] p-6 sm:rounded-[3rem] sm:p-12 lg:flex lg:items-center lg:justify-between lg:p-16"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-[#16826d]">Build the right system</p><h2 className="mt-4 max-w-3xl font-display text-3xl sm:text-5xl">Match irrigation to water, crop, soil, and field.</h2></div><Link href="/products?q=Irrigation" className="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black lg:mt-0">Explore irrigation <ArrowRight className="h-4 w-4" /></Link></div></div></section>
+
+      <FarmersNotCustomersSection />
+      <CropSuccessStories />
       </main>
       <SiteFooter />
     </div>

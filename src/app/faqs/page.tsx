@@ -4,6 +4,8 @@ import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import FaqsPageClient from "@/components/faqs/faqs-page-client"
+import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
+import CropSuccessStories from "@/components/home/crop-success-stories"
 import { listOryCMSFaqs } from "@/lib/orycms/faqs"
 
 export const metadata: Metadata = {
@@ -23,6 +25,8 @@ export default async function FaqsPage() {
 
       <main>
         <FaqsPageClient initialFaqs={faqs} />
+        <FarmersNotCustomersSection />
+        <CropSuccessStories />
       </main>
 
       <SiteFooter />

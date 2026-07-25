@@ -15,6 +15,8 @@ import AnnouncementBar from "@/components/layout/announcement-bar"
 import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
+import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
+import CropSuccessStories from "@/components/home/crop-success-stories"
 
 export const metadata: Metadata = {
   title: "Field Journal | Adhunik Crop Care",
@@ -256,6 +258,9 @@ export default function BlogPage() {
             </div>
           </div>
         </section>
+
+        <FarmersNotCustomersSection />
+        <CropSuccessStories />
       </main>
 
       <SiteFooter />

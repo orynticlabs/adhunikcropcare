@@ -148,13 +148,13 @@ export default function FaqsPageClient({
           <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/contact"
-              className="inline-flex h-11 items-center justify-center rounded-full bg-[#033927] px-6 text-xs font-semibold text-white shadow-soft transition-transform hover:scale-[1.02] active:scale-98"
+              className="inline-flex h-11 items-center justify-center rounded-full bg-[#033927] px-6 text-xs font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black"
             >
               Contact Support
             </Link>
             <a
               href="tel:+919205762766"
-              className="inline-flex h-11 items-center justify-center rounded-full border border-[#033927]/30 bg-white px-6 text-xs font-semibold text-[#033927] shadow-soft transition-transform hover:scale-[1.02] active:scale-98"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-[#d7e0da] bg-white px-6 text-xs font-semibold text-[#033927] transition-colors hover:bg-[#033927] hover:!text-white"
             >
               Call Us (+91 9205762766)
             </a>

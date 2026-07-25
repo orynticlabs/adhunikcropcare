@@ -18,14 +18,7 @@ import { useAuth } from "@/features/auth/auth-context"
 
 /* ── Constants ──────────────────────────────────────────────── */
 const MAX_SAVED_ADDRESSES = 4
-const INDIA_STATES = [
-  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
-  "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu & Kashmir",
-  "Jharkhand", "Karnataka", "Kerala", "Ladakh", "Madhya Pradesh", "Maharashtra",
-  "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan",
-  "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand",
-  "West Bengal",
-]
+
 
 type AppliedCoupon = {
   code: string
@@ -40,9 +33,14 @@ type SavedAddress = {
   address1: string
   address2?: string
   city: string
+  email?: string
+  firstName?: string
   id: string
   isDefault?: boolean
   label: string
+  lastName?: string
+  name?: string
+  phone?: string
   pincode: string
   state: string
 }
@@ -146,7 +144,7 @@ export default function CheckoutPage() {
   const [saveAddress, setSaveAddress] = useState(true)
   const [saveAsDefault, setSaveAsDefault] = useState(true)
   const [addressLabel, setAddressLabel] = useState("Home")
-  const [delivery,  setDelivery]    = useState<"standard" | "express">("standard")
+
   const [payment,   setPayment]     = useState<PaymentMethod>("cash_on_delivery")
   const [coupon,    setCoupon]      = useState("")
   const [applied,   setApplied]     = useState<AppliedCoupon | null>(null)
@@ -157,10 +155,10 @@ export default function CheckoutPage() {
   const [paymentErr, setPaymentErr] = useState("")
   const [toast, setToast] = useState("")
 
-  const savedAddresses = useMemo(() => readSavedAddresses(user?.defaultAddress), [user?.defaultAddress])
+  const savedAddresses = useMemo(() => readSavedAddresses(user?.defaultAddress, user), [user])
 
   /* derived totals */
-  const shippingCost   = delivery === "express" ? 99 : subtotal >= 999 ? 0 : 49
+  const shippingCost   = 0
   const discountAmount = applied ? applied.discountAmount : 0
   const total          = subtotal + shippingCost - discountAmount
 
@@ -184,6 +182,18 @@ export default function CheckoutPage() {
     setCity(address.city)
     setState(address.state)
     setPincode(address.pincode)
+
+    const rawName = (address.name || "").trim()
+    const parts = rawName ? rawName.split(/\s+/) : []
+    const addrFirstName = address.firstName || parts[0] || user?.firstName || ""
+    const addrLastName = address.lastName || parts.slice(1).join(" ") || user?.lastName || ""
+
+    if (addrFirstName) setFirstName(addrFirstName)
+    if (addrLastName) setLastName(addrLastName)
+    if (address.phone) setPhone(address.phone)
+    else if (user?.phone) setPhone(user.phone)
+    if (address.email) setEmail(address.email)
+    else if (user?.email) setEmail(user.email)
   }
 
   function startNewAddress() {
@@ -194,6 +204,12 @@ export default function CheckoutPage() {
     setState("")
     setPincode("")
     setAddressLabel("Home")
+    if (user) {
+      setFirstName(user.firstName)
+      setLastName(user.lastName)
+      setEmail(user.email)
+      setPhone(user.phone)
+    }
     setSaveAddress(savedAddresses.length < MAX_SAVED_ADDRESSES)
     setSaveAsDefault(savedAddresses.length === 0)
   }
@@ -215,13 +231,22 @@ export default function CheckoutPage() {
   }, [savedAddresses, selectedAddressId])
 
   useEffect(() => {
-    if (!/^\d{6}$/.test(pincode)) return
+    if (!/^\d{6}$/.test(pincode)) {
+      // Clear stale city/state when pincode is incomplete or being edited
+      setCity("")
+      setState("")
+      return
+    }
     setPincodeLoading(true)
-    fetch(`/api/pincode?pincode=${pincode}`).then((response) => response.json()).then((json) => {
-      if (!json.success) return
-      setCity(json.data.city)
-      setState(json.data.state)
-    }).catch(() => undefined).finally(() => setPincodeLoading(false))
+    fetch(`/api/pincode?pincode=${pincode}`)
+      .then((response) => response.json())
+      .then((json) => {
+        if (!json.success) return
+        setCity(json.data.city)
+        setState(json.data.state)
+      })
+      .catch(() => undefined)
+      .finally(() => setPincodeLoading(false))
   }, [pincode])
 
   /* coupon */
@@ -262,7 +287,7 @@ export default function CheckoutPage() {
     if (!/^\d{10}$/.test(phone))              e.phone     = "Enter a valid 10-digit number"
     if (!address1.trim())                      e.address1  = "Required"
     if (!city.trim())                          e.city      = "Required"
-    if (!state)                                e.state     = "Select a state"
+    if (!state)                                e.state     = "Enter a valid pincode to detect state"
     if (!/^\d{6}$/.test(pincode))             e.pincode   = "Enter a valid 6-digit pincode"
     setErrors(e)
     return Object.keys(e).length === 0
@@ -370,9 +395,14 @@ export default function CheckoutPage() {
       address1: address1.trim(),
       address2: address2.trim(),
       city: city.trim(),
+      email: email.trim(),
+      firstName: firstName.trim(),
       id: selectedAddressId !== "new" ? selectedAddressId : crypto.randomUUID(),
       isDefault,
       label: label.trim() || "Home",
+      lastName: lastName.trim(),
+      name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+      phone: phone.trim(),
       pincode: pincode.trim(),
       state,
     }
@@ -387,7 +417,7 @@ export default function CheckoutPage() {
     return {
       contact: { email, firstName, lastName, phone },
       coupon: applied ? { code: applied.code, discountId: applied.discountId, discountAmount: applied.discountAmount, type: applied.type } : null,
-      deliveryMethod: delivery,
+      deliveryMethod: "standard",
       discountTotal: discountAmount,
       items: items.map((item) => ({
         id: item.id,
@@ -439,8 +469,7 @@ export default function CheckoutPage() {
   const hasSavedAddresses = savedAddresses.length > 0
   const contactStep = hasSavedAddresses ? 2 : 1
   const addressStep = hasSavedAddresses ? 3 : 2
-  const deliveryStep = hasSavedAddresses ? 4 : 3
-  const paymentStep = hasSavedAddresses ? 5 : 4
+  const paymentStep = hasSavedAddresses ? 4 : 3
 
   return (
     <div className="min-h-screen bg-background">
@@ -650,54 +679,6 @@ export default function CheckoutPage() {
                 </div>
               </SectionCard>
 
-              {/* Delivery Method */}
-              <SectionCard title="Delivery Method" step={deliveryStep}>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {[
-                    {
-                      id: "standard" as const,
-                      icon: Truck,
-                      label: "Standard Delivery",
-                      sub: "3–5 business days",
-                      price: subtotal >= 999 ? "Free" : formatCurrency(49),
-                      note: subtotal >= 999 ? "You qualify for free shipping!" : "Free above ₹999",
-                    },
-                    {
-                      id: "express" as const,
-                      icon: Package,
-                      label: "Express Delivery",
-                      sub: "1–2 business days",
-                      price: formatCurrency(99),
-                      note: "Priority dispatch & tracking",
-                    },
-                  ].map(opt => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setDelivery(opt.id)}
-                      className={`group min-h-24 rounded-2xl border p-4 text-left transition-colors ${
-                        delivery === opt.id
-                          ? "border-[#033927] bg-[#033927] text-white"
-                          : "border-border/60 bg-white text-black hover:border-[#689c30] hover:bg-[#689c30]/10"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-2.5">
-                          <opt.icon className={`h-5 w-5 shrink-0 ${delivery === opt.id ? "text-[#689c30]" : "text-black group-hover:text-[#689c30]"}`} aria-hidden />
-                          <div>
-                            <p className="text-sm font-semibold">{opt.label}</p>
-                            <p className={`text-xs ${delivery === opt.id ? "text-white/75" : "text-muted-foreground"}`}>{opt.sub}</p>
-                          </div>
-                        </div>
-                        <span className={`text-sm font-bold ${delivery === opt.id ? "text-white" : ""}`}>
-                          {opt.price}
-                        </span>
-                      </div>
-                      <p className={`mt-2 text-[11px] ${delivery === opt.id ? "text-white/75" : "text-muted-foreground"}`}>{opt.note}</p>
-                    </button>
-                  ))}
-                </div>
-              </SectionCard>
 
               {/* Payment */}
               <SectionCard title="Payment Method" step={paymentStep}>
@@ -852,8 +833,8 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex justify-between text-muted-foreground">
                     <span>Shipping</span>
-                    <span className={`font-medium ${shippingCost === 0 ? "text-[#033927]" : "text-foreground"}`}>
-                      {shippingCost === 0 ? "Free" : formatCurrency(shippingCost)}
+                    <span className="font-semibold text-[#033927] flex items-center gap-1">
+                      <Truck className="h-3.5 w-3.5" aria-hidden /> Free
                     </span>
                   </div>
                   {applied && (
@@ -1023,14 +1004,14 @@ async function openRazorpayCheckout(input: {
   checkout.open()
 }
 
-function readSavedAddresses(raw: unknown): SavedAddress[] {
+function readSavedAddresses(raw: unknown, user?: { firstName?: string; lastName?: string; email?: string; phone?: string } | null): SavedAddress[] {
   if (!raw || typeof raw !== "object") return []
   const value = raw as Record<string, unknown>
   const defaultId = typeof value.defaultId === "string" ? value.defaultId : ""
 
   if (Array.isArray(value.addresses)) {
     return value.addresses
-      .map((item, index) => normalizeAddress(item, defaultId, index))
+      .map((item, index) => normalizeAddress(item, defaultId, index, user))
       .filter((item): item is SavedAddress => Boolean(item))
   }
 
@@ -1039,9 +1020,14 @@ function readSavedAddresses(raw: unknown): SavedAddress[] {
       address1: value.line.trim(),
       address2: "",
       city: "",
+      email: user?.email ?? "",
+      firstName: user?.firstName ?? "",
       id: "legacy-default",
       isDefault: true,
       label: "Default",
+      lastName: user?.lastName ?? "",
+      name: user ? `${user.firstName} ${user.lastName}`.trim() : "",
+      phone: user?.phone ?? "",
       pincode: "",
       state: "",
     }]
@@ -1050,19 +1036,34 @@ function readSavedAddresses(raw: unknown): SavedAddress[] {
   return []
 }
 
-function normalizeAddress(item: unknown, defaultId: string, index: number): SavedAddress | null {
+function normalizeAddress(
+  item: unknown,
+  defaultId: string,
+  index: number,
+  user?: { firstName?: string; lastName?: string; email?: string; phone?: string } | null
+): SavedAddress | null {
   if (!item || typeof item !== "object") return null
   const value = item as Record<string, unknown>
-  const address1 = text(value.address1)
+  const address1 = text(value.address1) || text(value.line1)
   if (!address1) return null
   const id = text(value.id) || `address-${index + 1}`
+  const rawName = text(value.name)
+  const parts = rawName ? rawName.split(/\s+/) : []
+  const firstName = text(value.firstName) || parts[0] || user?.firstName || ""
+  const lastName = text(value.lastName) || parts.slice(1).join(" ") || user?.lastName || ""
+
   return {
     address1,
-    address2: text(value.address2),
+    address2: text(value.address2) || text(value.line2),
     city: text(value.city),
+    email: text(value.email) || user?.email || "",
+    firstName,
     id,
     isDefault: Boolean(value.isDefault) || id === defaultId,
     label: text(value.label) || `Address ${index + 1}`,
+    lastName,
+    name: rawName || `${firstName} ${lastName}`.trim(),
+    phone: text(value.phone) || user?.phone || "",
     pincode: text(value.pincode),
     state: text(value.state),
   }

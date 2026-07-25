@@ -6,6 +6,8 @@ import AnnouncementBar from "@/components/layout/announcement-bar"
 import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
+import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
+import CropSuccessStories from "@/components/home/crop-success-stories"
 
 export const metadata: Metadata = { title: "Bio Products | Adhunik Crop Care", description: "Explore microbial biofertilizers and biological crop-support products." }
 
@@ -58,8 +60,11 @@ export default function BioProductsPage() {
         </section>
 
         <section className="py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4"><div className="rounded-[2rem] bg-[#062f24] p-6 text-white sm:rounded-[3rem] sm:p-12 lg:flex lg:items-center lg:justify-between lg:p-16"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-[#e9c46a]">Explore the bio range</p><h2 className="mt-4 max-w-3xl font-display text-3xl sm:text-5xl">Bring beneficial biology into your crop program.</h2></div><Link href="/products?q=Bio%20Products" className="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#bdd879] px-7 font-bold text-[#17382d] hover:text-[#17382d] lg:mt-0">View bio products <ArrowRight className="h-4 w-4" /></Link></div></div>
+        <div className="mx-auto max-w-7xl px-4"><div className="rounded-[2rem] bg-[#062f24] p-6 text-white sm:rounded-[3rem] sm:p-12 lg:flex lg:items-center lg:justify-between lg:p-16"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-[#e9c46a]">Explore the bio range</p><h2 className="mt-4 max-w-3xl font-display text-3xl sm:text-5xl">Bring beneficial biology into your crop program.</h2></div><Link href="/products?q=Bio%20Products" className="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#bdd879] px-7 font-bold text-[#17382d] transition-colors hover:bg-white hover:text-[#17382d] lg:mt-0">View bio products <ArrowRight className="h-4 w-4" /></Link></div></div>
         </section>
+
+        <FarmersNotCustomersSection />
+        <CropSuccessStories />
       </main>
       <SiteFooter />
     </div>

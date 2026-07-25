@@ -17,6 +17,8 @@ import AnnouncementBar from "@/components/layout/announcement-bar"
 import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
+import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
+import CropSuccessStories from "@/components/home/crop-success-stories"
 import { listOryCMSCertificates, type OryCMSCertificateDTO } from "@/lib/orycms/certificates"
 
 export const metadata: Metadata = {
@@ -78,10 +80,10 @@ export default async function CertificationsPage() {
                 Review our published company certificates and understand the practical quality system behind responsible products, reliable support, and continuous improvement.
               </p>
               <div className="mt-8 flex flex-col gap-3 min-[420px]:flex-row min-[420px]:flex-wrap">
-                <a href="#company-certificates" className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-medium text-primary-foreground shadow-luxe transition hover:shadow-xl">
+                <a href="#company-certificates" className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black">
                   View certificates <ArrowRight className="h-4 w-4" aria-hidden />
                 </a>
-                <Link href="/contact" className="inline-flex h-12 items-center justify-center rounded-full border border-[#033927]/15 bg-white/80 px-7 text-sm font-medium shadow-soft hover:bg-white">
+                <Link href="/contact" className="inline-flex h-12 items-center justify-center rounded-full border border-[#d7e0da] bg-white px-7 text-sm font-semibold text-[#033927] transition-colors hover:bg-[#033927] hover:!text-white">
                   Request verification
                 </Link>
               </div>
@@ -205,6 +207,9 @@ export default async function CertificationsPage() {
         <section className="pb-20 sm:pb-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6"><div className="relative overflow-hidden rounded-3xl bg-[#e9c46a] px-6 py-10 sm:px-10 lg:flex lg:items-center lg:justify-between lg:px-14"><Sparkles className="absolute -right-8 -top-12 h-52 w-52 text-white/25" strokeWidth={0.7} /><div className="relative max-w-2xl"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#665728]">Need formal documentation?</p><h2 className="mt-3 font-display text-3xl text-[#17382d] sm:text-5xl">Connect with our quality team.</h2></div><Link href="/contact" className="relative mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-medium text-white shadow-xl transition hover:bg-[#689c30] hover:!text-black lg:mt-0">Request details <ArrowRight className="h-4 w-4" /></Link></div></div>
         </section>
+
+        <FarmersNotCustomersSection />
+        <CropSuccessStories />
       </main>
       <SiteFooter />
     </div>

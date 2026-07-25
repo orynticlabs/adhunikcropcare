@@ -215,7 +215,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const offerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const offerTextRef  = useRef<HTMLDivElement>(null)
-  const { user } = useAuth()
+  const { openAuthModal, user } = useAuth()
   const { addItem, openCart } = useCart()
   const [liveReviews, setLiveReviews] = useState<Review[]>([])
   const [liveAverageRating, setLiveAverageRating] = useState<number>(0)
@@ -232,22 +232,21 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
   // Write a review modal state
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [ratingInput, setRatingInput] = useState(5)
-  const [nameInput, setNameInput] = useState("")
-  const [emailInput, setEmailInput] = useState("")
   const [titleInput, setTitleInput] = useState("")
   const [commentInput, setCommentInput] = useState("")
   const [submittingReview, setSubmittingReview] = useState(false)
   const [reviewError, setReviewError] = useState("")
   const [reviewSuccess, setReviewSuccess] = useState(false)
 
-  // Pre-fill user details if logged in
-  useEffect(() => {
-    if (user) {
-      const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim()
-      if (fullName) setNameInput(fullName)
-      if (user.email) setEmailInput(user.email)
+  const handleWriteReviewClick = () => {
+    if (!user) {
+      openAuthModal("signin")
+      return
     }
-  }, [user])
+    setShowReviewModal(true)
+    setReviewError("")
+    setReviewSuccess(false)
+  }
 
   // Load live reviews from database API
   useEffect(() => {
@@ -270,8 +269,6 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
 
   async function submitReview(e: React.FormEvent) {
     e.preventDefault()
-    if (!nameInput.trim()) { setReviewError("Please enter your name."); return }
-    if (!titleInput.trim()) { setReviewError("Please enter a review title."); return }
     if (!commentInput.trim()) { setReviewError("Please enter your review comment."); return }
     if (ratingInput < 1 || ratingInput > 5) { setReviewError("Please select a rating from 1 to 5 stars."); return }
 
@@ -282,12 +279,9 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: nameInput,
-          email: emailInput,
           rating: ratingInput,
           title: titleInput,
           comment: commentInput,
-          verified: Boolean(user),
         }),
       })
       const json = await response.json()
@@ -922,12 +916,8 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
             </div>
             <button
               type="button"
-              onClick={() => {
-                setShowReviewModal(true)
-                setReviewError("")
-                setReviewSuccess(false)
-              }}
-              className="rounded-md border-2 border-[#033927] bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-[#033927] transition-colors hover:bg-[#033927] hover:text-white"
+              onClick={handleWriteReviewClick}
+              className="rounded-md border-2 border-[#033927] bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-[#033927] transition-colors hover:bg-[#033927] hover:!text-white"
             >
               Write a Review
             </button>
@@ -956,11 +946,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               <p className="mt-1 text-sm text-muted-foreground">Be the first to share your experience!</p>
               <button
                 type="button"
-                onClick={() => {
-                  setShowReviewModal(true)
-                  setReviewError("")
-                  setReviewSuccess(false)
-                }}
+                onClick={handleWriteReviewClick}
                 className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#033927] px-5 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#689c30] hover:text-black"
               >
                 Write First Review
@@ -987,7 +973,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                   <div className="mt-3">
                     <Stars rating={r.stars} />
                   </div>
-                  <p className="mt-2 font-semibold text-foreground">{r.title}</p>
+                  {r.title?.trim() && <p className="mt-2 font-semibold text-foreground">{r.title}</p>}
                   <p className="mt-1 text-sm leading-relaxed text-foreground/75">{r.body}</p>
                 </div>
               ))}
@@ -1023,6 +1009,13 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               <h3 className="font-display text-2xl font-bold text-[#033927]">Write a Product Review</h3>
               <p className="mt-1 text-xs text-foreground/60">Sharing your honest feedback helps fellow farmers make informed choices.</p>
 
+              {user && (
+                <div className="mt-4 rounded-xl border border-[#033927]/15 bg-[#033927]/5 px-3.5 py-2.5 text-xs font-semibold text-[#033927] flex items-center justify-between">
+                  <span>Posting review as <strong>{[user.firstName, user.lastName].filter(Boolean).join(" ")}</strong></span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#689c30]">✓ Verified Account</span>
+                </div>
+              )}
+
               {reviewSuccess ? (
                 <div className="mt-6 rounded-xl border border-[#689c30]/40 bg-[#689c30]/10 p-5 text-center">
                   <p className="font-bold text-[#033927]">Thank you for your review!</p>
@@ -1050,38 +1043,13 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                     </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-foreground/70">Your Name *</label>
-                      <input
-                        required
-                        type="text"
-                        value={nameInput}
-                        onChange={(e) => setNameInput(e.target.value)}
-                        placeholder="e.g. Ramesh Patil"
-                        className="mt-1 w-full rounded-lg border border-border/80 bg-background px-3.5 py-2 text-sm outline-none focus:border-[#033927]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-foreground/70">Email Address</label>
-                      <input
-                        type="email"
-                        value={emailInput}
-                        onChange={(e) => setEmailInput(e.target.value)}
-                        placeholder="e.g. ramesh@example.com"
-                        className="mt-1 w-full rounded-lg border border-border/80 bg-background px-3.5 py-2 text-sm outline-none focus:border-[#033927]"
-                      />
-                    </div>
-                  </div>
-
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-foreground/70">Review Title *</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-foreground/70">Review Title (Optional)</label>
                     <input
-                      required
                       type="text"
                       value={titleInput}
                       onChange={(e) => setTitleInput(e.target.value)}
-                      placeholder="e.g. Visible results within two weeks"
+                      placeholder="e.g. Great results on my crop"
                       className="mt-1 w-full rounded-lg border border-border/80 bg-background px-3.5 py-2 text-sm outline-none focus:border-[#033927]"
                     />
                   </div>
@@ -1136,6 +1104,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               {similarList.map((item, idx) => (
                 <ProductCard
                   key={`sim-${item.name}-${idx}`}
+                  slug={item.slug}
                   href={item.slug ? `/products/${item.slug}` : productHref(item.name)}
                   name={item.name}
                   image={item.img}
@@ -1144,8 +1113,6 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                   originalPrice={comparePrice(item.price)}
                   badge={item.badge}
                   subtitle={item.desc}
-                  rating={Number(item.rating)}
-                  reviews={Number(item.rating) * 40}
                   imageSizes="(max-width: 639px) calc(50vw - 1rem), (max-width: 1023px) calc(50vw - 1.5rem), 25vw"
                 />
               ))}
@@ -1165,6 +1132,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               {differentList.map((item, idx) => (
                 <ProductCard
                   key={`diff-${item.name}-${idx}`}
+                  slug={item.slug}
                   href={item.slug ? `/products/${item.slug}` : productHref(item.name)}
                   name={item.name}
                   image={item.img}
@@ -1173,8 +1141,6 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                   originalPrice={comparePrice(item.price)}
                   badge={item.badge}
                   subtitle={item.desc}
-                  rating={Number(item.rating)}
-                  reviews={Number(item.rating) * 40}
                   imageSizes="(max-width: 639px) calc(50vw - 1rem), (max-width: 1023px) calc(50vw - 1.5rem), 25vw"
                 />
               ))}
@@ -1194,6 +1160,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               {bestSellerList.map((item, idx) => (
                 <ProductCard
                   key={`best-${item.name}-${idx}`}
+                  slug={item.slug}
                   href={item.slug ? `/products/${item.slug}` : productHref(item.name)}
                   name={item.name}
                   image={item.img}
@@ -1202,8 +1169,6 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                   originalPrice={comparePrice(item.price)}
                   badge={item.badge}
                   subtitle={item.desc}
-                  rating={Number(item.rating)}
-                  reviews={Number(item.rating) * 40}
                   imageSizes="(max-width: 639px) calc(50vw - 1rem), (max-width: 1023px) calc(50vw - 1.5rem), 25vw"
                 />
               ))}

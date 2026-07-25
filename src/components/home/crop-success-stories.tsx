@@ -10,8 +10,38 @@ export type CropSuccessStory = {
   video: string
 }
 
-export default function CropSuccessStories({ stories }: { stories: CropSuccessStory[] }) {
-  if (stories.length === 0) return null
+export default function CropSuccessStories({ stories: propStories }: { stories?: CropSuccessStory[] }) {
+  const [stories, setStories] = useState<CropSuccessStory[]>(propStories ?? [])
+  const [loaded, setLoaded] = useState(Boolean(propStories && propStories.length > 0))
+
+  useEffect(() => {
+    if (propStories && propStories.length > 0) {
+      setStories(propStories)
+      setLoaded(true)
+      return
+    }
+
+    let isMounted = true
+    fetch("/api/reels")
+      .then((res) => res.json())
+      .then((data) => {
+        if (isMounted && data.success && Array.isArray(data.reels)) {
+          setStories(data.reels)
+        }
+      })
+      .catch(() => {
+        if (isMounted) setStories([])
+      })
+      .finally(() => {
+        if (isMounted) setLoaded(true)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [propStories])
+
+  if (!loaded || stories.length === 0) return null
 
   return <CropSuccessStoriesCarousel stories={stories} />
 }

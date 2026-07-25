@@ -6,6 +6,8 @@ import AnnouncementBar from "@/components/layout/announcement-bar"
 import Header from "@/components/layout/header"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
+import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
+import CropSuccessStories from "@/components/home/crop-success-stories"
 
 export const metadata: Metadata = { title: "Knowledge Center | Adhunik Crop Care", description: "Sample crop-learning resources, field notes, and practical guides from Adhunik Crop Care." }
 
@@ -27,7 +29,10 @@ export default function KnowledgeCenterPage() {
 
         <section className="border-y border-[#e2e8da] bg-[#eff4e9] py-16 sm:py-20"><div className="mx-auto max-w-7xl px-4"><div className="flex items-end justify-between gap-6"><div><p className="text-xs font-bold uppercase tracking-[.2em] text-[#689c30]">Featured resources</p><h2 className="mt-4 font-display text-4xl sm:text-5xl">Start with the basics.</h2></div><PlayCircle className="hidden h-10 w-10 text-[#689c30] sm:block" /></div><div className="mt-10 grid gap-4 lg:grid-cols-3">{RESOURCES.map(([type, title, copy]) => <article key={title} className="rounded-[2rem] bg-white p-7 shadow-sm"><span className="text-xs font-bold uppercase tracking-[.17em] text-[#689c30]">{type}</span><h3 className="mt-6 font-display text-3xl leading-tight">{title}</h3><p className="mt-4 leading-7 text-[#68766e]">{copy}</p><Link href="/contact" className="mt-8 inline-flex items-center gap-2 text-sm font-bold text-[#174c37]">Ask a question <ArrowRight className="h-4 w-4" /></Link></article>)}</div></div></section>
 
-        <section className="mx-auto max-w-7xl px-4 py-20"><div className="rounded-[2.5rem] border border-[#dbe5d4] bg-white p-8 text-center sm:p-14"><Sprout className="mx-auto h-9 w-9 text-[#689c30]" /><h2 className="mt-5 font-display text-4xl sm:text-5xl">Need guidance for a specific crop?</h2><p className="mx-auto mt-4 max-w-xl leading-7 text-[#66746c]">Send our team the crop stage and field context. We will use it to guide the next conversation.</p><Link href="/farmer-services" className="mt-7 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white">Explore farmer services <ArrowRight className="h-4 w-4" /></Link></div></section>
+        <section className="mx-auto max-w-7xl px-4 py-20"><div className="rounded-[2.5rem] border border-[#dbe5d4] bg-white p-8 text-center sm:p-14"><Sprout className="mx-auto h-9 w-9 text-[#689c30]" /><h2 className="mt-5 font-display text-4xl sm:text-5xl">Need guidance for a specific crop?</h2><p className="mx-auto mt-4 max-w-xl leading-7 text-[#66746c]">Send our team the crop stage and field context. We will use it to guide the next conversation.</p><Link href="/farmer-services" className="mt-7 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">Explore farmer services <ArrowRight className="h-4 w-4" /></Link></div></section>
+
+        <FarmersNotCustomersSection />
+        <CropSuccessStories />
       </main>
       <SiteFooter />
     </div>

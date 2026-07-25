@@ -19,6 +19,8 @@ import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import ContactEnquiryForm from "@/components/contact/contact-enquiry-form"
+import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
+import CropSuccessStories from "@/components/home/crop-success-stories"
 
 export const metadata: Metadata = {
   title: "Contact Us | Adhunik Crop Care",
@@ -198,6 +200,9 @@ export default function ContactPage() {
             </div>
           </div>
         </section>
+
+        <FarmersNotCustomersSection />
+        <CropSuccessStories />
       </main>
 
       <SiteFooter />

@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Star } from "lucide-react"
@@ -44,13 +44,61 @@ export function ProductCard({
   originalPrice,
   badge,
   subtitle,
-  rating = 4.8,
-  reviews = 199,
+  rating,
+  reviews,
   className = "",
   imageSizes = "(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(50vw - 2rem), (max-width: 1279px) calc(33vw - 1.5rem), 300px",
+  slug,
 }: ProductCardProps) {
   const supportingLine = buildSubtitle(badge, subtitle)
   const gallery = useMemo(() => (images && images.length > 0 ? images : [image]), [image, images])
+
+  const [liveRating, setLiveRating] = useState<number | undefined>(rating)
+  const [liveReviews, setLiveReviews] = useState<number | undefined>(reviews)
+
+  useEffect(() => {
+    if (typeof rating === "number" && typeof reviews === "number") {
+      setLiveRating(rating)
+      setLiveReviews(reviews)
+      return
+    }
+
+    const targetSlug = slug || (href.startsWith("/products/") ? href.replace("/products/", "").split("/")[0] : "")
+    if (!targetSlug) {
+      setLiveRating(0)
+      setLiveReviews(0)
+      return
+    }
+
+    let isMounted = true
+    fetch(`/api/products/${encodeURIComponent(targetSlug)}/reviews`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (isMounted) {
+          if (json.success && json.data) {
+            setLiveRating(json.data.averageRating || 0)
+            setLiveReviews(json.data.totalReviews || 0)
+          } else {
+            setLiveRating(0)
+            setLiveReviews(0)
+          }
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setLiveRating(0)
+          setLiveReviews(0)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [href, rating, reviews, slug])
+
+  const currentRating = liveRating ?? rating ?? 0
+  const currentReviews = liveReviews ?? reviews ?? 0
+  const showReviewBadge = currentReviews > 0 && currentRating > 0
 
   return (
     <article
@@ -71,11 +119,14 @@ export function ProductCard({
           </div>
         ) : null}
 
-        <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md border border-[#d7e0da] bg-white/95 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-[#173c31] shadow-sm">
-          <span>{rating.toFixed(1)}</span>
-          <Star className="h-3.5 w-3.5 fill-[#1d6b57] text-[#1d6b57]" />
-          <span className="text-[#947f69]">| {reviews}</span>
-        </div>
+        {showReviewBadge ? (
+          <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md border border-[#d7e0da] bg-white/95 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-[#173c31] shadow-sm">
+            <span>{currentRating.toFixed(1)}</span>
+            <Star className="h-3.5 w-3.5 fill-[#1d6b57] text-[#1d6b57]" />
+            <span className="text-[#947f69]">| {currentReviews}</span>
+          </div>
+        ) : null}
+
         {gallery.length > 1 ? (
           <div className="absolute bottom-3 right-3 flex gap-1">
             {gallery.slice(0, 4).map((_, index) => (

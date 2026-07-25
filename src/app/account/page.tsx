@@ -40,6 +40,8 @@ interface Address {
   id: string
   label: string
   name: string
+  firstName?: string
+  lastName?: string
   line1: string
   line2?: string
   city: string
@@ -133,9 +135,11 @@ function addressesJson(addresses: Address[]) {
     address1: address.line1,
     address2: address.line2 ?? "",
     city: address.city,
+    firstName: address.firstName ?? address.name.split(/\s+/)[0] ?? "",
     id: address.id,
     isDefault: address.isDefault,
     label: address.label,
+    lastName: address.lastName ?? address.name.split(/\s+/).slice(1).join(" ") ?? "",
     name: address.name,
     phone: address.phone,
     pincode: address.pincode,
@@ -387,9 +391,11 @@ function AddressesView() {
   const isAddressLimitReached = savedAddresses.length >= MAX_SAVED_ADDRESSES
   const emptyForm = useMemo<Address>(() => ({
     city: "",
+    firstName: user?.firstName ?? "",
     id: "",
     isDefault: savedAddresses.length === 0,
     label: "Home",
+    lastName: user?.lastName ?? "",
     line1: "",
     line2: "",
     name: user ? `${user.firstName} ${user.lastName}`.trim() : "",
@@ -403,7 +409,12 @@ function AddressesView() {
   const [pincodeLoading, setPincodeLoading] = useState(false)
 
   useEffect(() => {
-    if (!editing || !/^\d{6}$/.test(editing.pincode)) return
+    if (!editing) return
+    if (!/^\d{6}$/.test(editing.pincode)) {
+      // Clear stale city/state whenever pincode is incomplete or being edited
+      setEditing((current) => current ? { ...current, city: "", state: "" } : null)
+      return
+    }
     setPincodeLoading(true)
     fetch(`/api/pincode?pincode=${editing.pincode}`)
       .then((response) => response.json())
@@ -459,13 +470,15 @@ function AddressesView() {
       label: editing.label.trim() || "Address",
       line1: editing.line1.trim(),
       line2: editing.line2?.trim() ?? "",
-      name: editing.name.trim(),
+      name: `${editing.firstName?.trim() || editing.name.split(/\s+/)[0] || ""} ${editing.lastName?.trim() || editing.name.split(/\s+/).slice(1).join(" ") || ""}`.trim(),
+      firstName: editing.firstName?.trim() || editing.name.split(/\s+/)[0] || "",
+      lastName: editing.lastName?.trim() || editing.name.split(/\s+/).slice(1).join(" ") || "",
       phone: editing.phone.replace(/\D/g, "").slice(0, 10),
       pincode: editing.pincode.replace(/\D/g, "").slice(0, 6),
       state: editing.state.trim(),
     }
-    if (!nextAddress.name) {
-      setError("Full name is required.")
+    if (!nextAddress.firstName || !nextAddress.lastName) {
+      setError("First name and last name are required.")
       return
     }
     if (!/^\d{10}$/.test(nextAddress.phone)) {
@@ -529,21 +542,46 @@ function AddressesView() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <AddressInput label="Label" value={editing.label} onChange={(label) => setEditing({ ...editing, label })} />
-            <AddressInput required label="Full name" value={editing.name} onChange={(name) => setEditing({ ...editing, name })} />
             <AddressInput required label="Mobile number" value={editing.phone} maxLength={10} onChange={(phone) => setEditing({ ...editing, phone: phone.replace(/\D/g, "") })} />
             <AddressInput
               required
-              label={pincodeLoading ? "Pincode (Detecting...)" : "Pincode"}
+              label="First name"
+              value={editing.firstName ?? ""}
+              onChange={(firstName) => setEditing({ ...editing, firstName, name: `${firstName} ${editing.lastName ?? ""}`.trim() })}
+            />
+            <AddressInput
+              required
+              label="Last name"
+              value={editing.lastName ?? ""}
+              onChange={(lastName) => setEditing({ ...editing, lastName, name: `${editing.firstName ?? ""} ${lastName}`.trim() })}
+            />
+            <AddressInput
+              required
+              label={pincodeLoading ? "Pincode (Detecting…)" : "Pincode"}
               value={editing.pincode}
               maxLength={6}
               onChange={(pincode) => setEditing({ ...editing, pincode: pincode.replace(/\D/g, "") })}
             />
             <AddressInput required label="Address line 1" value={editing.line1} onChange={(line1) => setEditing({ ...editing, line1 })} className="sm:col-span-2" />
             <AddressInput label="Address line 2" value={editing.line2 ?? ""} onChange={(line2) => setEditing({ ...editing, line2 })} className="sm:col-span-2" />
-            <AddressInput label="City" value={editing.city} onChange={() => {}} readOnly placeholder="Auto-detected from pincode" />
-            <AddressInput label="State" value={editing.state} onChange={() => {}} readOnly placeholder="Auto-detected from pincode" />
+            <AddressInput
+              required
+              readOnly
+              label="City"
+              value={editing.city}
+              onChange={() => undefined}
+              placeholder={pincodeLoading ? "Detecting…" : "Auto-detected from pincode"}
+            />
+            <AddressInput
+              required
+              readOnly
+              label="State"
+              value={editing.state}
+              onChange={() => undefined}
+              placeholder={pincodeLoading ? "Detecting…" : "Auto-detected from pincode"}
+            />
             <p className="sm:col-span-2 text-xs text-muted-foreground bg-[#689c30]/10 p-2.5 rounded-xl border border-[#689c30]/20">
-              City and state are automatically detected by pincode and are not editable.
+              City and state are automatically detected from your pincode and cannot be edited manually.
             </p>
           </div>
           <label className="mt-4 flex items-center gap-3 text-sm font-semibold">

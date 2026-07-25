@@ -20,6 +20,7 @@ import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
+import CropSuccessStories from "@/components/home/crop-success-stories"
 
 export const metadata: Metadata = {
   title: "Crop Fertilizers | Adhunik Crop Care",
@@ -107,7 +108,7 @@ export default function CropFertilizersPage() {
                 </Link>
                 <Link
                   href="/contact"
-                  className="inline-flex h-12 items-center rounded-full bg-[#033927] px-7 text-sm font-semibold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black"
+                  className="inline-flex h-12 items-center rounded-full bg-white px-7 text-sm font-semibold text-[#033927] shadow-xl transition-colors hover:bg-[#033927] hover:!text-white"
                 >
                   Ask an agronomist
                 </Link>
@@ -276,7 +277,7 @@ export default function CropFertilizersPage() {
               </div>
               <Link
                 href="/contact"
-                className="relative mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl lg:mt-0"
+                className="relative mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl transition-colors hover:bg-[#689c30] hover:!text-black lg:mt-0"
               >
                 Get crop guidance <ArrowRight className="h-4 w-4" />
               </Link>
@@ -285,6 +286,7 @@ export default function CropFertilizersPage() {
         </section>
 
         <FarmersNotCustomersSection />
+        <CropSuccessStories />
       </main>
 
       <SiteFooter />

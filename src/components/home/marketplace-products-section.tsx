@@ -91,8 +91,6 @@ export function MarketplaceProductsSection({
                   originalPrice={comparePrice(price)}
                   badge={p.featured ? "Featured" : p.category}
                   subtitle={p.shortDescription}
-                  reviews={120}
-                  rating={4.8}
                   className="w-[calc(100vw-4rem)] max-w-[20rem] basis-[calc(100vw-4rem)] flex-shrink-0 snap-start sm:w-[20rem] sm:basis-[20rem]"
                   imageSizes="(max-width: 640px) 75vw, 320px"
                 />

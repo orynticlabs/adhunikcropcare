@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { addProductReview, getProductReviewSummary } from "@/lib/orycms/reviews"
 import { checkRateLimit } from "@/lib/rate-limit"
+import { currentUser } from "@/lib/storefront-auth"
 
 export const runtime = "nodejs"
 
@@ -44,6 +45,14 @@ export async function POST(
     )
   }
 
+  const user = await currentUser()
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: { message: "You must be logged in to submit a review." } },
+      { status: 401 }
+    )
+  }
+
   const { slug } = await params
   if (!slug) {
     return NextResponse.json({ success: false, error: { message: "Invalid product slug." } }, { status: 400 })
@@ -51,18 +60,10 @@ export async function POST(
 
   try {
     const body = await request.json()
-    const { name, email, rating, title, comment, verified } = body
-
-    if (!name || typeof name !== "string" || !name.trim()) {
-      return NextResponse.json({ success: false, error: { message: "Please enter your name." } }, { status: 400 })
-    }
-
-    if (!title || typeof title !== "string" || !title.trim()) {
-      return NextResponse.json({ success: false, error: { message: "Please enter a review title." } }, { status: 400 })
-    }
+    const { rating, title, comment } = body
 
     if (!comment || typeof comment !== "string" || !comment.trim()) {
-      return NextResponse.json({ success: false, error: { message: "Please enter review comments." } }, { status: 400 })
+      return NextResponse.json({ success: false, error: { message: "Please enter your review comment." } }, { status: 400 })
     }
 
     const numRating = Number(rating)
@@ -72,12 +73,10 @@ export async function POST(
 
     const review = await addProductReview({
       productSlug: slug,
-      reviewerName: name,
-      reviewerEmail: email || "",
+      userId: user.id,
       rating: Math.round(numRating),
-      title,
+      title: title && typeof title === "string" ? title : "",
       comment,
-      verified: Boolean(verified),
     })
 
     const updatedSummary = await getProductReviewSummary(slug)

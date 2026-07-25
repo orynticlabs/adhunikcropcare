@@ -120,10 +120,10 @@ export default async function Home() {
 
               {/* CTAs */}
               <div className="mt-7 sm:mt-9 flex flex-wrap items-center justify-center gap-3">
-                <Link href="/products" className="inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-6 sm:px-7 h-11 sm:h-12 text-sm font-medium shadow-luxe transition-shadow hover:shadow-xl">
+                <Link href="/products" className="inline-flex items-center gap-2 rounded-full bg-[#033927] px-6 sm:px-7 h-11 sm:h-12 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black">
                   Explore Products <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
-                <Link href="/about" className="inline-flex items-center gap-2 rounded-full border border-white bg-white px-6 sm:px-7 h-11 sm:h-12 text-sm font-medium text-foreground shadow-luxe transition hover:bg-white/90 hover:shadow-xl">
+                <Link href="/about" className="inline-flex items-center gap-2 rounded-full border border-[#d7e0da] bg-white px-6 sm:px-7 h-11 sm:h-12 text-sm font-semibold text-[#033927] transition-colors hover:bg-[#033927] hover:!text-white">
                   <Info className="h-4 w-4" aria-hidden /> Learn About ACCPL
                 </Link>
               </div>
@@ -263,7 +263,7 @@ export default async function Home() {
                   ))}
                 </div>
 
-                <Link href="/knowledge-center" className="mt-8 inline-flex items-center gap-2 rounded-full bg-primary text-primary-foreground px-8 h-10 text-sm font-medium shadow transition-shadow hover:shadow-lg">
+                <Link href="/knowledge-center" className="mt-8 inline-flex items-center gap-2 rounded-full bg-[#033927] px-8 h-10 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black">
                   <BookOpen className="h-4 w-4" aria-hidden /> Open Knowledge Center
                 </Link>
               </div>
@@ -358,12 +358,11 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* ══ Farmers, not customers (Database Testimonials) ══ */}
-        <FarmersNotCustomersSection />
-
         {/* ══ FAQ (Database FAQs) ═══════════════════════════════ */}
         <FAQSection />
 
+        {/* ══ Farmers, not customers & Crop Success Stories ══ */}
+        <FarmersNotCustomersSection />
         <CropSuccessStories stories={reels} />
       </main>
 

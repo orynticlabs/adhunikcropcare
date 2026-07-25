@@ -98,7 +98,7 @@ export default function FAQSection() {
           <div className="mt-8 text-center">
             <Link
               href="/faqs"
-              className="inline-flex items-center gap-2.5 rounded-full border border-[#033927]/20 bg-[#033927]/5 px-6 py-3 text-sm font-semibold text-[#033927] transition-all hover:bg-[#033927] hover:text-white hover:shadow-md"
+              className="inline-flex items-center gap-2.5 rounded-full border border-[#d7e0da] bg-white px-6 py-3 text-sm font-semibold text-[#033927] transition-colors hover:bg-[#033927] hover:!text-white"
             >
               View all FAQs ({faqs.length}) <ArrowRight className="h-4 w-4" />
             </Link>

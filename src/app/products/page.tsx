@@ -13,7 +13,6 @@ import { ProductCard } from "@/components/products/product-card"
 import { ProductGridSkeleton } from "@/components/ui/skeleton"
 import Header from "@/components/layout/header"
 import CartDrawer from "@/features/cart/components/cart-drawer"
-import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 import SiteFooter from "@/components/layout/site-footer"
 import { formatCurrency } from "@/features/cart/cart-context"
 import { matchesSearchQuery } from "@/lib/search"
@@ -61,8 +60,8 @@ type StoreProduct = {
   img: string
   name: string
   priceValue: number
-  rating: number
-  reviews: number
+  rating?: number
+  reviews?: number
   shortDescription?: string
   sizes?: string[]
   slug?: string
@@ -104,8 +103,6 @@ function cmsProductToStoreProduct(product: CmsProduct): StoreProduct {
     img: images[0] || "/placeholder.svg",
     name: product.name,
     priceValue,
-    rating: 4.8,
-    reviews: 120,
     shortDescription: product.shortDescription,
     sizes: product.packSizes.map((pack) => pack.size),
     slug: product.slug,
@@ -166,7 +163,7 @@ function ProductsPageContent() {
     result = result.filter(p => p.priceValue >= min && p.priceValue <= max)
     if (sortBy === "price-asc")  result.sort((a, b) => a.priceValue - b.priceValue)
     if (sortBy === "price-desc") result.sort((a, b) => b.priceValue - a.priceValue)
-    if (sortBy === "rating")     result.sort((a, b) => b.rating - a.rating)
+    if (sortBy === "rating")     result.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
     return result
   }, [activeCategory, priceRange, products, searchQuery, sortBy])
 
@@ -434,6 +431,7 @@ function ProductsPageContent() {
                 return (
                   <ProductCard
                     key={p.slug ?? p.name}
+                    slug={p.slug}
                     href={productHref(p)}
                     name={p.name}
                     image={p.img}
@@ -442,8 +440,6 @@ function ProductsPageContent() {
                     originalPrice={comparePrice(p.priceValue)}
                     badge={p.badge}
                     subtitle={p.shortDescription || `${p.category} solution for better crop outcomes`}
-                    rating={p.rating}
-                    reviews={p.reviews}
                     imageSizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(50vw - 2rem), (max-width: 1279px) calc(33vw - 1.5rem), 300px"
                   />
                 )
@@ -451,8 +447,6 @@ function ProductsPageContent() {
             </div>
           )}
         </div>
-
-        <FarmersNotCustomersSection />
       </main>
 
       <SiteFooter />

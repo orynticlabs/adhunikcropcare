@@ -6,6 +6,8 @@ import AnnouncementBar from "@/components/layout/announcement-bar"
 import Header from "@/components/layout/header"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
+import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
+import CropSuccessStories from "@/components/home/crop-success-stories"
 
 export const metadata: Metadata = {
   title: "Farmer Services | Adhunik Crop Care",
@@ -23,19 +25,7 @@ export default function FarmerServicesPage() {
     <div className="min-h-screen bg-[#f5f7f0] text-[#17382d]">
       <AnnouncementBar /><Header /><CartDrawer />
       <main>
-        <section className="relative isolate overflow-hidden px-4 pb-20 pt-32 sm:pt-40">
-          <Image src="https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=1800&q=88" alt="Farmer checking a healthy crop" fill priority sizes="100vw" className="-z-20 object-cover" />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#073b2f]/85 via-[#073b2f]/65 to-[#073b2f]/30" />
-          <div className="mx-auto max-w-7xl py-10 text-white sm:py-20">
-            <nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-white/65"><Link href="/">Home</Link><ChevronRight className="h-3.5 w-3.5" /><span>Farmer Services</span></nav>
-            <div className="mt-14 max-w-3xl">
-              <p className="text-xs font-bold uppercase tracking-[.22em] text-[#d7e99d]">Practical support</p>
-              <h1 className="mt-4 font-display text-5xl leading-[.95] sm:text-7xl">Better decisions begin in the field.</h1>
-              <p className="mt-6 max-w-xl text-lg leading-8 text-white/78">Use this sample support page to learn how crop conversations, seasonal planning, and product guidance can work together.</p>
-              <Link href="/contact" className="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#d7e99d] px-7 text-sm font-bold text-[#17382d] transition hover:bg-white">Talk to our team <ArrowRight className="h-4 w-4" /></Link>
-            </div>
-          </div>
-        </section>
+        <section className="relative isolate overflow-hidden bg-[#173f31] px-4 pb-20 pt-32 text-white sm:pt-40"><Image src="https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?w=1800&q=88" alt="Farmer receiving crop advice in green field" fill priority sizes="100vw" className="-z-20 object-cover opacity-45" /><div className="absolute inset-0 -z-10 bg-[#0c3126]/60" /><div className="mx-auto max-w-7xl"><nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-white/65"><Link href="/">Home</Link><ChevronRight className="h-3.5 w-3.5" /><span>Farmer Services</span></nav><div className="mt-16 grid gap-10 lg:grid-cols-[1.2fr_.8fr] lg:items-end"><div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#d7e99d]">Guidance for the field</p><h1 className="mt-5 font-display text-5xl leading-[.94] sm:text-7xl">Practical support for every crop stage.</h1><p className="mt-6 max-w-2xl text-lg leading-8 text-white/78">Explore example service concepts covering crop planning, product selection, and seasonal advice designed for Indian farming conditions.</p></div><Link href="/contact" className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-bold text-[#033927] transition-colors hover:bg-[#033927] hover:!text-white">Ask a crop question <ArrowRight className="h-4 w-4" /></Link></div></div></section>
 
         <section className="mx-auto max-w-7xl px-4 py-20 sm:py-28">
           <div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-end">
@@ -47,7 +37,10 @@ export default function FarmerServicesPage() {
           </div>
         </section>
 
-        <section className="bg-[#dce9cf] px-4 py-16 sm:py-20"><div className="mx-auto flex max-w-7xl flex-col gap-6 rounded-[2.5rem] bg-[#123f31] p-8 text-white sm:p-12 lg:flex-row lg:items-center lg:justify-between"><div><UsersRound className="h-8 w-8 text-[#d7e99d]" /><h2 className="mt-5 font-display text-4xl sm:text-5xl">Ready to start a crop conversation?</h2></div><Link href="/contact" className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-[#d7e99d] px-7 text-sm font-bold text-[#17382d]">Contact support</Link></div></section>
+        <section className="bg-[#dce9cf] px-4 py-16 sm:py-20"><div className="mx-auto flex max-w-7xl flex-col gap-6 rounded-[2.5rem] bg-[#123f31] p-8 text-white sm:p-12 lg:flex-row lg:items-center lg:justify-between"><div><UsersRound className="h-8 w-8 text-[#d7e99d]" /><h2 className="mt-5 font-display text-4xl sm:text-5xl">Ready to start a crop conversation?</h2></div><Link href="/contact" className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-[#d7e99d] px-7 text-sm font-bold text-[#17382d] transition-colors hover:bg-white hover:text-[#17382d]">Contact support</Link></div></section>
+
+        <FarmersNotCustomersSection />
+        <CropSuccessStories />
       </main>
       <SiteFooter />
     </div>
