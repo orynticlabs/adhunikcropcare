@@ -37,7 +37,7 @@ export async function POST(request: Request) {
             ? "out_of_stock"
             : "available"
 
-      return { name, status }
+      return { name, slug: product?.slug ?? null, status }
     })
 
     return NextResponse.json({ success: true, data })

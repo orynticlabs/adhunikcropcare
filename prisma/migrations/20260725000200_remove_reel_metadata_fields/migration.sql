@@ -1,0 +1,5 @@
+ALTER TABLE orycms_reel_videos
+  DROP COLUMN IF EXISTS result,
+  DROP COLUMN IF EXISTS farmer,
+  DROP COLUMN IF EXISTS location,
+  DROP COLUMN IF EXISTS prompt;

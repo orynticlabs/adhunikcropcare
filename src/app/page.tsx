@@ -58,10 +58,7 @@ async function getHomeProducts() {
 async function getHomeReels() {
   try {
     return (await listOryCMSReelVideos({ publishedOnly: true })).map((reel) => ({
-      farmer: reel.farmer,
-      location: reel.location,
       product: reel.title,
-      result: reel.result,
       thumbnail: reel.posterUrl,
       video: reel.videoUrl,
     }))

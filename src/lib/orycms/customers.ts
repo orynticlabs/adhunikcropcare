@@ -83,7 +83,7 @@ export async function getOryCMSCustomer(id: string) {
     id,
   )
 
-  return { ...toCustomerDTO(customer), orders, payments, wishlist: [], activity: recentActivity(customer, orders, payments) }
+  return { ...toCustomerDTO(customer), orders, payments, activity: recentActivity(customer, orders, payments) }
 }
 
 export async function updateOryCMSCustomer(id: string, input: { firstName?: string; lastName?: string; phone?: string; status?: CustomerStatus }) {

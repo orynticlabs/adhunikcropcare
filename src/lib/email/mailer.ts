@@ -4,7 +4,7 @@ import nodemailer from "nodemailer"
 import { emailTemplates, type EmailTemplateName } from "@/lib/email/templates"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 
-export const OPTIONAL_EMAIL_TYPES = ["cartUpdate", "wishlistUpdate", "offerAnnouncement", "saleAnnouncement"] as const
+export const OPTIONAL_EMAIL_TYPES = ["cartUpdate", "offerAnnouncement", "saleAnnouncement"] as const
 type OptionalEmailType = typeof OPTIONAL_EMAIL_TYPES[number]
 
 type SendInput = Parameters<(typeof emailTemplates)[EmailTemplateName]>[0] & {

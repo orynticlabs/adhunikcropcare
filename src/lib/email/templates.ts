@@ -6,7 +6,6 @@ export type EmailTemplateName =
   | "orderCancelled"
   | "refundUpdate"
   | "cartUpdate"
-  | "wishlistUpdate"
   | "offerAnnouncement"
   | "saleAnnouncement"
   | "adminOrderNotification"
@@ -77,7 +76,6 @@ export const emailTemplates: Record<EmailTemplateName, (input: TemplateInput) =>
   orderCancelled: (i) => ({ subject: `Order ${i.orderNumber} cancelled`, text: `Order ${i.orderNumber} has been cancelled.`, html: layout("Order cancelled", `<p>Hello ${escapeHtml(i.firstName)},</p><p>Your order <strong>${escapeHtml(i.orderNumber)}</strong> has been cancelled.</p>`, i.unsubscribeUrl) }),
   refundUpdate: (i) => ({ subject: `Refund update for ${i.orderNumber}`, text: `Refund status for ${i.orderNumber}: ${i.refundStatus}`, html: layout("Refund update", `<p>Hello ${escapeHtml(i.firstName)},</p><p>The refund status for <strong>${escapeHtml(i.orderNumber)}</strong> is now <strong>${escapeHtml(i.refundStatus)}</strong>.</p>`, i.unsubscribeUrl) }),
   cartUpdate: (i) => ({ subject: "Product added to your cart", text: `${i.productName} was added to your cart.`, html: layout("Added to your cart", `<p>Hello ${escapeHtml(i.firstName)},</p><p><strong>${escapeHtml(i.productName)}</strong> was added to your cart.</p>${button("View cart", i.actionUrl)}`, i.unsubscribeUrl) }),
-  wishlistUpdate: (i) => ({ subject: "Product added to your wishlist", text: `${i.productName} was added to your wishlist.`, html: layout("Added to your wishlist", `<p>Hello ${escapeHtml(i.firstName)},</p><p><strong>${escapeHtml(i.productName)}</strong> was added to your wishlist.</p>${button("View wishlist", i.actionUrl)}`, i.unsubscribeUrl) }),
   offerAnnouncement: (i) => ({ subject: "A new offer is coming", text: "A new Adhunik Crop Care offer is available.", html: layout("Special offer", `<p>Hello ${escapeHtml(i.firstName)},</p><p>A new offer is available for you.</p>${button("Explore offers", i.actionUrl)}`, i.unsubscribeUrl) }),
   saleAnnouncement: (i) => ({ subject: "Adhunik Crop Care sale announcement", text: "A new sale is coming.", html: layout("Sale announcement", `<p>Hello ${escapeHtml(i.firstName)},</p><p>Our latest sale is coming soon.</p>${button("Explore products", i.actionUrl)}`, i.unsubscribeUrl) }),
   adminOrderNotification: (i) => ({

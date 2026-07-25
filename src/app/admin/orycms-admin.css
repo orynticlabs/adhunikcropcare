@@ -35,6 +35,22 @@
   border-color: oklch(0.7 0.14 60 / 32%);
 }
 
+/* Hard stop transparent OryCMS toasts. Several admin modules render their own
+   toast stacks and some use bg-surface, which can resolve transparent under
+   imported OryCMS theme styles. Keep all admin toasts solid white. */
+.orycms-admin [class*="fixed"][class*="bottom-"][class*="right-"] > [class*="rounded"][class*="border"],
+.orycms-admin [class*="fixed"][class*="bottom-"][class*="left-"] > [class*="rounded"][class*="border"],
+.orycms-admin [class*="fixed"][class*="top-"][class*="right-"] > [class*="rounded"][class*="border"],
+.orycms-admin [class*="fixed"][class*="top-"][class*="left-"] > [class*="rounded"][class*="border"],
+[data-sonner-toast],
+.toaster [data-sonner-toast],
+.toaster .toast {
+  background: #fff !important;
+  background-color: #fff !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+}
+
 /* Rich text editor content styles (WYSIWYG parity with the storefront). */
 .orycms-richtext > * + * {
   margin-top: 0.6em;

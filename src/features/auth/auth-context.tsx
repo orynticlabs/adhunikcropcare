@@ -67,9 +67,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await getCsrf()
       const me = await fetchJson<{ user: AuthUser | null }>("/api/auth/me", { method: "GET" }, false)
-      setUser(me?.user ?? null)
+      if (me) setUser(me.user)
     } catch {
-      setUser(null)
+      // Keep the current in-memory session on transient /me failures during navigation.
     } finally {
       setLoadingUser(false)
     }

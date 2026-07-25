@@ -94,13 +94,6 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
         children: [
           {
             section: "Content",
-            label: "Collections",
-            href: adminHref("/collections"),
-            slug: "collections",
-            description: "Define content schemas and manage collection structure.",
-          },
-          {
-            section: "Content",
             label: "Reels",
             href: adminHref("/collections/reels"),
             slug: "collections/reels",

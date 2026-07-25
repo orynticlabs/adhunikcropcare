@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Heart, LogOut, Package, User, Menu, X, ChevronDown, ShoppingBag, Leaf } from "lucide-react"
+import { LogOut, Package, User, Menu, X, ChevronDown, ShoppingBag, Leaf } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import CartIcon from "@/features/cart/components/cart-icon"
@@ -157,7 +157,6 @@ export default function Header({ initialCategories }: { initialCategories?: Stor
                     {[
                       { href: "/account", label: "My Account", Icon: User },
                       { href: "/account?tab=orders", label: "Order History", Icon: Package },
-                      { href: "/account?tab=wishlist", label: "Wishlist", Icon: Heart },
                     ].map(({ href, label, Icon }) => (
                       <Link
                         key={href}

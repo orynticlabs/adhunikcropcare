@@ -15,6 +15,7 @@ const inputCls =
   "h-11 w-full rounded-xl border border-border/60 bg-background px-4 text-sm outline-none transition focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15"
 const buttonCls =
   "inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#033927] px-5 text-sm font-bold text-white shadow-soft transition-colors hover:bg-[#689c30] hover:!text-black disabled:opacity-60"
+const EMAIL_VERIFICATION_REQUIRED_MESSAGE = "Please verify your email before creating your account."
 
 export function FrontendAuthPage({ mode }: { mode: Mode }) {
   return (
@@ -137,7 +138,7 @@ function AuthFlow({ mode }: { mode: Mode }) {
       }
       if (mode === "signup") {
         if (form.password !== form.confirm) throw new Error("Passwords do not match.")
-        if (!emailVerificationToken) throw new Error("Verify your email OTP before creating your account.")
+        if (!emailVerificationToken) throw new Error(EMAIL_VERIFICATION_REQUIRED_MESSAGE)
         if (!/^[6-9]\d{9}$/.test(form.phone)) throw new Error("Enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.")
         await signup({ ...form, emailVerificationToken })
         router.push(from)
@@ -153,7 +154,7 @@ function AuthFlow({ mode }: { mode: Mode }) {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Something went wrong."
-      if (mode === "signup" && errorMessage.includes("Email verification has expired")) {
+      if (mode === "signup" && errorMessage.includes("Please verify your email")) {
         setEmailVerificationToken("")
         setOtp("")
         setOtpSent(false)
@@ -176,7 +177,8 @@ function AuthFlow({ mode }: { mode: Mode }) {
     mode === "forgot" ? "Enter your email to create a secure password reset link." :
     mode === "reset" ? "Choose a new password for your account." :
     mode === "verify" ? "Confirming your email address." :
-    "Access your account, orders, wishlist, and saved addresses."
+    "Access your account, orders, and saved addresses."
+  const signupVerificationPending = mode === "signup" && otpLoading && otpSent && !emailVerificationToken && otp.length === 6
 
   return (
     <AuthShell>
@@ -207,7 +209,7 @@ function AuthFlow({ mode }: { mode: Mode }) {
                 <Field label="Email OTP" type="text" value={otp} onChange={(value) => setOtp(value.replace(/\D/g, "").slice(0, 6))} required />
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-xs text-muted-foreground">Valid for 5 minutes.</p>
-                  <button type="button" onClick={verifyOtp} disabled={otpLoading || otp.length !== 6} className="text-sm font-semibold text-[#689c30] hover:underline disabled:opacity-60">Verify OTP</button>
+                  <button type="button" onClick={verifyOtp} disabled={otpLoading || otp.length !== 6} className="text-sm font-semibold text-[#689c30] hover:underline disabled:opacity-60">{otpLoading ? "Verifying..." : "Verify OTP"}</button>
                 </div>
               </div>
             ) : null}
@@ -231,10 +233,13 @@ function AuthFlow({ mode }: { mode: Mode }) {
             ) : null}
 
             {message ? <StatusMessage message={message} /> : null}
+            {mode === "signup" && !emailVerificationToken && !message ? (
+              <p className="text-sm font-medium text-red-600">{EMAIL_VERIFICATION_REQUIRED_MESSAGE}</p>
+            ) : null}
 
-            <button type="submit" disabled={loading || (mode === "signup" && !emailVerificationToken)} className={buttonCls}>
-              {loading ? "Please wait..." : mode === "signup" ? "Create Account" : mode === "forgot" ? "Create reset link" : mode === "reset" ? "Save new password" : "Sign In"}
-              {!loading ? <ArrowRight className="h-4 w-4" /> : null}
+            <button type="submit" disabled={loading || (mode === "signup" && (!emailVerificationToken || otpLoading))} className={buttonCls}>
+              {signupVerificationPending ? "Verifying..." : loading ? "Please wait..." : mode === "signup" ? "Create Account" : mode === "forgot" ? "Create reset link" : mode === "reset" ? "Save new password" : "Sign In"}
+              {!loading && !signupVerificationPending ? <ArrowRight className="h-4 w-4" /> : null}
             </button>
           </form>
         )}
@@ -268,7 +273,7 @@ function AuthShell({ children }: { children: React.ReactNode }) {
                   <Leaf className="h-6 w-6" />
                 </div>
                 <h1 className="font-display text-4xl leading-tight">Secure account access for Adhunik farmers.</h1>
-                <p className="mt-4 text-sm leading-6 text-white/75">Manage profile, orders, wishlist, saved address, invoices, shipment tracking, and reorder from one place.</p>
+                <p className="mt-4 text-sm leading-6 text-white/75">Manage profile, orders, saved address, invoices, shipment tracking, and reorder from one place.</p>
               </div>
               <p className="text-xs text-white/65">Protected with HttpOnly cookies, CSRF checks, and refresh-token sessions.</p>
             </div>

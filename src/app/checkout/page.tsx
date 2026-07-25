@@ -17,6 +17,7 @@ import { formatCurrency, useCart } from "@/features/cart/cart-context"
 import { useAuth } from "@/features/auth/auth-context"
 
 /* ── Constants ──────────────────────────────────────────────── */
+const MAX_SAVED_ADDRESSES = 4
 const INDIA_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
   "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu & Kashmir",
@@ -167,7 +168,7 @@ export default function CheckoutPage() {
     if (!loadingUser && !user) {
       openAuthModal("signin", { redirectTo: "/checkout" })
     }
-  }, [loadingUser, user])
+  }, [loadingUser, openAuthModal, user])
 
   useEffect(() => {
     if (!user) return
@@ -193,7 +194,7 @@ export default function CheckoutPage() {
     setState("")
     setPincode("")
     setAddressLabel("Home")
-    setSaveAddress(true)
+    setSaveAddress(savedAddresses.length < MAX_SAVED_ADDRESSES)
     setSaveAsDefault(savedAddresses.length === 0)
   }
 
@@ -343,6 +344,9 @@ export default function CheckoutPage() {
 
   async function saveCheckoutAddress() {
     if (!user) return
+    if (selectedAddressId === "new" && savedAddresses.length >= MAX_SAVED_ADDRESSES) {
+      throw new Error(`You can save up to ${MAX_SAVED_ADDRESSES} addresses. Delete or edit an address to continue.`)
+    }
     const nextAddress = currentAddress(addressLabel || "Home", saveAsDefault || savedAddresses.length === 0)
     const otherAddresses = savedAddresses.filter((address) => address.id !== selectedAddressId)
     const addresses = [
@@ -618,12 +622,17 @@ export default function CheckoutPage() {
                       <input
                         type="checkbox"
                         checked={saveAddress}
+                        disabled={selectedAddressId === "new" && savedAddresses.length >= MAX_SAVED_ADDRESSES}
                         onChange={(event) => setSaveAddress(event.target.checked)}
-                        className="mt-0.5 h-4 w-4 accent-[#033927]"
+                        className="mt-0.5 h-4 w-4 accent-[#033927] disabled:cursor-not-allowed disabled:opacity-50"
                       />
                       <span>
                         <span className="font-semibold">Save this address to my account</span>
-                        <span className="mt-0.5 block text-xs text-muted-foreground">You can reuse it on future orders.</span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          {selectedAddressId === "new" && savedAddresses.length >= MAX_SAVED_ADDRESSES
+                            ? `You can save up to ${MAX_SAVED_ADDRESSES} addresses. Delete or edit an address to add another.`
+                            : "You can reuse it on future orders."}
+                        </span>
                       </span>
                     </label>
                     {saveAddress ? (
@@ -776,13 +785,15 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="divide-y divide-border/40 max-h-72 overflow-y-auto">
-                  {items.map(item => (
+                  {items.map(item => {
+                    const href = `/products/${item.productSlug ?? item.id.split("--")[0]}`
+                    return (
                     <div key={item.id} className="flex gap-3 p-4">
-                      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-white">
+                      <Link href={href} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-border/50 bg-white" aria-label={`View ${item.name}`}>
                         <Image src={item.img} alt={item.name} fill className="object-contain p-1.5" sizes="64px" />
-                      </div>
+                      </Link>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-sm">{item.name}</p>
+                        <Link href={href} className="block truncate font-medium text-sm transition-colors hover:text-[#689c30]">{item.name}</Link>
                         <div className="mt-0.5 flex flex-wrap gap-1">
                           {item.size && (
                             <span className="rounded-full border border-border/60 bg-white px-2 py-0.5 text-[10px] font-semibold text-black">
@@ -794,7 +805,8 @@ export default function CheckoutPage() {
                       </div>
                       <p className="shrink-0 font-semibold text-sm">{formatCurrency(item.priceValue * item.quantity)}</p>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
 
                 {/* Coupon */}

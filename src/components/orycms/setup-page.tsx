@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { CheckCircle2, Eye, EyeOff, KeyRound, Lock, Mail, Shield, UserPlus } from "lucide-react"
+import { CheckCircle2, Eye, EyeOff, KeyRound, Lock, Mail, Shield, User, UserPlus } from "lucide-react"
 import { OryCMSSessionProvider, useOryCMSSession } from "../../../orycms/hooks"
 
 const setupSignals = [
   {
     icon: UserPlus,
-    title: "Owner account",
-    body: "The first account gets Owner-level access across users, content, and settings.",
+    title: "Super Admin account",
+    body: "The first account gets Super Admin access across users, content, and settings.",
   },
   {
     icon: Lock,
@@ -19,12 +19,12 @@ const setupSignals = [
   {
     icon: Shield,
     title: "One-time setup",
-    body: "This screen disappears after your Owner account is created.",
+    body: "This screen disappears after your Super Admin account is created.",
   },
   {
     icon: CheckCircle2,
-    title: "Sign in to continue",
-    body: "Once setup is complete, sign in on the admin login screen.",
+    title: "Automatic sign in",
+    body: "Once setup is complete, you will be signed in with an admin-only session.",
   },
 ]
 
@@ -54,6 +54,7 @@ function SetupForm() {
   const [confirm, setConfirm] = useState("")
   const [email, setEmail] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [fullName, setFullName] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [password, setPassword] = useState("")
   const [showConfirm, setShowConfirm] = useState(false)
@@ -68,15 +69,21 @@ function SetupForm() {
       .catch(() => {})
   }, [router])
 
+  const passwordHelp = password.length > 0 ? getPasswordHelp(password) : null
   const passwordMismatch = confirm.length > 0 && password !== confirm
-  const canSubmit = email.trim().length > 0 && password.length >= 8 && password === confirm && !isSubmitting
+  const canSubmit =
+    fullName.trim().length > 0 &&
+    email.trim().length > 0 &&
+    !passwordHelp &&
+    password === confirm &&
+    !isSubmitting
 
   async function handleSubmit() {
     setError(null)
     setIsSubmitting(true)
     try {
       const response = await fetch("/api/orycms/auth/setup", {
-        body: JSON.stringify({ email: email.trim(), password }),
+        body: JSON.stringify({ confirmPassword: confirm, email: email.trim(), fullName: fullName.trim(), password }),
         headers: { "Content-Type": "application/json" },
         method: "POST",
       })
@@ -86,7 +93,7 @@ function SetupForm() {
         setIsSubmitting(false)
         return
       }
-      router.replace("/admin/login")
+      router.replace("/admin/dashboard")
     } catch {
       setError("Network error. Please try again.")
       setIsSubmitting(false)
@@ -121,10 +128,10 @@ function SetupForm() {
           <div className="max-w-[500px]">
             <p className="text-[11.5px] uppercase tracking-[0.12em] text-muted-foreground">Installation</p>
             <h1 className="mt-3 text-[36px] font-semibold leading-tight tracking-tight xl:text-[42px]">
-              Create your Owner account to unlock OryCMS.
+              Welcome to OryCMS.
             </h1>
             <p className="mt-4 text-[14px] leading-relaxed text-muted-foreground">
-              OryCMS requires one Owner account before it can be used. You can invite additional operators from Users later.
+              Create the first Super Admin account before this installation can be used. You can invite additional operators from Users later.
             </p>
 
             <div className="mt-8 grid gap-3">
@@ -148,7 +155,7 @@ function SetupForm() {
           <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-muted-foreground">
             <span>One-time setup</span>
             <span className="h-1 w-1 rounded-full bg-border-strong" />
-            <span>Owner-level access</span>
+            <span>Super Admin access</span>
             <span className="h-1 w-1 rounded-full bg-border-strong" />
             <span>Admin-only sessions</span>
           </div>
@@ -164,7 +171,7 @@ function SetupForm() {
         <div className="w-full max-w-[420px] rounded-2xl border border-border bg-surface p-6 shadow-[0_20px_60px_-20px_rgba(20,24,31,0.18)] lg:p-8">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-[22px] font-semibold tracking-tight">Create Owner account</h2>
+              <h2 className="text-[22px] font-semibold tracking-tight">Create Super Admin</h2>
               <p className="mt-1 text-[13px] text-muted-foreground">This will be the primary administrator.</p>
             </div>
             <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-foreground text-background">
@@ -173,6 +180,21 @@ function SetupForm() {
           </div>
 
           <div className="mt-6 space-y-4" onKeyDown={onKeyDown}>
+            <label className="block space-y-1.5">
+              <span className="text-[12.5px] font-medium">Full name</span>
+              <span className="relative block">
+                <User className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                  className="h-10 w-full rounded-lg border border-border bg-background pl-10 pr-3 text-sm outline-none transition focus:border-chart-3 focus:ring-2 focus:ring-chart-3/15"
+                  placeholder="Your full name"
+                  autoComplete="name"
+                />
+              </span>
+            </label>
+
             <label className="block space-y-1.5">
               <span className="text-[12.5px] font-medium">Email address</span>
               <span className="relative block">
@@ -193,14 +215,14 @@ function SetupForm() {
             <PasswordField
               autoComplete="new-password"
               label="Password"
-              placeholder="At least 8 characters"
+              placeholder="Strong password"
               show={showPassword}
               toggle={() => setShowPassword((value) => !value)}
               value={password}
               onChange={setPassword}
             />
-            {password.length > 0 && password.length < 8 ? (
-              <p className="-mt-2 text-[12px] text-warning">Use at least 8 characters.</p>
+            {passwordHelp ? (
+              <p className="-mt-2 text-[12px] text-warning">{passwordHelp}</p>
             ) : null}
 
             <PasswordField
@@ -228,7 +250,7 @@ function SetupForm() {
               onClick={() => void handleSubmit()}
               disabled={!canSubmit}
             >
-              {isSubmitting ? "Creating account…" : "Create Owner account"}
+              {isSubmitting ? "Creating account…" : "Create Super Admin"}
             </button>
           </div>
 
@@ -284,4 +306,13 @@ function PasswordField({
       </span>
     </label>
   )
+}
+
+function getPasswordHelp(password: string) {
+  if (password.length < 8) return "Use at least 8 characters."
+  if (!/[a-z]/.test(password)) return "Add at least one lowercase letter."
+  if (!/[A-Z]/.test(password)) return "Add at least one uppercase letter."
+  if (!/\d/.test(password)) return "Add at least one number."
+  if (!/[^A-Za-z0-9]/.test(password)) return "Add at least one special character."
+  return null
 }

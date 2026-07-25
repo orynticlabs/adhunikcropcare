@@ -25,6 +25,7 @@ const inputCls = (err?: string) =>
 
 const authSubmitButtonCls =
   "flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[#033927] text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#689c30] hover:!text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#689c30]/30 disabled:opacity-60"
+const EMAIL_VERIFICATION_REQUIRED_MESSAGE = "Please verify your email before creating your account."
 
 function PasswordStrength({ password }: { password: string }) {
   const checks = [
@@ -327,7 +328,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
     if (!firstName.trim()) nextErrors.firstName = "Required"
     if (!lastName.trim()) nextErrors.lastName = "Required"
     if (!/\S+@\S+\.\S+/.test(email)) nextErrors.email = "Enter a valid email"
-    if (!emailVerificationToken) nextErrors.otp = "Verify your email OTP first"
+    if (!emailVerificationToken) nextErrors.otp = EMAIL_VERIFICATION_REQUIRED_MESSAGE
     if (!/^[6-9]\d{9}$/.test(phone)) nextErrors.phone = "Enter 10 digits starting with 6, 7, 8, or 9"
     if (password.length < 8) nextErrors.password = "Minimum 8 characters"
     if (password !== confirm) nextErrors.confirm = "Passwords do not match"
@@ -349,7 +350,7 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
       if (redirectPath) router.push(redirectPath)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Could not create account. Please try again."
-      if (errorMessage.includes("Email verification has expired")) {
+      if (errorMessage.includes("Please verify your email")) {
         setEmailVerificationToken("")
         setOtp("")
         setOtpMessage("")
@@ -404,6 +405,8 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
     const timer = window.setTimeout(() => setResendIn((seconds) => seconds - 1), 1000)
     return () => window.clearTimeout(timer)
   }, [resendIn])
+
+  const createDisabled = loading || sendingOtp || verifyingOtp || !emailVerificationToken
 
   return (
     <>
@@ -583,17 +586,17 @@ function SignUpForm({ onSwitch }: { onSwitch: () => void }) {
           {errors.agree ? <p className="ml-7 mt-1 text-xs text-red-500">{errors.agree}</p> : null}
         </div>
 
+        {!emailVerificationToken ? (
+          <p className="text-sm font-medium text-red-600">{EMAIL_VERIFICATION_REQUIRED_MESSAGE}</p>
+        ) : null}
+
         <button
           type="submit"
-          disabled={loading}
+          disabled={createDisabled}
           className={authSubmitButtonCls}
         >
-          {loading ? (
-            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
-            </svg>
-          ) : (
+          {loading || verifyingOtp ? <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" /></svg> : null}
+          {verifyingOtp ? "Verifying..." : loading ? "Creating..." : (
             <>
               Create Account <ArrowRight className="h-4 w-4" />
             </>

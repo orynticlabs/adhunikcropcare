@@ -1,18 +1,16 @@
 import { revalidateTag, unstable_cache } from "next/cache"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
-import { uploadOryCMSReelVideo, type OryCMSMediaAssetDTO } from "@/lib/orycms/media"
+import { deleteOryCMSCloudinaryAsset, uploadOryCMSReelVideo, type OryCMSMediaAssetDTO } from "@/lib/orycms/media"
+
+export const MAX_ORYCMS_REELS = 10
 
 export type OryCMSReelVideoDTO = {
   bytes: number
   createdAt: string
   displayOrder: number
-  farmer: string
   format: string
   id: string
-  location: string
   posterUrl: string
-  prompt: string
-  result: string
   status: "draft" | "published"
   title: string
   videoUrl: string
@@ -22,13 +20,9 @@ type ReelRow = {
   bytes: number
   created_at: Date
   display_order: number
-  farmer: string | null
   format: string
   id: string
-  location: string | null
   poster_url: string | null
-  prompt: string | null
-  result: string
   status: string
   title: string
   video_url: string
@@ -36,10 +30,6 @@ type ReelRow = {
 
 type ReelInput = {
   displayOrder?: number
-  farmer?: string
-  location?: string
-  prompt?: string
-  result?: string
   status?: string
   title?: string
 }
@@ -68,6 +58,7 @@ function invalidateReelsCache() {
 }
 
 export async function listOryCMSReelVideos(options: { publishedOnly?: boolean } = {}) {
+  await ensureOryCMSReelVideoSchema()
   if (options.publishedOnly) return listPublishedReelsCached()
 
   const rows = await orycmsPrisma.$queryRaw<ReelRow[]>`
@@ -80,14 +71,20 @@ export async function listOryCMSReelVideos(options: { publishedOnly?: boolean } 
 }
 
 export async function createOryCMSReelVideo(file: File, input: ReelInput) {
+  await ensureOryCMSReelVideoSchema()
+  const [{ count }] = await orycmsPrisma.$queryRaw<{ count: bigint }[]>`
+    SELECT COUNT(*)::bigint AS count FROM orycms_reel_videos WHERE deleted_at IS NULL
+  `
+  if (Number(count) >= MAX_ORYCMS_REELS) {
+    throw new Error(`You can upload up to ${MAX_ORYCMS_REELS} reels. Delete an existing reel before adding a new one.`)
+  }
   const payload = validate(input)
   const asset = await uploadOryCMSReelVideo(file, { mediaName: payload.title })
   const [row] = await orycmsPrisma.$queryRaw<ReelRow[]>`
     INSERT INTO orycms_reel_videos
-      (title, result, farmer, location, prompt, video_url, poster_url, asset_id, public_id, format, bytes, status, display_order)
+      (title, video_url, poster_url, asset_id, public_id, format, bytes, status, display_order)
     VALUES
-      (${payload.title}, ${payload.result}, ${payload.farmer || null}, ${payload.location || null}, ${payload.prompt || null},
-       ${asset.secure_url}, ${cloudinaryVideoPoster(asset.secure_url)}, ${asset.asset_id}, ${asset.public_id}, ${asset.format},
+      (${payload.title}, ${asset.secure_url}, ${cloudinaryVideoPoster(asset.secure_url)}, ${asset.asset_id}, ${asset.public_id}, ${asset.format},
        ${asset.bytes}, ${payload.status}, ${payload.displayOrder})
     RETURNING *
   `
@@ -97,6 +94,29 @@ export async function createOryCMSReelVideo(file: File, input: ReelInput) {
 }
 
 export async function deleteOryCMSReelVideo(id: string) {
+  await ensureOryCMSReelVideoSchema()
+  const [existing] = await orycmsPrisma.$queryRaw<{ public_id: string }[]>`
+    SELECT public_id
+    FROM orycms_reel_videos
+    WHERE id = ${id}::uuid AND deleted_at IS NULL
+    LIMIT 1
+  `
+
+  if (!existing) throw new Error("Reel video not found.")
+
+  const [activeReferences] = await orycmsPrisma.$queryRaw<{ count: bigint }[]>`
+    SELECT COUNT(*)::bigint AS count
+    FROM orycms_reel_videos
+    WHERE public_id = ${existing.public_id} AND deleted_at IS NULL
+  `
+
+  if (Number(activeReferences?.count ?? 0) <= 1) {
+    await deleteOryCMSCloudinaryAsset(existing.public_id, "video")
+    await orycmsPrisma.oryCMSMediaAsset.deleteMany({
+      where: { publicId: existing.public_id, resourceType: "video" },
+    })
+  }
+
   const [row] = await orycmsPrisma.$queryRaw<{ id: string }[]>`
     UPDATE orycms_reel_videos
     SET deleted_at = now(), updated_at = now()
@@ -108,26 +128,43 @@ export async function deleteOryCMSReelVideo(id: string) {
   invalidateReelsCache()
 }
 
+async function ensureOryCMSReelVideoSchema() {
+  await orycmsPrisma.$executeRaw`
+    CREATE TABLE IF NOT EXISTS orycms_reel_videos (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      title text NOT NULL,
+      video_url text NOT NULL,
+      poster_url text,
+      asset_id text,
+      public_id text NOT NULL,
+      format text NOT NULL,
+      bytes integer NOT NULL DEFAULT 0,
+      status text NOT NULL DEFAULT 'published',
+      display_order integer NOT NULL DEFAULT 0,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      deleted_at timestamptz
+    )
+  `
+  await orycmsPrisma.$executeRaw`ALTER TABLE orycms_reel_videos DROP COLUMN IF EXISTS result`
+  await orycmsPrisma.$executeRaw`ALTER TABLE orycms_reel_videos DROP COLUMN IF EXISTS farmer`
+  await orycmsPrisma.$executeRaw`ALTER TABLE orycms_reel_videos DROP COLUMN IF EXISTS location`
+  await orycmsPrisma.$executeRaw`ALTER TABLE orycms_reel_videos DROP COLUMN IF EXISTS prompt`
+  await orycmsPrisma.$executeRaw`CREATE INDEX IF NOT EXISTS orycms_reel_videos_status_display_order_idx ON orycms_reel_videos (status, display_order)`
+  await orycmsPrisma.$executeRaw`CREATE INDEX IF NOT EXISTS orycms_reel_videos_deleted_at_idx ON orycms_reel_videos (deleted_at)`
+}
+
 function validate(input: ReelInput) {
   const payload = {
     displayOrder: Number(input.displayOrder ?? 0),
-    farmer: input.farmer?.trim() ?? "",
-    location: input.location?.trim() ?? "",
-    prompt: input.prompt?.trim() ?? "",
-    result: input.result?.trim() ?? "",
-    status: input.status === "draft" ? ("draft" as const) : ("published" as const),
+    status: input.status === "draft" ? "draft" as const : "published" as const,
     title: input.title?.trim() ?? "",
   }
 
   if (!payload.title) throw new Error("Title is required.")
-  if (!payload.result) throw new Error("Result is required.")
   if (!Number.isFinite(payload.displayOrder) || payload.displayOrder < 0) payload.displayOrder = 0
 
   payload.title = payload.title.slice(0, 120)
-  payload.result = payload.result.slice(0, 120)
-  payload.farmer = payload.farmer.slice(0, 120)
-  payload.location = payload.location.slice(0, 120)
-  payload.prompt = payload.prompt.slice(0, 500)
 
   return payload
 }
@@ -137,13 +174,9 @@ function toDTO(row: ReelRow): OryCMSReelVideoDTO {
     bytes: row.bytes,
     createdAt: row.created_at.toISOString(),
     displayOrder: row.display_order,
-    farmer: row.farmer ?? "",
     format: row.format,
     id: row.id,
-    location: row.location ?? "",
     posterUrl: row.poster_url ?? "",
-    prompt: row.prompt ?? "",
-    result: row.result,
     status: row.status === "draft" ? "draft" : "published",
     title: row.title,
     videoUrl: row.video_url,

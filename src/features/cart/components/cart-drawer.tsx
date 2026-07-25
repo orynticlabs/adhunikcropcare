@@ -2,10 +2,15 @@
 
 import { useEffect } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { CreditCard, Minus, Plus, ShieldCheck, ShoppingBag, Trash2, X } from "lucide-react"
 import { formatCurrency, useCart } from "@/features/cart/cart-context"
 import { useAuth } from "@/features/auth/auth-context"
+
+function productHref(item: { id: string; productSlug?: string }) {
+  return `/products/${item.productSlug ?? item.id.split("--")[0]}`
+}
 
 export default function CartDrawer() {
   const router = useRouter()
@@ -100,7 +105,12 @@ export default function CartDrawer() {
                     className="rounded-[1.25rem] border border-[#d8e1d9] bg-white p-2.5 shadow-[0_10px_28px_rgba(31,42,34,0.08)]"
                   >
                     <div className="grid grid-cols-[5.75rem_1fr] gap-3">
-                      <div className="relative h-[5.75rem] w-[5.75rem] overflow-hidden rounded-xl bg-accent/20">
+                      <Link
+                        href={productHref(item)}
+                        onClick={closeCart}
+                        className="relative h-[5.75rem] w-[5.75rem] overflow-hidden rounded-xl bg-accent/20"
+                        aria-label={`View ${item.name}`}
+                      >
                         <Image
                           src={item.img}
                           alt={item.name}
@@ -108,14 +118,18 @@ export default function CartDrawer() {
                           className="object-cover"
                           sizes="92px"
                         />
-                      </div>
+                      </Link>
 
                       <div className="min-w-0">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <h3 className="truncate font-display text-base leading-tight text-[#203129]">
+                          <Link
+                            href={productHref(item)}
+                            onClick={closeCart}
+                            className="block truncate font-display text-base leading-tight text-[#203129] transition-colors hover:text-[#689c30]"
+                          >
                             {item.name}
-                          </h3>
+                          </Link>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             {item.size && (
                               <span className="inline-flex items-center rounded-full border border-[#689c30]/20 bg-[#689c30]/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#033927]">

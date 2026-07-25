@@ -11,5 +11,5 @@ export async function GET(request: Request) {
     return new NextResponse("This unsubscribe link is invalid.", { status: 400 })
   }
   await disableOptionalEmails(userId, [...OPTIONAL_EMAIL_TYPES])
-  return new NextResponse("You have been unsubscribed from cart, wishlist, offer, and sale emails. Essential account and order emails will continue.", { headers: { "content-type": "text/plain; charset=utf-8" } })
+  return new NextResponse("You have been unsubscribed from cart, offer, and sale emails. Essential account and order emails will continue.", { headers: { "content-type": "text/plain; charset=utf-8" } })
 }

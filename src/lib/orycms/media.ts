@@ -265,7 +265,7 @@ export async function deleteOryCMSMedia(id: string) {
     throw new Error("Media asset not found.")
   }
 
-  await deleteCloudinaryAsset(asset.publicId)
+  await deleteOryCMSCloudinaryAsset(asset.publicId)
   await orycmsPrisma.oryCMSMediaAsset.delete({ where: { id } })
 }
 
@@ -281,7 +281,7 @@ export async function deleteOryCMSMediaIfUnreferenced(reference: { id?: string; 
 
   if (!asset || await isMediaAssetReferenced(asset.id, asset.secureUrl)) return false
 
-  await deleteCloudinaryAsset(asset.publicId)
+  await deleteOryCMSCloudinaryAsset(asset.publicId)
   await orycmsPrisma.oryCMSMediaAsset.delete({ where: { id: asset.id } })
   return true
 }
@@ -318,7 +318,7 @@ function jsonContainsMedia(value: unknown, id: string, url: string): boolean {
   return Object.values(item).some((nested) => jsonContainsMedia(nested, id, url))
 }
 
-async function deleteCloudinaryAsset(publicId: string) {
+export async function deleteOryCMSCloudinaryAsset(publicId: string, resourceType: "image" | "video" = "image") {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME
   const apiKey = process.env.CLOUDINARY_API_KEY
   const apiSecret = process.env.CLOUDINARY_API_SECRET
@@ -335,7 +335,7 @@ async function deleteCloudinaryAsset(publicId: string) {
     signature,
     timestamp,
   })
-  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/destroy`, {
+  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/destroy`, {
     body: form,
     method: "POST",
   })

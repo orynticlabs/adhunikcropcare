@@ -39,6 +39,7 @@ export type PaymentFilters = {
 
 const num = (value: string | number | null | undefined) => (value == null ? 0 : Number(value))
 const iso = (value: Date | string | null) => (value == null ? null : value instanceof Date ? value.toISOString() : String(value))
+const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 
 function serializePayment(row: PaymentRow) {
   return {
@@ -101,10 +102,15 @@ export async function listPayments(filters: PaymentFilters) {
 }
 
 export async function getPaymentDetail(paymentId: string) {
-  const rows = await orycmsPrisma.$queryRawUnsafe<PaymentRow[]>(
-    `SELECT ${PAYMENT_COLUMNS} FROM razorpay_payments WHERE razorpay_payment_id = $1 OR id = $1::uuid LIMIT 1`,
-    paymentId,
-  )
+  const rows = isUuid(paymentId)
+    ? await orycmsPrisma.$queryRawUnsafe<PaymentRow[]>(
+        `SELECT ${PAYMENT_COLUMNS} FROM razorpay_payments WHERE razorpay_payment_id = $1 OR id = $1::uuid LIMIT 1`,
+        paymentId,
+      )
+    : await orycmsPrisma.$queryRawUnsafe<PaymentRow[]>(
+        `SELECT ${PAYMENT_COLUMNS} FROM razorpay_payments WHERE razorpay_payment_id = $1 LIMIT 1`,
+        paymentId,
+      )
   const payment = rows[0]
   if (!payment) return null
 
