@@ -46,3 +46,5 @@ npm run lint
 - Use `@/features/<feature>/...` for feature-owned code.
 - Use `@/lib/...` for shared utilities.
 - Keep framework configuration files at the repository root.
+
+- By OrynricLabs Private Limited
