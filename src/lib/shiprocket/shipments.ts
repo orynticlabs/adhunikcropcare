@@ -3,9 +3,10 @@ import { orycmsPrisma } from "@/lib/orycms/prisma"
 import type { ShipmentEventRow, ShipmentRow } from "@/lib/shiprocket/types"
 
 export const SHIPMENT_SELECT = `
-  id, order_id, shiprocket_order_id, shiprocket_shipment_id, awb_code, courier_name, courier_id,
+  id, order_id, shiprocket_order_id, shiprocket_shipment_id, awb_code, tracking_number, courier_name, courier_id,
   status, status_code, tracking_url, estimated_delivery_date, shipping_charge, pickup_scheduled_date,
-  pickup_status, pickup_token, label_url, manifest_url, invoice_url,
+  pickup_status, pickup_token, label_url, manifest_url, invoice_url, shipment_created_at, shipment_created_by_admin_id,
+  return_status, reverse_pickup_status, return_reason, return_updated_at,
   retry_count, last_error_code, last_error_message, last_retry_at, raw_response, created_at, updated_at
 `
 
@@ -13,6 +14,8 @@ export function serializeShipment(row: ShipmentRow) {
   return {
     ...row,
     estimated_delivery_date: toIso(row.estimated_delivery_date),
+    shipment_created_at: toIso(row.shipment_created_at),
+    return_updated_at: toIso(row.return_updated_at),
     pickup_scheduled_date: toIso(row.pickup_scheduled_date),
     shipping_charge: row.shipping_charge === null ? null : Number(row.shipping_charge),
     last_retry_at: toIso(row.last_retry_at ?? null),
@@ -30,6 +33,7 @@ export function serializeShipmentEvent(row: ShipmentEventRow) {
 }
 
 export async function getShipmentByOrderId(orderId: string): Promise<ShipmentRow | null> {
+  await ensureShipmentAuditSchema()
   const rows = await orycmsPrisma.$queryRawUnsafe<ShipmentRow[]>(
     `SELECT ${SHIPMENT_SELECT} FROM storefront_shipments WHERE order_id = $1::uuid LIMIT 1`,
     orderId,
@@ -38,6 +42,7 @@ export async function getShipmentByOrderId(orderId: string): Promise<ShipmentRow
 }
 
 export async function getShipmentByShiprocketId(shipmentId: string): Promise<ShipmentRow | null> {
+  await ensureShipmentAuditSchema()
   const rows = await orycmsPrisma.$queryRawUnsafe<ShipmentRow[]>(
     `SELECT ${SHIPMENT_SELECT} FROM storefront_shipments WHERE shiprocket_shipment_id = $1 LIMIT 1`,
     shipmentId,
@@ -46,11 +51,45 @@ export async function getShipmentByShiprocketId(shipmentId: string): Promise<Shi
 }
 
 export async function getShipmentByAwb(awb: string): Promise<ShipmentRow | null> {
+  await ensureShipmentAuditSchema()
   const rows = await orycmsPrisma.$queryRawUnsafe<ShipmentRow[]>(
     `SELECT ${SHIPMENT_SELECT} FROM storefront_shipments WHERE awb_code = $1 LIMIT 1`,
     awb,
   )
   return rows[0] ?? null
+}
+
+export async function listActiveShipmentsForTracking(limit = 25): Promise<ShipmentRow[]> {
+  await ensureShipmentAuditSchema()
+  return orycmsPrisma.$queryRawUnsafe<ShipmentRow[]>(
+    `SELECT ${SHIPMENT_SELECT}
+     FROM storefront_shipments
+     WHERE awb_code IS NOT NULL
+       AND lower(status) IN (
+         'created', 'awb_assigned', 'shipment created', 'confirmed', 'processing',
+         'packed', 'picked up', 'shipped', 'in transit', 'out for delivery',
+         'rto in transit', 'return requested', 'return picked up'
+       )
+     ORDER BY updated_at ASC
+     LIMIT $1`,
+    Math.max(1, Math.min(100, limit)),
+  )
+}
+
+export async function ensureShipmentAuditSchema() {
+  await orycmsPrisma.$executeRaw`
+    ALTER TABLE storefront_shipments
+      ADD COLUMN IF NOT EXISTS tracking_number TEXT,
+      ADD COLUMN IF NOT EXISTS shipment_created_at TIMESTAMPTZ(6),
+      ADD COLUMN IF NOT EXISTS shipment_created_by_admin_id UUID,
+      ADD COLUMN IF NOT EXISTS return_status TEXT,
+      ADD COLUMN IF NOT EXISTS reverse_pickup_status TEXT,
+      ADD COLUMN IF NOT EXISTS return_reason TEXT,
+      ADD COLUMN IF NOT EXISTS return_updated_at TIMESTAMPTZ(6)
+  `
+  await orycmsPrisma.$executeRaw`
+    CREATE INDEX IF NOT EXISTS storefront_shipments_shipment_created_at_idx ON storefront_shipments (shipment_created_at)
+  `
 }
 
 export async function listShipmentEvents(shipmentId: string): Promise<ShipmentEventRow[]> {
@@ -69,7 +108,7 @@ function toIso(value: Date | string | null) {
 export type ApiLogInput = {
   orderId?: string | null
   shipmentId?: string | null
-  direction?: "request" | "webhook"
+  direction?: "request" | "webhook" | "sync" | "status_change"
   endpoint: string
   method: string
   statusCode?: number | null

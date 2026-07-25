@@ -66,13 +66,19 @@ type MenuItem = {
 
 type OryCMSNotification = {
   body: string
+  category: string
+  entityId: string | null
+  entityType: string | null
   id: string
-  kind: "order" | "customer" | "admin-user" | "system"
+  kind: "order" | "payment" | "shipment" | "inventory" | "customer" | "admin-user" | "system"
   read: boolean
+  targetUrl: string
   time: string
   timestamp: string
   title: string
 }
+
+type OryCMSNotificationsResponse = { items?: OryCMSNotification[]; total?: number }
 
 type OryCMSHeaderProfile = {
   email: string
@@ -183,9 +189,12 @@ function DashboardShell({
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [notifications, setNotifications] = useState<OryCMSNotification[]>([])
   const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [notificationFilter, setNotificationFilter] = useState("all")
   const [profileOpen, setProfileOpen] = useState(false)
   const [headerProfile, setHeaderProfile] = useState<OryCMSHeaderProfile | null>(null)
   const [sessionWarningSeconds, setSessionWarningSeconds] = useState<number | null>(null)
+  const notificationsInitialized = useRef(false)
+  const knownUnreadNotificationIds = useRef<Set<string>>(new Set())
   const logoutInProgress = useRef(false)
 
   const logout = useCallback(async () => {
@@ -215,10 +224,16 @@ function DashboardShell({
     async function loadNotifications() {
       setNotificationsLoading(true)
       try {
-        const response = await fetch("/api/orycms/notifications", { cache: "no-store" })
+        const response = await fetch("/api/orycms/notifications?limit=100", { cache: "no-store" })
         const json = await response.json()
         if (!cancelled && response.ok && json.success) {
-          setNotifications(Array.isArray(json.data) ? json.data : [])
+          const next = notificationItems(json.data)
+          const unreadIds = new Set(next.filter((item) => !item.read).map((item) => item.id))
+          const hasNewUnread = [...unreadIds].some((id) => !knownUnreadNotificationIds.current.has(id))
+          if (notificationsInitialized.current && hasNewUnread) playOryCMSNotificationSound()
+          notificationsInitialized.current = true
+          knownUnreadNotificationIds.current = unreadIds
+          setNotifications(next)
         }
       } finally {
         if (!cancelled) setNotificationsLoading(false)
@@ -226,7 +241,7 @@ function DashboardShell({
     }
 
     void loadNotifications()
-    const interval = window.setInterval(loadNotifications, 8000)
+    const interval = window.setInterval(loadNotifications, 15000)
     return () => {
       cancelled = true
       window.clearInterval(interval)
@@ -337,6 +352,42 @@ function DashboardShell({
   }
 
   if (!user) return null
+  const unreadNotificationCount = notifications.filter((item) => !item.read).length
+  const visibleNotifications = filterNotifications(notifications, notificationFilter)
+
+  async function markNotificationRead(id: string) {
+    const response = await fetch("/api/orycms/notifications", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id }),
+    })
+    const json = await response.json().catch(() => null)
+    if (response.ok && json?.success) setNotifications(notificationItems(json.data))
+    else setNotifications((items) => items.map((item) => item.id === id ? { ...item, read: true } : item))
+  }
+
+  async function markAllNotificationsRead() {
+    const response = await fetch("/api/orycms/notifications", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ all: true }),
+    })
+    const json = await response.json().catch(() => null)
+    if (response.ok && json?.success) setNotifications(notificationItems(json.data))
+    knownUnreadNotificationIds.current = new Set()
+  }
+
+  async function clearReadNotifications() {
+    const response = await fetch("/api/orycms/notifications", { method: "DELETE" })
+    const json = await response.json().catch(() => null)
+    if (response.ok && json?.success) setNotifications(notificationItems(json.data))
+  }
+
+  async function openNotification(notification: OryCMSNotification) {
+    await markNotificationRead(notification.id)
+    setNotificationsOpen(false)
+    router.push(notification.targetUrl)
+  }
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -405,17 +456,24 @@ function DashboardShell({
                 }`}
               >
                 <Bell className="h-4 w-4" />
-                {notifications.length ? (
+                {unreadNotificationCount ? (
                   <span className="absolute -right-0.5 -top-0.5 grid min-h-4 min-w-4 place-items-center rounded-full bg-destructive px-1 text-[9px] font-semibold leading-none text-white">
-                    {Math.min(notifications.length, 9)}
+                    {Math.min(unreadNotificationCount, 9)}
                   </span>
                 ) : null}
               </button>
               <NotificationsPanel
                 loading={notificationsLoading}
-                notifications={notifications}
+                onClearRead={clearReadNotifications}
+                filter={notificationFilter}
+                notifications={visibleNotifications}
+                onMarkAllRead={markAllNotificationsRead}
                 open={notificationsOpen}
                 onClose={() => setNotificationsOpen(false)}
+                onFilterChange={setNotificationFilter}
+                onOpenNotification={(notification) => void openNotification(notification)}
+                totalCount={notifications.length}
+                unreadCount={unreadNotificationCount}
               />
             </div>
 
@@ -1728,16 +1786,32 @@ function ProfileDropdown({
 }
 
 function NotificationsPanel({
+  filter,
   loading,
+  onClearRead,
+  onFilterChange,
+  onMarkAllRead,
   notifications,
+  onOpenNotification,
   open,
   onClose,
+  totalCount,
+  unreadCount,
 }: {
+  filter: string
   loading: boolean
+  onClearRead: () => void
+  onFilterChange: (filter: string) => void
+  onMarkAllRead: () => void
   notifications: OryCMSNotification[]
+  onOpenNotification: (notification: OryCMSNotification) => void
   open: boolean
   onClose: () => void
+  totalCount: number
+  unreadCount: number
 }) {
+  const readCount = totalCount - unreadCount
+  const groups = groupNotifications(notifications)
   return (
     <div
       role="dialog"
@@ -1761,8 +1835,29 @@ function NotificationsPanel({
             <X className="h-3.5 w-3.5" />
           </button>
         </div>
-        <div className="mt-0.5 text-[11.5px] text-muted-foreground">
-          Live order, customer, and admin activity
+        <div className="mt-0.5 flex items-center justify-between gap-2 text-[11.5px] text-muted-foreground">
+          <span>Live order, customer, and admin activity</span>
+          <span>{unreadCount} unread</span>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {NOTIFICATION_FILTERS.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => onFilterChange(item.value)}
+              className={cn("rounded-md border px-2 py-1 text-[10.5px] font-medium transition-colors", filter === item.value ? "border-foreground bg-foreground text-background" : "border-border bg-white text-muted-foreground hover:bg-accent")}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-2 flex gap-2">
+          <button type="button" onClick={onMarkAllRead} disabled={unreadCount === 0} className="rounded-md border border-border bg-white px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50">
+            Mark all as read
+          </button>
+          <button type="button" onClick={onClearRead} disabled={readCount === 0} className="rounded-md border border-border bg-white px-2 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50">
+            Clear read
+          </button>
         </div>
       </div>
       <div className="max-h-[420px] space-y-2 overflow-y-auto bg-white p-3">
@@ -1776,46 +1871,120 @@ function NotificationsPanel({
             No recent order or customer activity.
           </div>
         ) : null}
-        {notifications.map((notification) => (
-          <div
-            key={notification.id}
-            className="rounded-lg border border-border bg-white p-3 transition-colors hover:bg-accent/30"
-          >
-            <div className="flex items-start gap-3">
-              <div
-                className={cn("mt-0.5 grid h-8 w-8 place-items-center rounded-md", notificationTone(notification.kind))}
-              >
-                <NotificationIcon kind={notification.kind} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="text-[12.5px] font-medium">{notification.title}</div>
-                  <div className="text-[10.5px] text-muted-foreground">
-                    {notification.time}
-                  </div>
-                </div>
-                <div className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground">
-                  {notification.body}
-                </div>
-              </div>
-            </div>
+        {groups.map((group) => (
+          <div key={group.label} className="space-y-2">
+            <div className="px-1 text-[10.5px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{group.label}</div>
+            {group.items.map((notification) => (
+              <NotificationButton key={notification.id} notification={notification} onOpen={onOpenNotification} />
+            ))}
           </div>
         ))}
+        <Link href="/admin/notifications" onClick={onClose} className="block rounded-lg border border-border bg-white p-3 text-center text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
+          View All Notifications
+        </Link>
       </div>
     </div>
   )
 }
 
+function NotificationButton({ notification, onOpen }: { notification: OryCMSNotification; onOpen: (notification: OryCMSNotification) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(notification)}
+      className={cn("w-full rounded-lg border border-border bg-white p-3 text-left transition-colors hover:bg-accent/30", !notification.read && "border-chart-3/30 bg-chart-3/5")}
+    >
+      <div className="flex items-start gap-3">
+        <div className={cn("mt-0.5 grid h-8 w-8 place-items-center rounded-md", notificationTone(notification.kind))}>
+          <NotificationIcon kind={notification.kind} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-[12.5px] font-medium">{notification.title}</div>
+            <div className="text-[10.5px] text-muted-foreground" title={dateTime(notification.timestamp)}>
+              {notification.time}
+            </div>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{notification.category}</span>
+            {!notification.read ? <span className="text-[10.5px] font-semibold text-chart-3">Unread</span> : null}
+          </div>
+          <div className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground">
+            {notification.body}
+          </div>
+        </div>
+      </div>
+    </button>
+  )
+}
+
 function NotificationIcon({ kind }: { kind: OryCMSNotification["kind"] }) {
   if (kind === "order") return <Receipt className="h-4 w-4" />
+  if (kind === "payment") return <CreditCard className="h-4 w-4" />
+  if (kind === "shipment") return <Truck className="h-4 w-4" />
+  if (kind === "inventory") return <Boxes className="h-4 w-4" />
   if (kind === "customer") return <Users className="h-4 w-4" />
   if (kind === "admin-user") return <UserCog className="h-4 w-4" />
   return <Bell className="h-4 w-4" />
 }
 
+const NOTIFICATION_FILTERS = [
+  { label: "All", value: "all" },
+  { label: "Unread", value: "unread" },
+  { label: "Orders", value: "order" },
+  { label: "Payments", value: "payment" },
+  { label: "Shipments", value: "shipment" },
+  { label: "Inventory", value: "inventory" },
+]
+
+function notificationItems(data: unknown): OryCMSNotification[] {
+  const payload = data as OryCMSNotificationsResponse | OryCMSNotification[] | undefined
+  if (Array.isArray(payload)) return payload
+  return Array.isArray(payload?.items) ? payload.items : []
+}
+
+function filterNotifications(notifications: OryCMSNotification[], filter: string) {
+  if (filter === "all") return notifications
+  if (filter === "unread") return notifications.filter((item) => !item.read)
+  return notifications.filter((item) => item.kind === filter)
+}
+
+function groupNotifications(notifications: OryCMSNotification[]) {
+  const groups = [
+    { label: "Today", items: [] as OryCMSNotification[] },
+    { label: "Yesterday", items: [] as OryCMSNotification[] },
+    { label: "Earlier", items: [] as OryCMSNotification[] },
+  ]
+  for (const notification of notifications) {
+    groups[groupIndex(notification.timestamp)].items.push(notification)
+  }
+  return groups.filter((group) => group.items.length > 0)
+}
+
+function groupIndex(timestamp: string) {
+  const date = new Date(timestamp)
+  const startToday = new Date()
+  startToday.setHours(0, 0, 0, 0)
+  const startYesterday = new Date(startToday)
+  startYesterday.setDate(startYesterday.getDate() - 1)
+  if (date >= startToday) return 0
+  if (date >= startYesterday) return 1
+  return 2
+}
+
 function notificationTone(kind: OryCMSNotification["kind"]) {
   if (kind === "order") return "bg-success/10 text-success"
+  if (kind === "payment") return "bg-destructive/10 text-destructive"
+  if (kind === "shipment") return "bg-info/10 text-info"
+  if (kind === "inventory") return "bg-warning/10 text-warning"
   if (kind === "customer") return "bg-info/10 text-info"
   if (kind === "admin-user") return "bg-warning/10 text-warning"
   return "bg-muted text-muted-foreground"
+}
+
+function playOryCMSNotificationSound() {
+  if (typeof window === "undefined") return
+  const audio = new Audio("/universfield-new-notification-040-493469.mp3")
+  audio.volume = 0.35
+  void audio.play().catch(() => undefined)
 }

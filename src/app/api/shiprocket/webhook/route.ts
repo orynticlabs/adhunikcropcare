@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import crypto from "crypto"
 import { getShipmentByAwb, getShipmentByShiprocketId, recordApiLog } from "@/lib/shiprocket/shipments"
 import { enqueueJob } from "@/lib/shiprocket/jobs"
+import { syncShipmentStatus } from "@/lib/shiprocket/fulfillment"
 
 export const runtime = "nodejs"
 
@@ -38,6 +39,8 @@ export async function POST(request: NextRequest) {
 
   const statusCode = firstString(body.current_status_id, body.shipment_status_id, body["sr-status"]) ?? null
   const statusLabel = firstString(body.current_status, body.shipment_status, body.status) ?? "Update"
+  const location = firstString(body.current_location, body.location) ?? null
+  const activity = firstString(body.activity, body.current_status, body.shipment_status, body.status) ?? statusLabel
   const occurredAt = normalizeDate(firstString(body.current_timestamp, body.status_date, body.date))
 
   await recordApiLog({
@@ -49,7 +52,7 @@ export async function POST(request: NextRequest) {
     statusCode: 200,
     ok: Boolean(shipment),
     errorMessage: shipment ? null : "No matching shipment",
-    requestSummary: { awb, shiprocketShipmentId, statusCode, statusLabel },
+    requestSummary: { awb, shiprocketShipmentId, statusCode, statusLabel, location, activity },
   })
 
   if (!shipment) {
@@ -57,16 +60,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, data: { matched: false } })
   }
 
-  // Idempotent enqueue: one sync job per (shipment, status, timestamp).
-  await enqueueJob({
-    type: "sync_tracking",
-    orderId: shipment.order_id,
-    shipmentId: shipment.id,
-    payload: { statusCode, statusLabel, occurredAt },
-    dedupeKey: `sync:${shipment.id}:${statusCode ?? "na"}:${occurredAt}`,
+  const applied = await syncShipmentStatus(shipment, {
+    statusCode,
+    statusLabel,
+    location,
+    activity,
+    occurredAt,
+    raw: body,
   })
 
-  return NextResponse.json({ success: true, data: { matched: true, queued: true } })
+  const jobId = applied.applied
+    ? await enqueueJob({
+        type: "sync_tracking",
+        orderId: shipment.order_id,
+        shipmentId: shipment.id,
+        payload: { statusCode, statusLabel, location, activity, occurredAt },
+        dedupeKey: `sync:${shipment.id}:${statusCode ?? "na"}:${occurredAt}`,
+      })
+    : null
+
+  return NextResponse.json({ success: true, data: { matched: true, applied: applied.applied, queued: Boolean(jobId) } })
 }
 
 type ShiprocketWebhookBody = Record<string, unknown> & {

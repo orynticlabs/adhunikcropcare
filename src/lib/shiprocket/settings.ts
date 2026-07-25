@@ -139,13 +139,23 @@ export async function upsertShiprocketSettings(input: ShiprocketSettingsInput): 
     pickupCity: pick(input.pickupCity, existing?.pickupCity ?? null),
     pickupState: pick(input.pickupState, existing?.pickupState ?? null),
     pickupCountry: pick(input.pickupCountry, existing?.pickupCountry ?? "India") ?? "India",
-    pickupPincode: pick(input.pickupPincode, existing?.pickupPincode ?? null),
+    pickupPincode: normalizePincode(pick(input.pickupPincode, existing?.pickupPincode ?? null)),
     packageLengthCm: numberOr(input.packageLengthCm, existing?.packageLengthCm ?? 10),
     packageBreadthCm: numberOr(input.packageBreadthCm, existing?.packageBreadthCm ?? 10),
     packageHeightCm: numberOr(input.packageHeightCm, existing?.packageHeightCm ?? 10),
     packageWeightKg: numberOr(input.packageWeightKg, existing?.packageWeightKg ?? 0.5),
     autoShipOnConfirm: input.autoShipOnConfirm ?? existing?.autoShipOnConfirm ?? false,
     enabled: input.enabled ?? existing?.enabled ?? false,
+  }
+
+  if (merged.enabled) {
+    if (!merged.apiEmail || !/^\S+@\S+\.\S+$/.test(merged.apiEmail)) throw new Error("Valid Shiprocket API email is required.")
+    if (!passwordEncrypted || !decryptSecret(passwordEncrypted)) throw new Error("Shiprocket API password is required.")
+    if (!merged.pickupLocation) throw new Error("Shiprocket pickup location is required.")
+    if (!merged.pickupPincode || !/^\d{6}$/.test(merged.pickupPincode.replace(/\D/g, ""))) throw new Error("Valid Shiprocket pickup pincode is required.")
+    if (merged.packageLengthCm <= 0 || merged.packageBreadthCm <= 0 || merged.packageHeightCm <= 0 || merged.packageWeightKg <= 0) {
+      throw new Error("Shiprocket package dimensions and weight must be greater than zero.")
+    }
   }
 
   if (existing) {
@@ -206,4 +216,10 @@ function pick<T>(next: T | null | undefined, fallback: T | null): T | null {
 function numberOr(next: number | null | undefined, fallback: number): number {
   if (next === undefined || next === null || !Number.isFinite(next)) return fallback
   return Math.max(0, Number(next))
+}
+
+function normalizePincode(value: string | null) {
+  if (!value) return null
+  const digits = value.replace(/\D/g, "").slice(0, 6)
+  return digits || null
 }

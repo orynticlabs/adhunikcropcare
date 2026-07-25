@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
 import type { Prisma } from "@prisma/client"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
+import { createOryCMSNotification } from "@/lib/orycms/notifications"
 
 export const ACCESS_COOKIE = "acc_access"
 export const REFRESH_COOKIE = "acc_refresh"
@@ -135,6 +136,14 @@ export async function createUser(input: {
     RETURNING *
   `
   if (!user) throw new Error(EMAIL_VERIFICATION_REQUIRED_MESSAGE)
+  await createOryCMSNotification({
+    type: "customer",
+    title: "New Customer",
+    message: `${firstName} ${lastName} registered · ${email}`,
+    entityId: user.id,
+    entityType: "customer",
+    targetUrl: `/admin/customers/${user.id}?highlight=${user.id}`,
+  }).catch((error) => console.error("OryCMS notification failed", error))
 
   return { user: toUserDTO(user) }
 }

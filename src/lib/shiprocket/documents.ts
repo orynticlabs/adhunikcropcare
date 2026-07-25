@@ -1,14 +1,15 @@
 import "server-only"
-import { ensureDocument, type DocumentKind } from "@/lib/shiprocket/fulfillment"
+import { ensureDocument } from "@/lib/shiprocket/fulfillment"
 
-const CONTENT_TYPES: Record<DocumentKind, string> = {
+type PublicDocumentKind = "invoice" | "label"
+
+const CONTENT_TYPES: Record<"invoice" | "label", string> = {
   invoice: "application/pdf",
   label: "application/pdf",
-  manifest: "application/pdf",
 }
 
-export function isDocumentKind(value: string): value is DocumentKind {
-  return value === "invoice" || value === "label" || value === "manifest"
+export function isDocumentKind(value: string): value is PublicDocumentKind {
+  return value === "invoice" || value === "label"
 }
 
 /**
@@ -16,7 +17,7 @@ export function isDocumentKind(value: string): value is DocumentKind {
  * the file server-side, and returns a streamable Response. Proxying keeps the raw
  * Shiprocket URL server-only and lets the caller enforce auth before download.
  */
-export async function proxyDocument(orderId: string, kind: DocumentKind, filenameBase: string): Promise<Response> {
+export async function proxyDocument(orderId: string, kind: PublicDocumentKind, filenameBase: string): Promise<Response> {
   const url = await ensureDocument(orderId, kind)
   const upstream = await fetch(url)
   if (!upstream.ok || !upstream.body) {

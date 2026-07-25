@@ -4,6 +4,7 @@ import { recordApiLog } from "@/lib/shiprocket/shipments"
 import type { ShiprocketTrackingEvent } from "@/lib/shiprocket/types"
 
 const BASE_URL = "https://apiv2.shiprocket.in/v1/external"
+const REQUEST_TIMEOUT_MS = 20_000
 
 export type ApiContext = { orderId?: string | null; shipmentId?: string | null }
 
@@ -35,6 +36,9 @@ async function login(): Promise<string> {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ email: creds.email, password: creds.password }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  }).catch((error) => {
+    throw new ShiprocketError(error instanceof Error ? error.message : "Shiprocket authentication timed out.", 504, null, "AUTH_NETWORK_ERROR")
   })
   const json = (await response.json().catch(() => ({}))) as { token?: string; message?: string }
   if (!response.ok || !json.token) {
@@ -53,6 +57,7 @@ async function getToken(forceRefresh = false): Promise<string> {
 async function request<T>(path: string, init: { method?: string; body?: unknown; retryOnAuth?: boolean; context?: ApiContext } = {}): Promise<T> {
   const token = await getToken()
   const method = init.method ?? "GET"
+  const endpoint = path.split("?")[0]
   const response = await fetch(`${BASE_URL}${path}`, {
     method,
     headers: {
@@ -60,6 +65,20 @@ async function request<T>(path: string, init: { method?: string; body?: unknown;
       authorization: `Bearer ${token}`,
     },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  }).catch(async (error) => {
+    const message = error instanceof Error ? error.message : "Shiprocket request timed out."
+    await recordApiLog({
+      orderId: init.context?.orderId ?? null,
+      shipmentId: init.context?.shipmentId ?? null,
+      endpoint,
+      method,
+      statusCode: 504,
+      ok: false,
+      errorCode: "NETWORK_ERROR",
+      errorMessage: message,
+    })
+    throw new ShiprocketError(message, 504, null, "NETWORK_ERROR")
   })
 
   if (response.status === 401 && init.retryOnAuth !== false) {
@@ -69,7 +88,6 @@ async function request<T>(path: string, init: { method?: string; body?: unknown;
   }
 
   const json = (await response.json().catch(() => ({}))) as Record<string, unknown>
-  const endpoint = path.split("?")[0]
   if (!response.ok) {
     const message = typeof json.message === "string" ? json.message : `Shiprocket request failed (${response.status}).`
     const errorCode = json.status_code != null ? String(json.status_code) : String(response.status)
@@ -203,6 +221,7 @@ export async function checkServiceability(input: {
   deliveryPincode: string
   weight: number
   cod: boolean
+  context?: ApiContext
 }): Promise<ServiceabilityResponse> {
   const params = new URLSearchParams({
     pickup_postcode: input.pickupPincode,
@@ -210,7 +229,7 @@ export async function checkServiceability(input: {
     weight: String(input.weight),
     cod: input.cod ? "1" : "0",
   })
-  return request<ServiceabilityResponse>(`/courier/serviceability/?${params.toString()}`)
+  return request<ServiceabilityResponse>(`/courier/serviceability/?${params.toString()}`, { context: input.context })
 }
 
 export type CancelResponse = { status_code?: number; message?: string }
@@ -268,13 +287,13 @@ type TrackingResponse = {
   }
 }
 
-export async function getTrackingByAwb(awb: string): Promise<{ trackUrl: string | null; etd: string | null; events: ShiprocketTrackingEvent[] }> {
-  const json = await request<TrackingResponse>(`/courier/track/awb/${encodeURIComponent(awb)}`)
+export async function getTrackingByAwb(awb: string, context?: ApiContext): Promise<{ trackUrl: string | null; etd: string | null; events: ShiprocketTrackingEvent[] }> {
+  const json = await request<TrackingResponse>(`/courier/track/awb/${encodeURIComponent(awb)}`, { context })
   return normalizeTracking(json)
 }
 
-export async function getTrackingByShipmentId(shipmentId: string | number): Promise<{ trackUrl: string | null; etd: string | null; events: ShiprocketTrackingEvent[] }> {
-  const json = await request<TrackingResponse>(`/courier/track/shipment/${encodeURIComponent(String(shipmentId))}`)
+export async function getTrackingByShipmentId(shipmentId: string | number, context?: ApiContext): Promise<{ trackUrl: string | null; etd: string | null; events: ShiprocketTrackingEvent[] }> {
+  const json = await request<TrackingResponse>(`/courier/track/shipment/${encodeURIComponent(String(shipmentId))}`, { context })
   return normalizeTracking(json)
 }
 
