@@ -5,6 +5,7 @@ import { emailBaseUrl, sendAdminEmail, sendEmail, sendOrderAdminNotifications } 
 import { getEnabledOrderNotificationRecipients } from "@/lib/orycms/order-notification-emails"
 import { createOryCMSNotification } from "@/lib/orycms/notifications"
 import { validateCouponCode, recordDiscountUsage } from "@/lib/orycms/discounts"
+import { getOryCMSCodRule, getCustomerCompletedOrderCount } from "@/lib/orycms/cod-rules"
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -102,6 +103,17 @@ export async function createCheckoutOrder(userId: string, input: CheckoutPayload
   }
 
   const payload = normalizeCheckoutPayload(input)
+
+  // Server-side COD minimum order enforcement
+  if (payload.paymentMethod === "cash_on_delivery") {
+    const { minOrdersRequired } = await getOryCMSCodRule()
+    if (minOrdersRequired > 0) {
+      const userOrderCount = await getCustomerCompletedOrderCount(userId)
+      if (userOrderCount < minOrdersRequired) {
+        throw new Error(`Cash on Delivery is only available after completing at least ${minOrdersRequired} order(s). You currently have ${userOrderCount} completed order(s).`)
+      }
+    }
+  }
 
   // Server-side coupon re-validation
   let validatedCouponId: string | null = null

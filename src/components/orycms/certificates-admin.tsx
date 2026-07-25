@@ -130,7 +130,7 @@ export function OryCMSCertificatesAdmin() {
     <section className="mx-auto max-w-[1400px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <OryCMSBreadcrumbs items={[{ href: "/admin", label: "Overview" }, { href: "/admin/certificates", label: "Certificates" }]} />
+          <OryCMSBreadcrumbs items={[{ href: "/admin", label: "Overview" }, { href: "/admin/collections", label: "Collections" }, { href: "/admin/collections/certificates", label: "Certificates" }]} />
           <h1 className="mt-1 text-[26px] font-semibold tracking-tight">Company certificates</h1>
           <p className="mt-1 text-[13.5px] text-muted-foreground">Upload, order, and publish verified certificates on the storefront.</p>
         </div>

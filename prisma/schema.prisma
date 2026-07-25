@@ -735,3 +735,12 @@ model OryCMSAnnouncement {
   @@index([deletedAt], map: "orycms_announcements_deleted_at_idx")
   @@map("orycms_announcements")
 }
+
+model OryCMSCodRule {
+  id                String   @id @default("default")
+  minOrdersRequired Int      @default(0) @map("min_orders_required")
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("orycms_cod_rules")
+}
+

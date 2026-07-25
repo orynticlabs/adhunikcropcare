@@ -108,6 +108,20 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
           },
           {
             section: "Content",
+            label: "Certificates",
+            href: adminHref("/collections/certificates"),
+            slug: "collections/certificates",
+            description: "Upload, order, and publish verified company certificates.",
+          },
+          {
+            section: "Content",
+            label: "COD Rules",
+            href: adminHref("/collections/cod-rules"),
+            slug: "collections/cod-rules",
+            description: "Configure minimum completed order requirement for Cash on Delivery (COD).",
+          },
+          {
+            section: "Content",
             label: "Payments",
             href: adminHref("/payments"),
             slug: "payments",

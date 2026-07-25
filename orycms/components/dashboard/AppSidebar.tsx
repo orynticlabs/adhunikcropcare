@@ -24,6 +24,7 @@ import {
   Puzzle,
   Database,
   SearchCheck,
+  Award,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -74,7 +75,18 @@ const NAV: { section: string; items: Item[] }[] = [
   {
     section: "Content",
     items: [
-      { label: "Collections", to: adminCollectionsPath(), icon: Layers, permission: { resource: "collections", action: "read" } },
+      {
+        label: "Collections",
+        to: adminCollectionsPath(),
+        icon: Layers,
+        permission: { resource: "collections", action: "read" },
+        children: [
+          { label: "Reels", to: "/collections/reels", permission: { resource: "collections", action: "read" } },
+          { label: "FAQs", to: "/collections/faqs", permission: { resource: "collections", action: "read" } },
+          { label: "Certificates", to: "/collections/certificates", icon: Award, permission: { resource: "collections", action: "read" } },
+          { label: "COD Rules", to: "/collections/cod-rules", permission: { resource: "collections", action: "read" } },
+        ],
+      },
       { label: "Content", to: adminContentIndexPath(), icon: FileText, permission: { resource: "content", action: "read" } },
       { label: "Media", to: "/media", icon: ImageIcon, permission: { resource: "media", action: "read" } },
     ],

@@ -176,6 +176,34 @@ export default function CheckoutPage() {
     setPhone((value) => value || user.phone)
   }, [user])
 
+  const [codEligibility, setCodEligibility] = useState<{ eligible: boolean; minOrdersRequired: number; userOrderCount: number } | null>(null)
+
+  useEffect(() => {
+    let active = true
+    void fetch("/api/auth/checkout/cod-eligibility")
+      .then((res) => res.json())
+      .then((json: { data?: { eligible?: boolean; minOrdersRequired?: number; userOrderCount?: number }; success?: boolean }) => {
+        if (!active) return
+        if (json.success && json.data) {
+          const info = {
+            eligible: Boolean(json.data.eligible),
+            minOrdersRequired: Number(json.data.minOrdersRequired) || 0,
+            userOrderCount: Number(json.data.userOrderCount) || 0,
+          }
+          setCodEligibility(info)
+          if (!info.eligible) {
+            setPayment("razorpay")
+          }
+        }
+      })
+      .catch(() => {
+        /* ignore transient error */
+      })
+    return () => {
+      active = false
+    }
+  }, [user])
+
   function applyAddress(address: SavedAddress) {
     setAddress1(address.address1)
     setAddress2(address.address2 ?? "")
@@ -696,32 +724,52 @@ export default function CheckoutPage() {
                       label: "Online Payment",
                       sub: "UPI, cards, wallet, or netbanking",
                     },
-                  ].map(m => (
-                    <button
-                      key={m.id}
-                      type="button"
-                      onClick={() => setPayment(m.id)}
-                      className={`group min-h-24 rounded-2xl border p-4 text-left transition-colors ${
-                        payment === m.id
-                          ? "border-[#033927] bg-[#033927] text-white"
-                          : "border-border/60 bg-white text-black hover:border-[#689c30] hover:bg-[#689c30]/10"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${payment === m.id ? "bg-white/10 text-[#689c30]" : "bg-white text-black group-hover:text-[#689c30]"}`}>
-                          <m.icon className="h-5 w-5" aria-hidden />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="flex flex-wrap items-center gap-2 text-sm font-semibold">
-                            {m.label}
-                            {m.id === "razorpay" ? <RazorpayLogo /> : null}
+                  ].map(m => {
+                    const isCodDisabled = m.id === "cash_on_delivery" && codEligibility && !codEligibility.eligible
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        disabled={Boolean(isCodDisabled)}
+                        onClick={() => {
+                          if (!isCodDisabled) setPayment(m.id)
+                        }}
+                        className={`group min-h-24 rounded-2xl border p-4 text-left transition-colors ${
+                          isCodDisabled
+                            ? "cursor-not-allowed border-border/40 bg-gray-50 text-gray-400 opacity-60"
+                            : payment === m.id
+                            ? "border-[#033927] bg-[#033927] text-white"
+                            : "border-border/60 bg-white text-black hover:border-[#689c30] hover:bg-[#689c30]/10"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${isCodDisabled ? "bg-gray-200 text-gray-400" : payment === m.id ? "bg-white/10 text-[#689c30]" : "bg-white text-black group-hover:text-[#689c30]"}`}>
+                            <m.icon className="h-5 w-5" aria-hidden />
                           </span>
-                          <span className={`mt-1 block text-xs ${payment === m.id ? "text-white/75" : "text-muted-foreground"}`}>{m.sub}</span>
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                          <span className="min-w-0">
+                            <span className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                              {m.label}
+                              {m.id === "razorpay" ? <RazorpayLogo /> : null}
+                              {isCodDisabled ? <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Locked</span> : null}
+                            </span>
+                            <span className={`mt-1 block text-xs ${isCodDisabled ? "text-gray-400" : payment === m.id ? "text-white/75" : "text-muted-foreground"}`}>
+                              {isCodDisabled ? `Requires ${codEligibility?.minOrdersRequired ?? 0} completed order(s)` : m.sub}
+                            </span>
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
+
+                {codEligibility && !codEligibility.eligible ? (
+                  <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900">
+                    <p className="font-semibold">Cash on Delivery is currently locked</p>
+                    <p className="mt-1 leading-relaxed text-amber-800">
+                      A minimum of <strong>{codEligibility.minOrdersRequired}</strong> completed order(s) is required to unlock Cash on Delivery. You currently have <strong>{codEligibility.userOrderCount}</strong> completed order(s). Please proceed with Razorpay online payment.
+                    </p>
+                  </div>
+                ) : null}
 
                 {payment === "cash_on_delivery" ? (
                   <div className="mt-5 rounded-2xl border border-[#e5dcc3] bg-[#fffaf0] p-4 text-sm">

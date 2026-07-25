@@ -1131,6 +1131,8 @@ function sectionHref(section: string) {
     Products: "/admin/products",
     Reels: "/admin/collections/reels",
     FAQs: "/admin/collections/faqs",
+    Certificates: "/admin/collections/certificates",
+    "COD Rules": "/admin/collections/cod-rules",
   }
 
   return routes[section] ?? `/admin/${section.toLowerCase().replace(/\s+/g, "-")}`
