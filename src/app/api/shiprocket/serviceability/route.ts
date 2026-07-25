@@ -51,10 +51,10 @@ export async function GET(request: NextRequest) {
       pincode,
       codAvailable,
       estimatedDeliveryDays: best?.estimated_delivery_days ?? null,
-      estimatedDeliveryDate: best?.etd ?? null,
+      estimatedDeliveryDate: deliveryDate(best?.etd, best?.estimated_delivery_days),
       couriers: sorted.slice(0, 5).map((courier) => ({
         name: courier.courier_name,
-        etd: courier.etd,
+        etd: deliveryDate(courier.etd, courier.estimated_delivery_days),
         estimatedDeliveryDays: courier.estimated_delivery_days,
         rate: courier.rate,
         cod: Number(courier.cod) === 1,
@@ -72,4 +72,28 @@ export async function GET(request: NextRequest) {
       { status: 500 },
     )
   }
+}
+
+function deliveryDate(etd?: string | null, days?: string | number | null) {
+  const parsed = etd ? parseShiprocketDate(etd) : null
+  if (parsed) return formatDeliveryDate(parsed)
+
+  const count = Number.parseInt(String(days ?? ""), 10)
+  if (!Number.isFinite(count) || count <= 0) return null
+  const date = new Date()
+  date.setDate(date.getDate() + count)
+  return formatDeliveryDate(date)
+}
+
+function parseShiprocketDate(value: string) {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const isoLike = new Date(trimmed.replace(" ", "T"))
+  if (!Number.isNaN(isoLike.getTime())) return isoLike
+  const fallback = new Date(trimmed)
+  return Number.isNaN(fallback.getTime()) ? null : fallback
+}
+
+function formatDeliveryDate(date: Date) {
+  return date.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" })
 }

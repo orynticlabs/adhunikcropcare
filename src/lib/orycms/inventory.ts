@@ -1,4 +1,5 @@
 import { ensureOryCMSProductsSchema } from "@/lib/orycms/products"
+import { LOW_STOCK_THRESHOLD } from "@/lib/orycms/low-stock"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { ensureStorefrontAuthSchema } from "@/lib/storefront-auth"
 
@@ -37,7 +38,7 @@ type InventoryEventRow = {
   updated_by: string | null
 }
 
-const REORDER_LEVEL = 10
+const REORDER_LEVEL = LOW_STOCK_THRESHOLD
 
 export async function getOryCMSInventoryData() {
   await ensureStorefrontAuthSchema()

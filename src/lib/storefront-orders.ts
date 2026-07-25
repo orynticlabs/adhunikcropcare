@@ -4,6 +4,7 @@ import { ensureStorefrontAuthSchema, normalizePhone, validateEmail } from "@/lib
 import { emailBaseUrl, sendAdminEmail, sendEmail, sendOrderAdminNotifications } from "@/lib/email/mailer"
 import { getEnabledOrderNotificationRecipients } from "@/lib/orycms/order-notification-emails"
 import { createOryCMSNotification } from "@/lib/orycms/notifications"
+import { notifyLowStockProduct } from "@/lib/orycms/low-stock"
 import { validateCouponCode, recordDiscountUsage } from "@/lib/orycms/discounts"
 import { getOryCMSCodRule, getCustomerCompletedOrderCount } from "@/lib/orycms/cod-rules"
 
@@ -503,15 +504,8 @@ async function notifyLowStockForItems(items: CheckoutItem[]) {
     const [product] = await orycmsPrisma.$queryRaw<{ id: string; stock_quantity: number; name: string }[]>`
       SELECT id, stock_quantity, name FROM orycms_products WHERE id = ${productId}::uuid LIMIT 1
     `
-    if (!product || Number(product.stock_quantity) <= 0 || Number(product.stock_quantity) > 10) continue
-    await createOryCMSNotification({
-      type: "inventory",
-      title: "Low Stock",
-      message: `${product.name} has only ${product.stock_quantity} units left.`,
-      entityId: product.id,
-      entityType: "product",
-      targetUrl: `/admin/products/${product.id}?highlight=${product.id}`,
-    }).catch((error) => console.error("OryCMS notification failed", error))
+    if (!product) continue
+    await notifyLowStockProduct(product)
   }
 }
 

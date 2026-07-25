@@ -1,4 +1,5 @@
 import { ensureOryCMSProductsSchema } from "@/lib/orycms/products"
+import { LOW_STOCK_THRESHOLD } from "@/lib/orycms/low-stock"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { getOryCMSAdminProfile, type CurrentOryCMSAdmin } from "@/lib/orycms/users"
 import { ensureStorefrontAuthSchema } from "@/lib/storefront-auth"
@@ -118,9 +119,9 @@ export async function getOryCMSDashboardData(actor: CurrentOryCMSAdmin, input: {
   const items = paidOrders.flatMap(orderItems)
   const productStats = topProducts(items, products)
   const conversionRate = visitors ? (paidOrders.length / visitors) * 100 : null
-  const lowStock = products.filter((product) => product.stock_quantity > 0 && product.stock_quantity <= 10)
+  const lowStock = products.filter((product) => product.stock_quantity > 0 && product.stock_quantity <= LOW_STOCK_THRESHOLD)
   const outOfStock = products.filter((product) => product.stock_quantity <= 0)
-  const inStock = products.filter((product) => product.stock_quantity > 10)
+  const inStock = products.filter((product) => product.stock_quantity > LOW_STOCK_THRESHOLD)
   const healthScore = products.length ? Math.round(((inStock.length + lowStock.length * 0.45) / products.length) * 100) : 0
 
   return {

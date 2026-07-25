@@ -98,6 +98,12 @@ export type OrderAdminNotificationData = {
   total?: number
 }
 
+export type LowStockAdminNotificationData = {
+  adminProductUrl?: string
+  productName: string
+  stockQuantity: number
+}
+
 /**
  * Sends the detailed "new order" notification to admin-configured recipients
  * (managed on the Settings page). No unsubscribe/preference gating is applied —
@@ -115,6 +121,27 @@ export async function sendOrderAdminNotifications(recipients: string[], data: Or
     return { skipped: true }
   }
   const rendered = emailTemplates.adminOrderNotification({ ...data, unsubscribeUrl: `${emailBaseUrl()}/admin/settings` })
+  const transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } })
+  const info = await transporter.sendMail({
+    from: process.env.SMTP_EMAIL_FROM ?? user,
+    to: unique.join(", "),
+    subject: rendered.subject,
+    text: rendered.text,
+    html: rendered.html,
+  })
+  return { messageId: info.messageId, recipients: unique, skipped: false }
+}
+
+export async function sendLowStockAdminNotifications(recipients: string[], data: LowStockAdminNotificationData) {
+  const unique = Array.from(new Set(recipients.map((email) => email.trim().toLowerCase()).filter(Boolean)))
+  if (unique.length === 0) return { skipped: true }
+  const user = process.env.SMTP_GMAIL_USER
+  const pass = process.env.SMTP_GMAIL_APP_PASSWORD
+  if (!user || !pass) {
+    console.warn("Low stock admin notification skipped: Gmail SMTP is not configured.")
+    return { skipped: true }
+  }
+  const rendered = emailTemplates.adminLowStockNotification({ ...data, unsubscribeUrl: `${emailBaseUrl()}/admin/settings` })
   const transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } })
   const info = await transporter.sendMail({
     from: process.env.SMTP_EMAIL_FROM ?? user,

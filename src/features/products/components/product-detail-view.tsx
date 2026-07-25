@@ -717,6 +717,9 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                       {serviceability.estimatedDeliveryDate && (
                         <span><span className="text-foreground/60">Est. delivery:</span> <strong>{serviceability.estimatedDeliveryDate}</strong></span>
                       )}
+                      {!serviceability.estimatedDeliveryDate && serviceability.estimatedDeliveryDays && (
+                        <span><span className="text-foreground/60">Est. delivery:</span> <strong>{serviceability.estimatedDeliveryDays} days</strong></span>
+                      )}
                       <span>
                         <span className="text-foreground/60">COD:</span>{" "}
                         <strong>{serviceability.codAvailable ? "Available" : "Not available"}</strong>

@@ -1,4 +1,5 @@
 import "server-only"
+import { getOryCMSNotificationSettings } from "@/lib/orycms/notification-settings"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 
 export type OryCMSNotificationKind = "order" | "payment" | "shipment" | "inventory" | "customer" | "admin-user" | "system"
@@ -67,6 +68,9 @@ export async function createOryCMSNotification(input: {
   entityType?: string | null
   targetUrl: string
 }) {
+  const settings = await getOryCMSNotificationSettings()
+  if (!settings.pushAlerts) return
+
   await ensureOryCMSNotificationsSchema()
   await orycmsPrisma.$executeRawUnsafe(
     `INSERT INTO orycms_notifications (type, title, message, entity_id, entity_type, target_url)

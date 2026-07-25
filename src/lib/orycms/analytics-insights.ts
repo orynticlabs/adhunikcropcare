@@ -1,5 +1,6 @@
 import { ensureStorefrontAuthSchema } from "@/lib/storefront-auth"
 import { ensureOryCMSProductsSchema } from "@/lib/orycms/products"
+import { LOW_STOCK_THRESHOLD } from "@/lib/orycms/low-stock"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 
 type RangeKey = "today" | "7d" | "30d" | "90d" | "month" | "year" | "custom"
@@ -86,7 +87,7 @@ export async function getOryCMSAnalyticsInsights(input: { from?: string | null; 
   const peakHours = groupRevenue(paidOrders, (order) => `${new Date(order.created_at).getHours()}:00`)
   const peakDays = groupRevenue(paidOrders, (order) => new Date(order.created_at).toLocaleDateString("en-IN", { weekday: "long" }))
   const geo = groupRevenue(paidOrders, (order) => text((order.shipping_address as Record<string, unknown> | null)?.state) || "Unknown")
-  const lowStock = products.filter((product) => product.stock_quantity > 0 && product.stock_quantity <= 10)
+  const lowStock = products.filter((product) => product.stock_quantity > 0 && product.stock_quantity <= LOW_STOCK_THRESHOLD)
   const outOfStock = products.filter((product) => product.stock_quantity <= 0)
   const fastMoving = productStats.filter((p) => p.quantity >= 5).sort(byQuantity)
   const deadStock = products

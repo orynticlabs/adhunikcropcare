@@ -9,6 +9,7 @@ export type EmailTemplateName =
   | "offerAnnouncement"
   | "saleAnnouncement"
   | "adminOrderNotification"
+  | "adminLowStockNotification"
   | "shipmentCreated"
   | "shipmentShipped"
   | "shipmentOutForDelivery"
@@ -18,6 +19,7 @@ export type EmailTemplateName =
 type TemplateInput = {
   actionUrl?: string
   adminOrderUrl?: string
+  adminProductUrl?: string
   awbCode?: string
   courierName?: string
   customerEmail?: string
@@ -32,6 +34,7 @@ type TemplateInput = {
   paymentMethod?: string
   paymentStatus?: string
   productName?: string
+  stockQuantity?: number
   refundStatus?: string
   total?: number
   trackingUrl?: string
@@ -108,6 +111,25 @@ export const emailTemplates: Record<EmailTemplateName, (input: TemplateInput) =>
         ["Order Status", i.orderStatus ?? "-"],
         ["Order Date & Time", i.orderDate ?? "-"],
       ])}${button("View admin order details", i.adminOrderUrl)}`,
+      i.unsubscribeUrl,
+    ),
+  }),
+  adminLowStockNotification: (i) => ({
+    subject: `Low stock alert · ${i.productName ?? "Product"}`,
+    text: [
+      `Low stock alert on ${brand}.`,
+      `Product: ${i.productName ?? "-"}`,
+      `Stock quantity: ${i.stockQuantity ?? "-"}`,
+      i.adminProductUrl ? `Admin Product Details: ${i.adminProductUrl}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    html: layout(
+      "Low stock alert",
+      `<p>An item is at or below the low-stock threshold.</p>${detailsTable([
+        ["Product", i.productName ?? "-"],
+        ["Stock quantity", i.stockQuantity ?? "-"],
+      ])}${button("View product", i.adminProductUrl)}`,
       i.unsubscribeUrl,
     ),
   }),

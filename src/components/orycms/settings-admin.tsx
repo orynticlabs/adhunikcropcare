@@ -38,13 +38,11 @@ function isValidEmail(value: string) {
 }
 
 export function OryCMSSettingsPage() {
+  const [companyName, setCompanyName] = useState("Adhunik CropCare Private Limited")
   const [orderPrefix, setOrderPrefix] = useState("ORY")
   const [lowStockThreshold, setLowStockThreshold] = useState("8")
   const [twoFactor, setTwoFactor] = useState(true)
   const [auditLog, setAuditLog] = useState(true)
-  const [emailAlerts, setEmailAlerts] = useState(true)
-  const [pushAlerts, setPushAlerts] = useState(false)
-  const [marketingDigest, setMarketingDigest] = useState(true)
   const [returnApproval, setReturnApproval] = useState(true)
   const [internationalOrders, setInternationalOrders] = useState(false)
 
@@ -93,6 +91,7 @@ export function OryCMSSettingsPage() {
               description="Operational preferences that shape how orders, pricing, and catalog workflows behave."
             />
             <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <Field label="Company name" value={companyName} onChange={setCompanyName} />
               <Field label="Order prefix" value={orderPrefix} onChange={setOrderPrefix} />
               <Field label="Low stock threshold" value={lowStockThreshold} onChange={setLowStockThreshold} />
             </div>
@@ -108,30 +107,7 @@ export function OryCMSSettingsPage() {
 
           <ShipmentNotificationsCard onToast={toast} />
 
-          <Card>
-            <SectionHeader
-              icon={Bell}
-              title="Notifications"
-              description="Control which operational events should interrupt the team and where those alerts are delivered."
-            />
-            <div className="mt-5">
-              <SettingRow
-                title="Email alerts"
-                description="Send fulfillment issues, payment review alerts, and stock exceptions to operations inboxes."
-                control={<Toggle checked={emailAlerts} onChange={setEmailAlerts} />}
-              />
-              <SettingRow
-                title="Push alerts"
-                description="Deliver urgent dispatch and fraud-review updates to mobile devices for the active team."
-                control={<Toggle checked={pushAlerts} onChange={setPushAlerts} />}
-              />
-              <SettingRow
-                title="Weekly marketing digest"
-                description="Share campaign summary, conversion shifts, and revenue highlights every Monday morning."
-                control={<Toggle checked={marketingDigest} onChange={setMarketingDigest} />}
-              />
-            </div>
-          </Card>
+          <NotificationsCard onToast={toast} />
 
           <Card>
             <SectionHeader
@@ -474,6 +450,92 @@ type NotificationToggles = {
   outForDelivery: boolean
   delivered: boolean
   cancelled: boolean
+}
+
+type OryCMSNotificationToggles = {
+  emailAlerts: boolean
+  pushAlerts: boolean
+  marketingDigest: boolean
+}
+
+function NotificationsCard({ onToast }: { onToast: (message: string, tone: Toast["tone"]) => void }) {
+  const [settings, setSettings] = useState<OryCMSNotificationToggles>({
+    emailAlerts: true,
+    pushAlerts: true,
+    marketingDigest: true,
+  })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    fetch("/api/orycms/settings/notifications", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!active) return
+        if (json.success && json.data) setSettings(json.data)
+      })
+      .catch(() => {})
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  async function save(next: OryCMSNotificationToggles) {
+    setSaving(true)
+    try {
+      const json = await fetch("/api/orycms/settings/notifications", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(next),
+      }).then((response) => response.json())
+      if (!json.success) throw new Error(json.error?.message ?? "Failed to save.")
+      setSettings(json.data)
+      onToast("Notification settings saved.", "success")
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : "Failed to save.", "error")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function update(key: keyof OryCMSNotificationToggles, value: boolean) {
+    const next = { ...settings, [key]: value }
+    setSettings(next)
+    void save(next)
+  }
+
+  return (
+    <Card>
+      <SectionHeader
+        icon={Bell}
+        title="Notifications"
+        description="Control which operational events should interrupt the team and where those alerts are delivered."
+      />
+      {loading ? (
+        <div className="mt-5 grid min-h-[64px] place-items-center text-[12.5px] text-muted-foreground">
+          <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</span>
+        </div>
+      ) : (
+        <div className="mt-5">
+          <SettingRow
+            title="Email alerts"
+            description="Send fulfillment issues, payment review alerts, and stock exceptions to operations inboxes."
+            control={<Toggle checked={settings.emailAlerts} disabled={saving} onChange={(value) => update("emailAlerts", value)} />}
+          />
+          <SettingRow
+            title="Push alerts"
+            description="Deliver urgent dispatch and fraud-review updates to the OryCMS notification bell."
+            control={<Toggle checked={settings.pushAlerts} disabled={saving} onChange={(value) => update("pushAlerts", value)} />}
+          />
+          <SettingRow
+            title="Weekly marketing digest"
+            description="Share campaign summary, conversion shifts, and revenue highlights every Monday morning."
+            control={<Toggle checked={settings.marketingDigest} disabled={saving} onChange={(value) => update("marketingDigest", value)} />}
+          />
+        </div>
+      )}
+    </Card>
+  )
 }
 
 function ShipmentNotificationsCard({ onToast }: { onToast: (message: string, tone: Toast["tone"]) => void }) {
