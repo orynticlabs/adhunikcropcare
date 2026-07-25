@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client"
 import { revalidateTag, unstable_cache } from "next/cache"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { deleteOryCMSMediaIfUnreferenced } from "@/lib/orycms/media"
+import { createOryCMSNotification } from "@/lib/orycms/notifications"
 import { sanitizeRichText } from "@/lib/orycms/sanitize-html"
 import {
   PRODUCT_STATUSES,
@@ -189,6 +190,16 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
       `
 
   if (!product) throw new Error("Product not found.")
+  if (product.status === "published" && product.stock_quantity > 0 && product.stock_quantity <= 10) {
+    await createOryCMSNotification({
+      type: "inventory",
+      title: "Low Stock",
+      message: `${product.name} has only ${product.stock_quantity} units left.`,
+      entityId: product.id,
+      entityType: "product",
+      targetUrl: `/admin/products/${product.id}?highlight=${product.id}`,
+    }).catch((error) => console.error("OryCMS notification failed", error))
+  }
 
   revalidateStorefrontProducts()
   return toProductDTO(product)

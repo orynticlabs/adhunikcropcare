@@ -3,6 +3,7 @@ import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { ensureStorefrontAuthSchema, normalizePhone, validateEmail } from "@/lib/storefront-auth"
 import { emailBaseUrl, sendAdminEmail, sendEmail, sendOrderAdminNotifications } from "@/lib/email/mailer"
 import { getEnabledOrderNotificationRecipients } from "@/lib/orycms/order-notification-emails"
+import { createOryCMSNotification } from "@/lib/orycms/notifications"
 import { validateCouponCode, recordDiscountUsage } from "@/lib/orycms/discounts"
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -57,6 +58,12 @@ export type StorefrontOrderRow = {
   razorpay_signature: string | null
   refund_status: string
   reservation_expires_at: Date | string | null
+  confirmed_at?: Date | string | null
+  confirmed_by_admin_id?: string | null
+  confirmed_by_admin_email?: string | null
+  packed_at?: Date | string | null
+  packed_by_admin_id?: string | null
+  packed_by_admin_email?: string | null
   shipping_address: unknown
   shipping_total: string | number
   status: string
@@ -165,6 +172,15 @@ export async function createCheckoutOrder(userId: string, input: CheckoutPayload
       razorpayOrderId,
       rawPayload: { idempotencyKey },
     })
+    await notifyLowStockForItems(reservedItems)
+    await createOryCMSNotification({
+      type: "order",
+      title: "New Order",
+      message: `Order ${order.number} placed · ${payload.paymentMethod} · ₹${Number(order.total).toFixed(2)}`,
+      entityId: order.id,
+      entityType: "order",
+      targetUrl: `/admin/orders/${order.id}?highlight=${order.id}`,
+    }).catch((error) => console.error("OryCMS notification failed", error))
     if (payload.paymentMethod === "cash_on_delivery") await sendOrderConfirmationEmail(order)
 
     const response = {
@@ -267,6 +283,28 @@ export async function cancelOrder(userId: string, orderId: string) {
   return serializeOrder(updated)
 }
 
+export async function cancelOrderByAdmin(orderId: string) {
+  await ensureStorefrontAuthSchema()
+  const order = await selectOrderRowById(orderId)
+  if (!order) throw new Error("Order not found.")
+  if (["cancelled", "shipped", "delivered"].includes(order.status.toLowerCase())) throw new Error("This order cannot be cancelled.")
+  const refundStatus = order.payment_status === "paid" ? "pending" : order.refund_status
+  await releaseOrderStock(order)
+  const [updated] = await orycmsPrisma.$queryRaw<StorefrontOrderRow[]>`
+    UPDATE storefront_orders
+    SET status = 'cancelled',
+        cancelled_at = now(),
+        refund_status = ${refundStatus},
+        payment_timeline = payment_timeline || ${JSON.stringify([timelineEvent("order.cancelled_by_admin", order.payment_status)])}::jsonb
+    WHERE id = ${orderId}::uuid
+    RETURNING *
+  `
+  await recordTransaction(order.id, order.user_id ?? null, "order.cancelled_by_admin", order.payment_status, Number(order.total), { rawPayload: { refundStatus } })
+  await sendOrderEventEmail(updated, "orderCancelled").catch((error) => console.error("Cancellation email failed", error))
+  if (refundStatus === "pending") await sendOrderEventEmail(updated, "refundUpdate").catch((error) => console.error("Refund email failed", error))
+  return serializeOrder(updated)
+}
+
 export async function handleRazorpayWebhook(rawBody: string, signature: string | null) {
   await ensureStorefrontAuthSchema()
   if (!isValidWebhookSignature(rawBody, signature)) throw new Error("Invalid webhook signature.")
@@ -301,6 +339,14 @@ export async function handleRazorpayWebhook(rawBody: string, signature: string |
         RETURNING *
       `
       await recordTransaction(updated.id, updated.user_id ?? null, "payment.failed", "failed", Number(updated.total), { razorpayOrderId: payment.order_id, razorpayPaymentId: payment.id, rawPayload: event })
+      await createOryCMSNotification({
+        type: "payment",
+        title: "Payment Failed",
+        message: `Payment failed for order ${updated.number}.`,
+        entityId: payment.id ?? updated.id,
+        entityType: "payment",
+        targetUrl: `/admin/payments?highlight=${encodeURIComponent(payment.id ?? updated.id)}`,
+      }).catch((error) => console.error("OryCMS notification failed", error))
     }
     return
   }
@@ -316,6 +362,14 @@ export async function handleRazorpayWebhook(rawBody: string, signature: string |
         RETURNING *
       `
       await recordTransaction(updated.id, updated.user_id ?? null, "refund.processed", "processed", Number(refund.amount ?? 0) / 100, { razorpayPaymentId: refund.payment_id, razorpayRefundId: refund.id, rawPayload: event })
+      await createOryCMSNotification({
+        type: "payment",
+        title: "Refund Completed",
+        message: `Refund completed for order ${updated.number}.`,
+        entityId: refund.id ?? refund.payment_id,
+        entityType: "refund",
+        targetUrl: `/admin/payments/${encodeURIComponent(refund.payment_id)}?highlight=${encodeURIComponent(refund.id ?? refund.payment_id)}`,
+      }).catch((error) => console.error("OryCMS notification failed", error))
       await sendOrderEventEmail(updated, "refundUpdate").catch((error) => console.error("Refund email failed", error))
     }
   }
@@ -325,6 +379,17 @@ export async function buildInvoicePdf(userId: string, orderId: string) {
   await ensureStorefrontAuthSchema()
   const [order] = await selectOrderForUser(orderId, userId)
   if (!order) throw new Error("Order not found.")
+  return invoicePdfForOrder(order)
+}
+
+export async function buildAdminInvoicePdf(orderId: string) {
+  await ensureStorefrontAuthSchema()
+  const order = await selectOrderRowById(orderId)
+  if (!order) throw new Error("Order not found.")
+  return invoicePdfForOrder(order)
+}
+
+function invoicePdfForOrder(order: StorefrontOrderRow) {
   const lines = [
     "Adhunik Crop Care",
     `Invoice: ${order.invoice_number ?? `INV-${order.number}`}`,
@@ -343,6 +408,8 @@ export function serializeOrder(order: StorefrontOrderRow) {
   return {
     ...order,
     cancelled_at: order.cancelled_at instanceof Date ? order.cancelled_at.toISOString() : order.cancelled_at,
+    confirmed_at: order.confirmed_at instanceof Date ? order.confirmed_at.toISOString() : order.confirmed_at,
+    packed_at: order.packed_at instanceof Date ? order.packed_at.toISOString() : order.packed_at,
     created_at: order.created_at instanceof Date ? order.created_at.toISOString() : order.created_at,
     discount_total: Number(order.discount_total),
     reservation_expires_at: order.reservation_expires_at instanceof Date ? order.reservation_expires_at.toISOString() : order.reservation_expires_at,
@@ -416,6 +483,24 @@ async function reserveStock(items: CheckoutItem[]) {
     const found = reserved.find((reservedItem) => productSlug(reservedItem) === productSlug(item) || reservedItem.name === item.name) as (CheckoutItem & { productId?: string; productSlug?: string }) | undefined
     return { ...item, productId: found?.productId, productSlug: found?.productSlug }
   })
+}
+
+async function notifyLowStockForItems(items: CheckoutItem[]) {
+  const productIds = Array.from(new Set(items.map((item) => (item as CheckoutItem & { productId?: string }).productId).filter((id): id is string => Boolean(id))))
+  for (const productId of productIds) {
+    const [product] = await orycmsPrisma.$queryRaw<{ id: string; stock_quantity: number; name: string }[]>`
+      SELECT id, stock_quantity, name FROM orycms_products WHERE id = ${productId}::uuid LIMIT 1
+    `
+    if (!product || Number(product.stock_quantity) <= 0 || Number(product.stock_quantity) > 10) continue
+    await createOryCMSNotification({
+      type: "inventory",
+      title: "Low Stock",
+      message: `${product.name} has only ${product.stock_quantity} units left.`,
+      entityId: product.id,
+      entityType: "product",
+      targetUrl: `/admin/products/${product.id}?highlight=${product.id}`,
+    }).catch((error) => console.error("OryCMS notification failed", error))
+  }
 }
 
 async function reReserveOrderStock(order: StorefrontOrderRow) {
@@ -512,7 +597,7 @@ async function recordTransaction(orderId: string, userId: string | null, event: 
   `
 }
 
-async function sendOrderConfirmationEmail(order: StorefrontOrderRow) {
+export async function sendOrderConfirmationEmail(order: StorefrontOrderRow) {
   const contact = order.contact as { email?: string; firstName?: string } | null
   const recipient = contact?.email
   if (!recipient) return

@@ -1,29 +1,28 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { requireOryCMSUser } from "@/lib/orycms/auth"
+import { confirmOryCMSOrder, getOryCMSOrder, packOryCMSOrder } from "@/lib/orycms/orders"
+import { cancelOrderByAdmin } from "@/lib/storefront-orders"
 import { enqueueJob } from "@/lib/shiprocket/jobs"
 import { getShipmentByOrderId } from "@/lib/shiprocket/shipments"
-import { generateLabel, printManifest, ShiprocketError } from "@/lib/shiprocket/client"
+import { generateLabel, ShiprocketError } from "@/lib/shiprocket/client"
+import { cancelShipment } from "@/lib/shiprocket/fulfillment"
 
 export const runtime = "nodejs"
 
-type BulkAction = "confirm" | "create_shipment" | "schedule_pickup" | "print_labels" | "download_manifest"
+type BulkAction = "confirm" | "pack" | "create_shipment" | "print_labels" | "cancel"
 
-const ENQUEUE_ACTIONS: Record<string, { type: "create_shipment" | "schedule_pickup" }> = {
-  confirm: { type: "create_shipment" },
+const ENQUEUE_ACTIONS: Record<string, { type: "create_shipment" }> = {
   create_shipment: { type: "create_shipment" },
-  schedule_pickup: { type: "schedule_pickup" },
 }
 
 /**
- * Bulk shipment operations over selected orders. Enqueue-style actions (confirm,
- * create, schedule pickup) fan out idempotent jobs — one per order — and return
- * per-order results. Document actions (labels, manifest) call the multi-id
- * Shiprocket endpoints and return a combined URL.
+ * Bulk order/shipment operations. Confirm updates orders directly; shipment
+ * actions fan out idempotent jobs and document actions call Shiprocket endpoints.
  */
 export async function POST(request: NextRequest) {
   try {
-    await requireOryCMSUser(request)
+    const user = await requireOryCMSUser(request)
     const body = (await request.json().catch(() => ({}))) as { action?: BulkAction; orderIds?: unknown }
     const action = body.action
     const orderIds = Array.isArray(body.orderIds) ? body.orderIds.filter((value): value is string => typeof value === "string") : []
@@ -31,6 +30,52 @@ export async function POST(request: NextRequest) {
     if (!action) return bad("Missing action.")
     if (orderIds.length === 0) return bad("Select at least one order.")
     if (orderIds.length > 100) return bad("Select at most 100 orders per bulk action.")
+
+    if (action === "confirm") {
+      const results = await Promise.all(
+        orderIds.map(async (orderId) => {
+          try {
+            await confirmOryCMSOrder(orderId, user)
+            return { orderId, ok: true }
+          } catch (error) {
+            return { orderId, ok: false, error: error instanceof Error ? error.message : "Failed to confirm." }
+          }
+        }),
+      )
+      return NextResponse.json({ success: true, data: { action, results } })
+    }
+
+    if (action === "pack") {
+      const results = await Promise.all(
+        orderIds.map(async (orderId) => {
+          try {
+            await packOryCMSOrder(orderId, user)
+            return { orderId, ok: true }
+          } catch (error) {
+            return { orderId, ok: false, error: error instanceof Error ? error.message : "Failed to pack." }
+          }
+        }),
+      )
+      return NextResponse.json({ success: true, data: { action, results } })
+    }
+
+    if (action === "cancel") {
+      const results = await Promise.all(
+        orderIds.map(async (orderId) => {
+          try {
+            const order = await getOryCMSOrder(orderId)
+            if (!order) throw new Error("Order not found.")
+            const shipment = await getShipmentByOrderId(order.id)
+            if (shipment) await cancelShipment(order.id)
+            else await cancelOrderByAdmin(order.id)
+            return { orderId, ok: true }
+          } catch (error) {
+            return { orderId, ok: false, error: error instanceof Error ? error.message : "Failed to cancel." }
+          }
+        }),
+      )
+      return NextResponse.json({ success: true, data: { action, results } })
+    }
 
     if (action in ENQUEUE_ACTIONS) {
       const { type } = ENQUEUE_ACTIONS[action]
@@ -47,23 +92,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, data: { action, queued: true, results } })
     }
 
-    if (action === "print_labels" || action === "download_manifest") {
+    if (action === "print_labels") {
       // Resolve Shiprocket shipment/order ids for the selection.
       const shipments = await Promise.all(orderIds.map((orderId) => getShipmentByOrderId(orderId)))
       const found = shipments.filter((shipment): shipment is NonNullable<typeof shipment> => Boolean(shipment))
       const missing = orderIds.length - found.length
 
-      if (action === "print_labels") {
-        const shipmentIds = found.map((shipment) => shipment.shiprocket_shipment_id).filter((value): value is string => Boolean(value))
-        if (shipmentIds.length === 0) return bad("None of the selected orders have a Shiprocket shipment yet.")
-        const response = await generateLabel(shipmentIds)
-        return NextResponse.json({ success: true, data: { action, url: response.label_url ?? null, count: shipmentIds.length, missing } })
-      }
-
-      const orderRefs = found.map((shipment) => shipment.shiprocket_order_id).filter((value): value is string => Boolean(value))
-      if (orderRefs.length === 0) return bad("None of the selected orders have a Shiprocket order yet.")
-      const response = await printManifest(orderRefs)
-      return NextResponse.json({ success: true, data: { action, url: response.manifest_url ?? null, count: orderRefs.length, missing } })
+      const shipmentIds = found.map((shipment) => shipment.shiprocket_shipment_id).filter((value): value is string => Boolean(value))
+      if (shipmentIds.length === 0) return bad("None of the selected orders have a Shiprocket shipment yet.")
+      const response = await generateLabel(shipmentIds)
+      return NextResponse.json({ success: true, data: { action, url: response.label_url ?? null, count: shipmentIds.length, missing } })
     }
 
     return bad("Unknown action.")

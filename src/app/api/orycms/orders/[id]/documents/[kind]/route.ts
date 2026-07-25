@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { requireOryCMSUser } from "@/lib/orycms/auth"
 import { getOryCMSOrder } from "@/lib/orycms/orders"
+import { buildAdminInvoicePdf } from "@/lib/storefront-orders"
 import { isDocumentKind, proxyDocument } from "@/lib/shiprocket/documents"
 import { ShiprocketError } from "@/lib/shiprocket/client"
 
@@ -17,6 +18,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const order = await getOryCMSOrder(id)
     if (!order) {
       return NextResponse.json({ success: false, error: { code: "NOT_FOUND", message: "Order not found." } }, { status: 404 })
+    }
+    if (kind === "invoice" && !order.shipment?.shiprocket_order_id) {
+      const invoice = await buildAdminInvoicePdf(order.id)
+      return new Response(new Uint8Array(invoice.bytes), {
+        headers: {
+          "content-disposition": `inline; filename="${invoice.filename}"`,
+          "content-type": "application/pdf",
+        },
+      })
     }
     return await proxyDocument(order.id, kind, order.number)
   } catch (error) {

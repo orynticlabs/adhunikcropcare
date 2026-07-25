@@ -1,10 +1,10 @@
 import "server-only"
 import { claimDueJobs, markJobFailed, markJobSucceeded, type ShiprocketJobRow } from "@/lib/shiprocket/jobs"
-import { confirmAndCreateShipment, ensureDocument, refreshTracking, schedulePickup, syncShipmentStatus, type DocumentKind } from "@/lib/shiprocket/fulfillment"
+import { confirmAndCreateShipment, ensureDocument, refreshActiveShipments, refreshTracking, schedulePickup, syncShipmentStatus, type DocumentKind } from "@/lib/shiprocket/fulfillment"
 import { getShipmentByOrderId } from "@/lib/shiprocket/shipments"
 import { sendShipmentNotification, type ShipmentNotificationType } from "@/lib/shiprocket/notifications"
 
-export type RunSummary = { claimed: number; succeeded: number; failed: number }
+export type RunSummary = { claimed: number; succeeded: number; failed: number; trackingChecked: number; trackingRefreshed: number; trackingFailed: number }
 
 /** Claims and runs due jobs. Called by the cron endpoint. */
 export async function runDueJobs(limit = 10): Promise<RunSummary> {
@@ -24,7 +24,15 @@ export async function runDueJobs(limit = 10): Promise<RunSummary> {
     }
   }
 
-  return { claimed: jobs.length, succeeded, failed }
+  const tracking = await refreshActiveShipments(Math.max(1, limit))
+  return {
+    claimed: jobs.length,
+    succeeded,
+    failed,
+    trackingChecked: tracking.checked,
+    trackingRefreshed: tracking.refreshed,
+    trackingFailed: tracking.failed,
+  }
 }
 
 async function runJob(job: ShiprocketJobRow): Promise<void> {
@@ -45,8 +53,8 @@ async function runJob(job: ShiprocketJobRow): Promise<void> {
         await syncShipmentStatus(shipment, {
           statusCode: typeof job.payload.statusCode === "string" ? job.payload.statusCode : null,
           statusLabel,
-          location: null,
-          activity: statusLabel,
+          location: typeof job.payload.location === "string" ? job.payload.location : null,
+          activity: typeof job.payload.activity === "string" ? job.payload.activity : statusLabel,
           occurredAt: typeof job.payload.occurredAt === "string" ? job.payload.occurredAt : new Date().toISOString(),
           raw: job.payload,
         })
@@ -62,7 +70,7 @@ async function runJob(job: ShiprocketJobRow): Promise<void> {
     }
     case "fetch_documents": {
       if (!job.order_id) throw new Error("fetch_documents job missing order_id")
-      const kinds = (Array.isArray(job.payload.kinds) ? job.payload.kinds : ["invoice", "label", "manifest"]) as DocumentKind[]
+      const kinds = (Array.isArray(job.payload.kinds) ? job.payload.kinds : ["invoice", "label"]) as DocumentKind[]
       for (const kind of kinds) {
         await ensureDocument(job.order_id, kind).catch((error) => console.error(`Document ${kind} failed`, error))
       }

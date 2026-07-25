@@ -3,11 +3,18 @@ export type ShiprocketOrderStatus =
   | "Confirmed"
   | "Processing"
   | "Packed"
+  | "Picked Up"
   | "Shipped"
   | "In Transit"
   | "Out for Delivery"
   | "Delivered"
   | "Cancelled"
+  | "RTO"
+  | "RTO In Transit"
+  | "RTO Delivered"
+  | "Return Requested"
+  | "Return Picked Up"
+  | "Return Delivered"
   | "Returned"
   | "Refunded"
 
@@ -46,6 +53,7 @@ export type ShipmentRow = {
   shiprocket_order_id: string | null
   shiprocket_shipment_id: string | null
   awb_code: string | null
+  tracking_number: string | null
   courier_name: string | null
   courier_id: string | null
   status: string
@@ -59,6 +67,12 @@ export type ShipmentRow = {
   label_url: string | null
   manifest_url: string | null
   invoice_url: string | null
+  shipment_created_at: Date | string | null
+  shipment_created_by_admin_id: string | null
+  return_status: string | null
+  reverse_pickup_status: string | null
+  return_reason: string | null
+  return_updated_at: Date | string | null
   retry_count: number
   last_error_code: string | null
   last_error_message: string | null

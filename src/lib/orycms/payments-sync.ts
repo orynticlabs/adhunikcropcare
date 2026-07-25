@@ -1,5 +1,6 @@
 import "server-only"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
+import { createOryCMSNotification } from "@/lib/orycms/notifications"
 import {
   createRefund,
   fetchPayments,
@@ -153,6 +154,7 @@ export async function syncRefundStatus(refundId: string): Promise<RazorpayRefund
     await upsertPaymentMirror(payment)
     await syncOrderRefundStatus(refund.payment_id, refund.status)
   }
+  if (refund.status === "processed") await notifyRefundCompleted(refund)
   return refund
 }
 
@@ -181,5 +183,28 @@ export async function issueRefund(input: { paymentId: string; amount?: number; r
   const payment = await getPayment(input.paymentId).catch(() => null)
   if (payment) await upsertPaymentMirror(payment)
   await syncOrderRefundStatus(input.paymentId, refund.status)
+  await createOryCMSNotification({
+    type: "payment",
+    title: "Refund Initiated",
+    message: `Refund ${refund.id} initiated.`,
+    entityId: refund.id,
+    entityType: "refund",
+    targetUrl: `/admin/payments/${encodeURIComponent(input.paymentId)}?highlight=${encodeURIComponent(refund.id)}`,
+  }).catch((error) => console.error("OryCMS notification failed", error))
+  if (refund.status === "processed") await notifyRefundCompleted(refund)
   return refund
+}
+
+async function notifyRefundCompleted(refund: RazorpayRefundEntity) {
+  const [order] = await orycmsPrisma.$queryRaw<Array<{ number: string }>>`
+    SELECT number FROM storefront_orders WHERE razorpay_payment_id = ${refund.payment_id} LIMIT 1
+  `
+  await createOryCMSNotification({
+    type: "payment",
+    title: "Refund Completed",
+    message: order ? `Refund completed for order ${order.number}.` : `Refund ${refund.id} completed.`,
+    entityId: refund.id,
+    entityType: "refund",
+    targetUrl: `/admin/payments/${encodeURIComponent(refund.payment_id)}?highlight=${encodeURIComponent(refund.id)}`,
+  }).catch((error) => console.error("OryCMS notification failed", error))
 }

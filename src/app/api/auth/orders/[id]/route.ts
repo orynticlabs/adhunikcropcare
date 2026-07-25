@@ -33,10 +33,16 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         shipment: shipment
           ? {
               awb_code: shipment.awb_code,
+              tracking_number: shipment.tracking_number ?? shipment.awb_code,
               courier_name: shipment.courier_name,
               status: shipment.status,
               tracking_url: shipment.tracking_url,
+              pickup_scheduled_date: shipment.pickup_scheduled_date,
               estimated_delivery_date: shipment.estimated_delivery_date,
+              return_status: shipment.return_status,
+              reverse_pickup_status: shipment.reverse_pickup_status,
+              return_reason: shipment.return_reason,
+              return_updated_at: shipment.return_updated_at,
               shiprocket_shipment_id: shipment.shiprocket_shipment_id,
             }
           : null,

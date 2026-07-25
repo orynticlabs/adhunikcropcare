@@ -287,6 +287,12 @@ model StorefrontOrder {
   invoiceNumber        String?   @map("invoice_number")
   refundStatus         String    @default("none") @map("refund_status")
   shiprocketStatus     String?   @map("shiprocket_status")
+  confirmedAt          DateTime? @map("confirmed_at") @db.Timestamptz(6)
+  confirmedByAdminId   String?   @map("confirmed_by_admin_id") @db.Uuid
+  confirmedByAdminEmail String?  @map("confirmed_by_admin_email")
+  packedAt             DateTime? @map("packed_at") @db.Timestamptz(6)
+  packedByAdminId      String?   @map("packed_by_admin_id") @db.Uuid
+  packedByAdminEmail   String?   @map("packed_by_admin_email")
   cancelledAt          DateTime? @map("cancelled_at") @db.Timestamptz(6)
   reservationExpiresAt DateTime? @map("reservation_expires_at") @db.Timestamptz(6)
   stockReleasedAt      DateTime? @map("stock_released_at") @db.Timestamptz(6)
@@ -299,6 +305,8 @@ model StorefrontOrder {
 
   @@index([userId], map: "storefront_orders_user_id_idx")
   @@index([createdAt], map: "storefront_orders_created_at_idx")
+  @@index([confirmedAt], map: "storefront_orders_confirmed_at_idx")
+  @@index([packedAt], map: "storefront_orders_packed_at_idx")
   @@map("storefront_orders")
 }
 
@@ -437,6 +445,22 @@ model OryCMSPaymentAuditLog {
   @@map("orycms_payment_audit_logs")
 }
 
+model OryCMSNotification {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type       String
+  title      String
+  message    String
+  entityId   String?  @map("entity_id")
+  entityType String?  @map("entity_type")
+  targetUrl  String   @map("target_url")
+  isRead     Boolean  @default(false) @map("is_read")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([type, entityType, entityId, title], map: "orycms_notifications_dedupe_key")
+  @@index([isRead, createdAt], map: "orycms_notifications_is_read_created_at_idx")
+  @@map("orycms_notifications")
+}
+
 model StorefrontEmailLog {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   orderId    String   @map("order_id") @db.Uuid
@@ -520,6 +544,7 @@ model StorefrontShipment {
   shiprocketOrderId     String?   @map("shiprocket_order_id")
   shiprocketShipmentId  String?   @map("shiprocket_shipment_id")
   awbCode               String?   @map("awb_code")
+  trackingNumber        String?   @map("tracking_number")
   courierName           String?   @map("courier_name")
   courierId             String?   @map("courier_id")
   status                String    @default("created")
@@ -533,6 +558,12 @@ model StorefrontShipment {
   labelUrl              String?   @map("label_url")
   manifestUrl           String?   @map("manifest_url")
   invoiceUrl            String?   @map("invoice_url")
+  shipmentCreatedAt     DateTime? @map("shipment_created_at") @db.Timestamptz(6)
+  shipmentCreatedByAdminId String? @map("shipment_created_by_admin_id") @db.Uuid
+  returnStatus          String?   @map("return_status")
+  reversePickupStatus   String?   @map("reverse_pickup_status")
+  returnReason          String?   @map("return_reason")
+  returnUpdatedAt       DateTime? @map("return_updated_at") @db.Timestamptz(6)
   retryCount            Int       @default(0) @map("retry_count")
   lastErrorCode         String?   @map("last_error_code")
   lastErrorMessage      String?   @map("last_error_message")
@@ -544,6 +575,7 @@ model StorefrontShipment {
   @@index([orderId], map: "storefront_shipments_order_id_idx")
   @@index([awbCode], map: "storefront_shipments_awb_code_idx")
   @@index([shiprocketShipmentId], map: "storefront_shipments_shiprocket_shipment_id_idx")
+  @@index([shipmentCreatedAt], map: "storefront_shipments_shipment_created_at_idx")
   @@map("storefront_shipments")
 }
 

@@ -15,10 +15,16 @@ import { useAuth } from "@/features/auth/auth-context"
 type OrderItem = { image?: string; img?: string; name: string; price: number; qty?: number; quantity?: number }
 type Shipment = {
   awb_code?: string | null
+  tracking_number?: string | null
   courier_name?: string | null
   status?: string
   tracking_url?: string | null
+  pickup_scheduled_date?: string | null
   estimated_delivery_date?: string | null
+  return_status?: string | null
+  reverse_pickup_status?: string | null
+  return_reason?: string | null
+  return_updated_at?: string | null
   shiprocket_shipment_id?: string | null
 } | null
 type ShipmentEvent = { id: string; status: string; location?: string | null; activity?: string | null; occurred_at: string }
@@ -63,7 +69,8 @@ export default function OrderDetailsPage() {
       router.replace(`/login?from=/account/orders/${params.id}`)
       return
     }
-    fetch(`/api/auth/orders/${params.id}`, { credentials: "include" })
+    function loadOrder() {
+      return fetch(`/api/auth/orders/${params.id}`, { credentials: "include" })
       .then(async (response) => {
         const json = await response.json()
         if (!response.ok || !json.success) throw new Error("Order not found.")
@@ -71,6 +78,10 @@ export default function OrderDetailsPage() {
       })
       .catch(() => setOrder(null))
       .finally(() => setLoading(false))
+    }
+    void loadOrder()
+    const interval = window.setInterval(() => void loadOrder(), 30000)
+    return () => window.clearInterval(interval)
   }, [loadingUser, params.id, router, user])
 
   return (
@@ -186,11 +197,20 @@ export default function OrderDetailsPage() {
                       <TrackField label="AWB Number" value={order.shipment.awb_code ?? "Pending"} />
                       <TrackField label="Courier" value={order.shipment.courier_name ?? "Assigning"} />
                       <TrackField
+                        label="Pickup Date"
+                        value={order.shipment.pickup_scheduled_date ? new Date(order.shipment.pickup_scheduled_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "To be confirmed"}
+                      />
+                      <TrackField
                         label="Estimated Delivery"
                         value={order.shipment.estimated_delivery_date ? new Date(order.shipment.estimated_delivery_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "To be confirmed"}
                       />
-                      <TrackField label="Tracking Number" value={order.shipment.awb_code ?? "Pending"} />
+                      <TrackField label="Tracking Number" value={order.shipment.tracking_number ?? order.shipment.awb_code ?? "Pending"} />
+                      {order.shipment.return_status || isReturnStatus(order.status) ? <TrackField label="Return/RTO Status" value={order.shipment.return_status ?? order.status} /> : null}
+                      {order.shipment.reverse_pickup_status ? <TrackField label="Reverse Pickup" value={order.shipment.reverse_pickup_status} /> : null}
+                      {order.shipment.return_reason ? <TrackField label="Return Reason" value={order.shipment.return_reason} /> : null}
+                      {order.shipment.return_updated_at ? <TrackField label="Return Updated" value={new Date(order.shipment.return_updated_at).toLocaleString("en-IN")} /> : null}
                     </div>
+                    <ShipmentStages shipment={order.shipment} events={order.shipmentEvents ?? []} />
                     {order.shipment.tracking_url ? (
                       <a
                         href={order.shipment.tracking_url}
@@ -344,14 +364,56 @@ function canRetry(order: Order) {
 }
 
 function canCancel(order: Order) {
-  return !["cancelled", "shipped", "delivered"].includes(order.status) && order.payment_status !== "refunded"
+  return !["cancelled", "picked up", "shipped", "in transit", "out for delivery", "delivered", "rto", "rto in transit", "rto delivered", "return requested", "return picked up", "return delivered", "returned"].includes(order.status.toLowerCase()) && order.payment_status !== "refunded"
+}
+
+function isReturnStatus(status: string) {
+  return ["cancelled", "rto", "rto in transit", "rto delivered", "return requested", "return picked up", "return delivered", "returned"].includes(status.toLowerCase())
 }
 
 function trackingSummary(order: Order) {
-  if (order.shipment?.awb_code) {
-    return `${order.shipment.courier_name ? `${order.shipment.courier_name} · ` : ""}${order.shipment.awb_code}`
+  if (order.shipment?.tracking_number || order.shipment?.awb_code) {
+    return `${order.shipment.courier_name ? `${order.shipment.courier_name} · ` : ""}${order.shipment.tracking_number ?? order.shipment.awb_code}`
   }
   return order.tracking ?? "Pending"
+}
+
+const SHIPMENT_STAGES = ["Shipment Created", "Picked Up", "In Transit", "Out for Delivery", "Delivered"] as const
+
+function ShipmentStages({ events, shipment }: { events: ShipmentEvent[]; shipment: NonNullable<Shipment> }) {
+  const currentIndex = shipmentStageIndex(shipment.status ?? "", events)
+  return (
+    <div className="mt-5 border-t border-border/40 pt-4">
+      <p className="text-sm font-semibold">Shipment Timeline</p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-5">
+        {SHIPMENT_STAGES.map((stage, index) => {
+          const state = index < currentIndex ? "Completed" : index === currentIndex ? "Current" : "Upcoming"
+          return (
+            <div key={stage} className={index <= currentIndex ? "rounded-xl border border-[#689c30]/30 bg-[#689c30]/5 px-3 py-2 text-xs text-[#689c30]" : "rounded-xl border border-border/50 bg-muted/20 px-3 py-2 text-xs text-muted-foreground"}>
+              <p className="font-semibold">{stage}</p>
+              <p className="mt-0.5">{state}</p>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function shipmentStageIndex(status: string, events: ShipmentEvent[]) {
+  const current = stageFromText(status)
+  if (current > 0) return current
+  return Math.max(0, ...events.map((event) => stageFromText(`${event.status} ${event.activity ?? ""}`)))
+}
+
+function stageFromText(value: string) {
+  const text = value.toLowerCase()
+  if (/\bdelivered\b/.test(text)) return 4
+  if (/out\s*for\s*delivery/.test(text)) return 3
+  if (/deliver/.test(text)) return 4
+  if (/in\s*transit|transit|reached/.test(text)) return 2
+  if (/picked\s*up|pickup|shipped|dispatch/.test(text)) return 1
+  return 0
 }
 
 function TrackField({ label, value }: { label: string; value: string }) {

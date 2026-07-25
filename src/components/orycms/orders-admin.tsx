@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Copy, Download, ExternalLink, Eye, Loader2, Package, RefreshCw, Search, Truck } from "lucide-react"
+import { ArrowLeft, Ban, CheckCircle2, Eye, FileText, Loader2, Package, Printer, Search, Truck } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
 import { cn, formatCurrency } from "@/lib/utils"
 
 const ORDER_PAGE_SIZE = 10
@@ -11,6 +12,12 @@ const ORDER_PAGE_SIZE = 10
 type OrderItem = { image?: string; img?: string; name?: string; price?: number; quantity?: number; qty?: number; size?: string }
 type Order = {
   cancelled_at?: string | null
+  confirmed_at?: string | null
+  confirmed_by_admin_email?: string | null
+  confirmed_by_admin_id?: string | null
+  packed_at?: string | null
+  packed_by_admin_email?: string | null
+  packed_by_admin_id?: string | null
   contact?: Record<string, unknown> | null
   created_at: string
   customerEmail: string
@@ -29,6 +36,7 @@ type Order = {
   refund_status?: string
   shipping_address?: Record<string, unknown> | null
   shipping_total: number
+  shipment?: Shipment | null
   status: string
   subtotal: number
   total: number
@@ -43,6 +51,7 @@ type Shipment = {
   shiprocket_order_id: string | null
   shiprocket_shipment_id: string | null
   awb_code: string | null
+  tracking_number: string | null
   courier_name: string | null
   courier_id: string | null
   status: string
@@ -56,6 +65,12 @@ type Shipment = {
   label_url: string | null
   manifest_url: string | null
   invoice_url: string | null
+  shipment_created_at: string | null
+  shipment_created_by_admin_id: string | null
+  return_status: string | null
+  reverse_pickup_status: string | null
+  return_reason: string | null
+  return_updated_at: string | null
   retry_count: number
   last_error_code: string | null
   last_error_message: string | null
@@ -71,24 +86,15 @@ type ShipmentEvent = {
   occurred_at: string
 }
 
-type ActivityLog = {
-  id: string
-  direction: string
-  endpoint: string
-  method: string
-  status_code: number | null
-  ok: boolean
-  error_code: string | null
-  error_message: string | null
-  created_at: string
-}
+type Toast = { id: number; message: string; tone: "success" | "error" }
 
 type OrderDetail = Order & {
+  refunds?: Refund[]
   shipment?: Shipment | null
   shipmentEvents?: ShipmentEvent[]
 }
 
-const PRE_DISPATCH_STATUSES = new Set(["Pending", "Confirmed", "Processing", "Packed", "created", "awb_assigned"])
+type Refund = { razorpay_refund_id: string; amount: number; status: string; reason: string | null; created_at: string | null }
 
 export function OryCMSOrdersList() {
   const [error, setError] = useState("")
@@ -101,7 +107,7 @@ export function OryCMSOrdersList() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkAction, setBulkAction] = useState<string | null>(null)
-  const [bulkNote, setBulkNote] = useState("")
+  const [actionNote, setActionNote] = useState("")
 
   useEffect(() => {
     void loadOrders(true)
@@ -132,28 +138,24 @@ export function OryCMSOrdersList() {
     })
   }
 
-  async function runBulk(action: string) {
+  async function runBulkAction(action: "confirm" | "pack" | "create_shipment" | "print_labels" | "cancel") {
     if (selected.size === 0) return
     setBulkAction(action)
-    setBulkNote("")
+    setActionNote("")
     try {
       const json = await fetch("/api/orycms/orders/bulk", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ action, orderIds: Array.from(selected) }),
       }).then((response) => response.json())
-      if (!json.success) throw new Error(json.error?.message ?? "Bulk action failed.")
-      if (json.data.url) {
-        window.open(json.data.url, "_blank", "noreferrer")
-        setBulkNote(`Document ready for ${json.data.count} order(s).${json.data.missing ? ` ${json.data.missing} skipped (no shipment).` : ""}`)
-      } else {
-        const ok = Array.isArray(json.data.results) ? json.data.results.filter((r: { ok: boolean }) => r.ok).length : selected.size
-        setBulkNote(`Queued ${ok} of ${selected.size} order(s). Processing runs in the background.`)
-      }
+      if (!json.success) throw new Error(json.error?.message ?? "Action failed.")
+      if (json.data?.url) window.open(json.data.url, "_blank", "noreferrer")
+      const ok = Array.isArray(json.data?.results) ? json.data.results.filter((item: { ok: boolean }) => item.ok).length : selected.size
+      setActionNote(`${label(action)} completed for ${ok} of ${selected.size} selected order(s).`)
       setSelected(new Set())
       void loadOrders(false)
     } catch (err) {
-      setBulkNote(err instanceof Error ? err.message : "Bulk action failed.")
+      setActionNote(err instanceof Error ? err.message : "Action failed.")
     } finally {
       setBulkAction(null)
     }
@@ -231,16 +233,15 @@ export function OryCMSOrdersList() {
         {selected.size > 0 ? (
           <div className="flex flex-wrap items-center gap-2 border-b border-border bg-accent/40 px-4 py-2.5">
             <span className="text-[12.5px] font-medium">{selected.size} selected</span>
-            <span className="mx-1 h-5 w-px bg-border" />
-            <BulkButton onClick={() => void runBulk("confirm")} busy={bulkAction === "confirm"} disabled={bulkAction !== null}>Confirm orders</BulkButton>
-            <BulkButton onClick={() => void runBulk("create_shipment")} busy={bulkAction === "create_shipment"} disabled={bulkAction !== null}>Create shipments</BulkButton>
-            <BulkButton onClick={() => void runBulk("schedule_pickup")} busy={bulkAction === "schedule_pickup"} disabled={bulkAction !== null}>Schedule pickup</BulkButton>
-            <BulkButton onClick={() => void runBulk("print_labels")} busy={bulkAction === "print_labels"} disabled={bulkAction !== null}>Print labels</BulkButton>
-            <BulkButton onClick={() => void runBulk("download_manifest")} busy={bulkAction === "download_manifest"} disabled={bulkAction !== null}>Download manifest</BulkButton>
+            <BulkButton onClick={() => void runBulkAction("confirm")} busy={bulkAction === "confirm"} disabled={bulkAction !== null}>Confirm</BulkButton>
+            <BulkButton onClick={() => void runBulkAction("pack")} busy={bulkAction === "pack"} disabled={bulkAction !== null}>Mark as Packed</BulkButton>
+            <BulkButton onClick={() => void runBulkAction("create_shipment")} busy={bulkAction === "create_shipment"} disabled={bulkAction !== null}>Create Shipment</BulkButton>
+            <BulkButton onClick={() => void runBulkAction("print_labels")} busy={bulkAction === "print_labels"} disabled={bulkAction !== null}>Print Labels</BulkButton>
+            <BulkButton onClick={() => void runBulkAction("cancel")} busy={bulkAction === "cancel"} disabled={bulkAction !== null}>Cancel</BulkButton>
             <button type="button" onClick={() => setSelected(new Set())} className="ml-auto text-[12px] font-medium text-muted-foreground hover:text-foreground">Clear</button>
           </div>
         ) : null}
-        {bulkNote ? <div className="border-b border-border bg-surface-muted px-4 py-2 text-[12px] text-muted-foreground">{bulkNote}</div> : null}
+        {actionNote ? <div className="border-b border-border bg-surface-muted px-4 py-2 text-[12px] text-muted-foreground">{actionNote}</div> : null}
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1050px] text-left text-[13px]">
@@ -335,8 +336,7 @@ export function OryCMSOrderDetails({ id }: { id: string }) {
   const [order, setOrder] = useState<OrderDetail | null>(null)
   const [action, setAction] = useState<string | null>(null)
   const [actionError, setActionError] = useState("")
-  const [actionNote, setActionNote] = useState("")
-  const [activity, setActivity] = useState<ActivityLog[]>([])
+  const [toasts, setToasts] = useState<Toast[]>([])
 
   useEffect(() => {
     setLoading(true)
@@ -348,37 +348,34 @@ export function OryCMSOrderDetails({ id }: { id: string }) {
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Order not found."))
       .finally(() => setLoading(false))
-    loadActivity()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  function loadActivity() {
-    fetch(`/api/orycms/orders/${encodeURIComponent(id)}/activity`, { cache: "no-store" })
-      .then((response) => response.json())
-      .then((json) => { if (json.success) setActivity(json.data) })
-      .catch(() => {})
+  function toast(message: string, tone: Toast["tone"]) {
+    const item = { id: Date.now(), message, tone }
+    playOryCMSToastSound()
+    setToasts((items) => [...items, item])
+    window.setTimeout(() => setToasts((items) => items.filter((toastItem) => toastItem.id !== item.id)), 3500)
   }
 
-  function applyResult(data: { orderStatus?: string; shipment?: Shipment | null; events?: ShipmentEvent[] }) {
+  function applyResult(data: { orderStatus?: string; order?: OrderDetail | null; shipment?: Shipment | null; events?: ShipmentEvent[] }) {
     setOrder((current) => current ? {
       ...current,
+      ...(data.order ?? {}),
       status: data.orderStatus ?? current.status,
-      shipment: data.shipment ?? current.shipment,
-      shipmentEvents: data.events ?? current.shipmentEvents,
+      shipment: data.shipment ?? data.order?.shipment ?? current.shipment,
+      shipmentEvents: data.events ?? data.order?.shipmentEvents ?? current.shipmentEvents,
     } : current)
-    loadActivity()
   }
 
-  async function runAction(kind: "confirm" | "cancel" | "sync" | "pickup-schedule" | "pickup-cancel") {
+  async function runAction(kind: "confirm" | "pack" | "create-shipment" | "cancel" | "refund") {
     setAction(kind)
     setActionError("")
-    setActionNote("")
     const urls: Record<string, { url: string; body?: unknown }> = {
       confirm: { url: `/api/orycms/orders/${encodeURIComponent(id)}/confirm` },
-      cancel: { url: `/api/orycms/orders/${encodeURIComponent(id)}/shipment/cancel` },
-      sync: { url: `/api/orycms/orders/${encodeURIComponent(id)}/sync` },
-      "pickup-schedule": { url: `/api/orycms/orders/${encodeURIComponent(id)}/pickup`, body: { action: "schedule" } },
-      "pickup-cancel": { url: `/api/orycms/orders/${encodeURIComponent(id)}/pickup`, body: { action: "cancel" } },
+      pack: { url: `/api/orycms/orders/${encodeURIComponent(id)}/pack` },
+      "create-shipment": { url: `/api/orycms/orders/${encodeURIComponent(id)}/shipment/create` },
+      cancel: { url: `/api/orycms/orders/${encodeURIComponent(id)}/cancel` },
+      refund: { url: `/api/orycms/orders/${encodeURIComponent(id)}/refund` },
     }
     const target = urls[kind]
     try {
@@ -389,9 +386,11 @@ export function OryCMSOrderDetails({ id }: { id: string }) {
       }).then((response) => response.json())
       if (!json.success) throw new Error(json.error?.message ?? "Action failed.")
       applyResult(json.data)
-      setActionNote(kind === "sync" ? "Tracking synced." : kind === "confirm" ? "Shipment updated." : "Done.")
+      toast(kind === "confirm" ? "Order confirmed." : kind === "pack" ? "Order packed." : kind === "create-shipment" ? "Shipment created." : kind === "refund" ? "Refund initiated." : "Order cancelled.", "success")
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Action failed.")
+      const message = err instanceof Error ? err.message : "Action failed."
+      setActionError(message)
+      toast(message, "error")
     } finally {
       setAction(null)
     }
@@ -430,12 +429,10 @@ export function OryCMSOrderDetails({ id }: { id: string }) {
             order={order}
             action={action}
             actionError={actionError}
-            actionNote={actionNote}
             onConfirm={() => void runAction("confirm")}
+            onPack={() => void runAction("pack")}
+            onCreateShipment={() => void runAction("create-shipment")}
             onCancel={() => void runAction("cancel")}
-            onSync={() => void runAction("sync")}
-            onSchedulePickup={() => void runAction("pickup-schedule")}
-            onCancelPickup={() => void runAction("pickup-cancel")}
           />
 
           <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
@@ -457,7 +454,7 @@ export function OryCMSOrderDetails({ id }: { id: string }) {
                 </div>
               </Panel>
 
-              <Panel title="Payment timeline">
+              <Panel title="Order timeline">
                 {Array.isArray(order.payment_timeline) && order.payment_timeline.length > 0 ? (
                   <div className="space-y-3">
                     {order.payment_timeline.map((event, index) => (
@@ -473,7 +470,13 @@ export function OryCMSOrderDetails({ id }: { id: string }) {
                 ) : <p className="text-muted-foreground">No timeline recorded.</p>}
               </Panel>
 
-              <ActivityPanel logs={activity} />
+              <ShipmentPanel order={order} />
+              <ReturnsPanel
+                action={action}
+                onRefund={() => void runAction("refund")}
+                order={order}
+              />
+
             </div>
 
             <div className="space-y-5">
@@ -503,9 +506,9 @@ export function OryCMSOrderDetails({ id }: { id: string }) {
                 <Info label="Refund" value={label(order.refund_status ?? "none")} />
               </Panel>
 
-              <ShipmentPanel order={order} />
             </div>
           </div>
+          <ToastStack toasts={toasts} />
         </>
       )}
     </section>
@@ -516,299 +519,157 @@ function FulfillmentActionBar({
   order,
   action,
   actionError,
-  actionNote,
-  onConfirm,
   onCancel,
-  onSync,
-  onSchedulePickup,
-  onCancelPickup,
+  onConfirm,
+  onCreateShipment,
+  onPack,
 }: {
   order: OrderDetail
   action: string | null
   actionError: string
-  actionNote: string
-  onConfirm: () => void
   onCancel: () => void
-  onSync: () => void
-  onSchedulePickup: () => void
-  onCancelPickup: () => void
+  onConfirm: () => void
+  onCreateShipment: () => void
+  onPack: () => void
 }) {
-  const shipment = order.shipment ?? null
-  const canCancel = Boolean(shipment) && PRE_DISPATCH_STATUSES.has(shipment?.status ?? "")
-  const hasAwb = Boolean(shipment?.awb_code)
-  const hasError = Boolean(shipment?.last_error_message) && !hasAwb
-  const [copied, setCopied] = useState(false)
-
-  function copyAwb() {
-    if (shipment?.awb_code && typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(shipment.awb_code).then(() => {
-        setCopied(true)
-        window.setTimeout(() => setCopied(false), 1500)
-      }).catch(() => {})
-    }
-  }
-
-  const docBase = `/api/orycms/orders/${encodeURIComponent(order.id)}/documents`
-
-  // Plain-language summary of where this order is in the fulfillment flow.
-  const state = !shipment
-    ? {
-        step: 1,
-        heading: "Awaiting confirmation",
-        detail: "Review the order below, then confirm to create the Shiprocket shipment, auto-assign a courier, and schedule pickup.",
-      }
-    : hasAwb
-      ? {
-          step: 3,
-          heading: `Shipment ready · ${shipment?.courier_name ?? "Courier assigned"}`,
-          detail: `AWB ${shipment?.awb_code} generated. Track live status in the Shipment panel. Cancel is available until the courier picks it up.`,
-        }
-      : {
-          step: 2,
-          heading: "Shipment created — assigning courier",
-          detail: "The Shiprocket order exists but no AWB is assigned yet. Retry to assign a courier and schedule pickup.",
-        }
-
+  const confirmed = isConfirmed(order.status)
+  const packed = isPacked(order.status)
+  const hasShipment = Boolean(order.shipment?.shiprocket_shipment_id)
   const busy = action !== null
 
   return (
     <div className="rounded-xl border border-border bg-surface p-5 shadow-xs">
-      <FulfillmentSteps current={state.step} />
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <Truck className="h-4 w-4 text-muted-foreground" />
-            <p className="text-[14px] font-semibold">{state.heading}</p>
+            <Package className="h-4 w-4 text-muted-foreground" />
+            <p className="text-[14px] font-semibold">{hasShipment ? "Shipment created" : packed ? "Order packed" : confirmed ? "Order confirmed" : "Awaiting order confirmation"}</p>
           </div>
-          <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-muted-foreground">{state.detail}</p>
+          <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-muted-foreground">
+            {hasShipment
+              ? `Shiprocket shipment ${order.shipment?.shiprocket_shipment_id ?? ""}${order.shipment?.awb_code ? ` · AWB ${order.shipment.awb_code}` : ""}.`
+              : packed
+              ? `Packed${order.packed_at ? ` on ${dateTime(order.packed_at)}` : ""}${order.packed_by_admin_email ? ` by ${order.packed_by_admin_email}` : ""}.`
+              : confirmed
+              ? `Confirmed${order.confirmed_at ? ` on ${dateTime(order.confirmed_at)}` : ""}${order.confirmed_by_admin_email ? ` by ${order.confirmed_by_admin_email}` : ""}.`
+              : "Validate payment and stock, then confirm this order. Packing is available after confirmation."}
+          </p>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {canCancel ? (
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={busy}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 text-[13px] font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-60"
-            >
-              {action === "cancel" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Cancel shipment
-            </button>
-          ) : null}
-          {!shipment || !hasAwb ? (
+          {canConfirmOrder(order) ? (
             <button
               type="button"
               onClick={onConfirm}
               disabled={busy}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-foreground px-5 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60"
             >
-              {action === "confirm" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
-              {shipment ? "Retry shipment creation" : "Confirm & create shipment"}
+              {action === "confirm" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Confirm Order
+            </button>
+          ) : null}
+          {canPackOrder(order) ? (
+            <button
+              type="button"
+              onClick={onPack}
+              disabled={busy}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-foreground px-5 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {action === "pack" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
+              Mark as Packed
+            </button>
+          ) : null}
+          {canCreateShipment(order) ? (
+            <button
+              type="button"
+              onClick={onCreateShipment}
+              disabled={busy}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-foreground px-5 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {action === "create-shipment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+              Create Shipment
+            </button>
+          ) : null}
+          {hasShipment ? (
+            <>
+              {order.shipment?.tracking_url ? <DocLink href={order.shipment.tracking_url} label="Track Shipment" icon={Truck} /> : null}
+              <DocLink href={`/api/orycms/orders/${encodeURIComponent(order.id)}/documents/label`} label="Download Shipping Label" icon={Printer} />
+              <DocLink href={`/api/orycms/orders/${encodeURIComponent(order.id)}/documents/invoice`} label="Download Invoice" icon={FileText} />
+            </>
+          ) : null}
+          {packed && !hasShipment ? <DocLink href={`/api/orycms/orders/${encodeURIComponent(order.id)}/documents/invoice`} label="Print Invoice" icon={FileText} /> : null}
+          {canCancelShipment(order) || (!hasShipment && canCancelOrder(order)) ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              disabled={busy}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 text-[13px] font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-60"
+            >
+              {action === "cancel" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
+              {hasShipment ? "Cancel Shipment" : "Cancel Order"}
             </button>
           ) : null}
         </div>
       </div>
 
-      {/* Secondary action toolbar — visible once a shipment exists. */}
-      {shipment ? (
-        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
-          <ToolbarButton onClick={onSync} busy={action === "sync"} disabled={busy}>
-            <RefreshCw className="h-3.5 w-3.5" /> Sync tracking now
-          </ToolbarButton>
-          {hasAwb ? (
-            <ToolbarButton onClick={copyAwb} disabled={busy}>
-              <Copy className="h-3.5 w-3.5" /> {copied ? "Copied!" : "Copy AWB"}
-            </ToolbarButton>
-          ) : null}
-          {shipment.tracking_url ? (
-            <a
-              href={shipment.tracking_url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium transition-colors hover:border-border-strong hover:bg-accent"
-            >
-              <ExternalLink className="h-3.5 w-3.5" /> Open tracking
-            </a>
-          ) : null}
-          <span className="mx-1 h-5 w-px bg-border" />
-          <DocLink href={`${docBase}/invoice`} label="Invoice" />
-          <DocLink href={`${docBase}/label`} label="Shipping label" />
-          <DocLink href={`${docBase}/manifest`} label="Manifest" />
-          <span className="mx-1 h-5 w-px bg-border" />
-          {shipment.pickup_status === "cancelled" || !shipment.pickup_scheduled_date ? (
-            <ToolbarButton onClick={onSchedulePickup} busy={action === "pickup-schedule"} disabled={busy || !hasAwb}>
-              <Truck className="h-3.5 w-3.5" /> Schedule pickup
-            </ToolbarButton>
-          ) : (
-            <>
-              <ToolbarButton onClick={onSchedulePickup} busy={action === "pickup-schedule"} disabled={busy}>
-                <RefreshCw className="h-3.5 w-3.5" /> Reschedule pickup
-              </ToolbarButton>
-              <ToolbarButton onClick={onCancelPickup} busy={action === "pickup-cancel"} disabled={busy}>
-                Cancel pickup
-              </ToolbarButton>
-            </>
-          )}
-        </div>
-      ) : null}
-
-      {/* Error + one-click retry surfaced from the last failed create attempt. */}
-      {hasError ? (
-        <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="text-[12.5px]">
-              <p className="font-semibold text-destructive">Last error{shipment?.last_error_code ? ` (${shipment.last_error_code})` : ""}</p>
-              <p className="mt-0.5 text-muted-foreground">{shipment?.last_error_message}</p>
-              <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-                Retry count: {shipment?.retry_count ?? 0}
-                {shipment?.last_retry_at ? ` · Last retry ${dateTime(shipment.last_retry_at)}` : ""}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onConfirm}
-              disabled={busy}
-              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-foreground px-3 text-[12.5px] font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60"
-            >
-              {action === "confirm" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-              Retry now
-            </button>
-          </div>
-        </div>
-      ) : null}
-
       {actionError ? (
         <p className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12.5px] text-destructive">{actionError}</p>
-      ) : null}
-      {actionNote && !actionError ? (
-        <p className="mt-3 text-[12.5px] text-success">{actionNote}</p>
       ) : null}
     </div>
   )
 }
 
-function BulkButton({ children, onClick, busy, disabled }: { children: React.ReactNode; onClick: () => void; busy?: boolean; disabled?: boolean }) {
+function BulkButton({
+  busy,
+  children,
+  disabled,
+  onClick,
+}: {
+  busy?: boolean
+  children: React.ReactNode
+  disabled?: boolean
+  onClick: () => void
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
-      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 text-[12px] font-medium transition-colors hover:border-border-strong hover:bg-accent disabled:opacity-50"
+      disabled={disabled || busy}
+      className="inline-flex min-h-7 items-center gap-1 rounded-lg border border-border bg-surface px-2 text-[11px] font-medium transition-colors hover:border-border-strong hover:bg-accent disabled:opacity-50"
     >
-      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+      {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
       {children}
     </button>
   )
 }
 
-function ToolbarButton({ children, onClick, busy, disabled }: { children: React.ReactNode; onClick: () => void; busy?: boolean; disabled?: boolean }) {
+function DocLink({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium transition-colors hover:border-border-strong hover:bg-accent disabled:opacity-50"
-    >
-      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-      {children}
-    </button>
-  )
-}
-
-function DocLink({ href, label }: { href: string; label: string }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium transition-colors hover:border-border-strong hover:bg-accent"
-    >
-      <Download className="h-3.5 w-3.5" /> {label}
+    <a href={href} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium transition-colors hover:border-border-strong hover:bg-accent">
+      <Icon className="h-3.5 w-3.5" />
+      {label}
     </a>
   )
 }
 
-function ActivityPanel({ logs }: { logs: ActivityLog[] }) {
-  return (
-    <Panel title="Shipment activity">
-      {logs.length === 0 ? (
-        <p className="text-muted-foreground">No Shiprocket API calls recorded yet.</p>
-      ) : (
-        <div className="space-y-2">
-          {logs.map((log) => (
-            <div key={log.id} className="flex items-start justify-between gap-3 border-b border-border/60 py-2 last:border-0 text-[12.5px]">
-              <div className="min-w-0">
-                <p className="font-medium">
-                  <span className={cn("mr-2 rounded px-1.5 py-0.5 text-[10.5px] font-semibold", log.ok ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
-                    {log.ok ? "OK" : "ERR"}
-                  </span>
-                  {log.direction === "webhook" ? "Webhook" : `${log.method} ${log.endpoint}`}
-                </p>
-                {log.error_message ? <p className="mt-0.5 text-destructive">{log.error_code ? `[${log.error_code}] ` : ""}{log.error_message}</p> : null}
-              </div>
-              <span className="shrink-0 text-[11.5px] text-muted-foreground">{dateTime(log.created_at)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </Panel>
-  )
-}
-
-function FulfillmentSteps({ current }: { current: number }) {
-  const steps = ["Order placed", "Shipment created", "Courier & pickup"]
-  return (
-    <div className="flex items-center gap-2">
-      {steps.map((stepLabel, index) => {
-        const step = index + 1
-        const done = step < current
-        const active = step === current
-        return (
-          <div key={stepLabel} className="flex items-center gap-2">
-            <div
-              className={cn(
-                "grid h-6 w-6 place-items-center rounded-full text-[11px] font-semibold",
-                done ? "bg-success/15 text-success" : active ? "bg-foreground text-background" : "bg-muted text-muted-foreground",
-              )}
-            >
-              {done ? "✓" : step}
-            </div>
-            <span className={cn("text-[12px] font-medium", active ? "text-foreground" : "text-muted-foreground")}>{stepLabel}</span>
-            {index < steps.length - 1 ? <span className="mx-1 h-px w-6 bg-border sm:w-10" /> : null}
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 function ShipmentPanel({ order }: { order: OrderDetail }) {
-  const shipment = order.shipment ?? null
+  const shipment = order.shipment
   const events = order.shipmentEvents ?? []
-
   return (
-    <Panel title="Shipment">
+    <Panel title="Shipment Information">
       {shipment ? (
         <div className="space-y-1">
-          <Info label="Shipment ID" value={shipment.shiprocket_shipment_id ?? "—"} />
-          <Info label="AWB" value={shipment.awb_code ?? "Pending"} />
-          <Info label="Courier" value={shipment.courier_name ?? "—"} />
-          <Info label="Status" value={label(shipment.status)} />
-          <Info label="Pickup" value={shipment.pickup_status ? label(shipment.pickup_status) : "—"} />
-          <Info label="Shipping cost" value={shipment.shipping_charge != null ? formatCurrency(shipment.shipping_charge) : "—"} />
-          <Info label="Est. delivery" value={shipment.estimated_delivery_date ? dateTime(shipment.estimated_delivery_date) : "—"} />
-          {shipment.tracking_url ? (
-            <div className="pt-1">
-              <a href={shipment.tracking_url} target="_blank" rel="noreferrer" className="text-[12.5px] font-medium text-success hover:underline">
-                Track parcel →
-              </a>
-            </div>
-          ) : null}
-
+          <Info label="AWB Number" value={shipment.awb_code ?? "Pending"} />
+          <Info label="Courier Name" value={shipment.courier_name ?? "Assigning"} />
+          <Info label="Tracking Number" value={shipment.tracking_number ?? shipment.awb_code ?? "Pending"} />
+          <Info label="Tracking URL" value={shipment.tracking_url ?? "Pending"} />
+          <Info label="Pickup Date" value={shipment.pickup_scheduled_date ? dateTime(shipment.pickup_scheduled_date) : "—"} />
+          <Info label="Shipment Status" value={label(shipment.status)} />
+          <Info label="Estimated Delivery" value={shipment.estimated_delivery_date ? dateTime(shipment.estimated_delivery_date) : "—"} />
+          <ShipmentStages shipment={shipment} events={events} />
           {events.length > 0 ? (
             <div className="mt-4 border-t border-border pt-3">
-              <p className="mb-2 text-[12px] font-semibold">Delivery timeline</p>
+              <p className="mb-2 text-[12px] font-semibold">Shipment timeline</p>
               <div className="space-y-3">
                 {events.map((event) => (
                   <div key={event.id} className="flex gap-3 text-[13px]">
@@ -828,9 +689,100 @@ function ShipmentPanel({ order }: { order: OrderDetail }) {
           ) : null}
         </div>
       ) : (
-        <p className="text-[13px] text-muted-foreground">No shipment yet. Use “Confirm &amp; create shipment” above to generate it.</p>
+        <p className="text-muted-foreground">No shipment created yet. Confirm the order, then create the Shiprocket shipment.</p>
       )}
     </Panel>
+  )
+}
+
+function ShipmentStages({ events, shipment }: { events: ShipmentEvent[]; shipment: Shipment }) {
+  const currentIndex = shipmentStageIndex(shipment.status, events)
+  return (
+    <div className="mt-4 border-t border-border pt-3">
+      <p className="mb-3 text-[12px] font-semibold">Shipment Timeline</p>
+      <div className="grid gap-2 sm:grid-cols-5">
+        {SHIPMENT_STAGES.map((stage, index) => {
+          const state = index < currentIndex ? "Completed" : index === currentIndex ? "Current" : "Upcoming"
+          return (
+            <div key={stage} className={cn("rounded-lg border px-2.5 py-2 text-[11px]", index <= currentIndex ? "border-success/30 bg-success/5 text-success" : "border-border bg-surface-muted text-muted-foreground")}>
+              <p className="font-semibold">{stage}</p>
+              <p className="mt-0.5">{state}</p>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function ReturnsPanel({ action, onRefund, order }: { action: string | null; onRefund: () => void; order: OrderDetail }) {
+  const shipment = order.shipment
+  const events = returnEvents(order.shipmentEvents ?? [])
+  const latestEvent = events[events.length - 1]
+  const latestRefund = order.refunds?.[0]
+  const shouldShow = Boolean(shipment?.return_status || latestEvent || isReturnStatus(order.status) || latestRefund || order.refund_status !== "none")
+  if (!shouldShow) return null
+
+  return (
+    <Panel title="Returns & RTO">
+      <div className="space-y-1">
+        <Info label="Current Return/RTO Status" value={label(shipment?.return_status ?? (isReturnStatus(order.status) ? order.status : "none"))} />
+        <Info label="Reverse Pickup Status" value={label(shipment?.reverse_pickup_status ?? "not available")} />
+        <Info label="Return Reason" value={shipment?.return_reason ?? "—"} />
+        <Info label="Updated Date & Time" value={shipment?.return_updated_at ? dateTime(shipment.return_updated_at) : latestEvent?.occurred_at ? dateTime(latestEvent.occurred_at) : "—"} />
+        {latestRefund ? (
+          <>
+            <Info label="Refund ID" value={latestRefund.razorpay_refund_id} />
+            <Info label="Refund Amount" value={formatCurrency(latestRefund.amount)} />
+            <Info label="Refund Status" value={label(latestRefund.status)} />
+          </>
+        ) : null}
+        {canInitiateRefund(order) ? (
+          <button
+            type="button"
+            onClick={onRefund}
+            disabled={action !== null}
+            className="mt-3 inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-foreground px-4 text-[12.5px] font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {action === "refund" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            Initiate Refund
+          </button>
+        ) : null}
+        <div className="mt-4 border-t border-border pt-3">
+          <p className="mb-2 text-[12px] font-semibold">Return Timeline</p>
+          {events.length > 0 ? (
+            <div className="space-y-3">
+              {events.map((event) => (
+                <div key={event.id} className="flex gap-3 text-[13px]">
+                  <span className="mt-1 h-2 w-2 rounded-full bg-foreground" />
+                  <div>
+                    <p className="font-medium">{label(event.status)}</p>
+                    <p className="text-[12px] text-muted-foreground">
+                      {dateTime(event.occurred_at)}
+                      {event.location ? ` · ${event.location}` : ""}
+                      {event.activity ? ` · ${event.activity}` : ""}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-muted-foreground">No return/RTO events recorded.</p>}
+        </div>
+      </div>
+    </Panel>
+  )
+}
+
+function ToastStack({ toasts }: { toasts: Toast[] }) {
+  return (
+    <div className="fixed bottom-4 right-4 z-[100] space-y-2">
+      {toasts.map((toast) => (
+        <div key={toast.id} className={cn("flex items-center gap-2 rounded-xl border bg-white px-4 py-3 text-[13px] shadow-lg", toast.tone === "success" ? "border-success/30 text-success" : "border-destructive/30 text-destructive")}>
+          {toast.tone === "success" ? <CheckCircle2 className="h-4 w-4" /> : null}
+          {toast.message}
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -850,8 +802,59 @@ function paymentMethod(method: string) {
   return method === "razorpay" ? "Razorpay Online" : "Cash on Delivery"
 }
 
+function canConfirmOrder(order: Order) {
+  return ["pending", "processing"].includes(order.status.toLowerCase())
+}
+
+function canPackOrder(order: Order) {
+  return isConfirmed(order.status)
+}
+
+function canCreateShipment(order: Order | OrderDetail) {
+  if (!isPacked(order.status)) return false
+  if (!order.shipment) return true
+  if (order.shipment.shiprocket_shipment_id) return false
+  return order.shipment.status.toLowerCase() === "error"
+}
+
+function canCancelOrder(order: Order) {
+  return !["cancelled", "picked up", "shipped", "in transit", "out for delivery", "delivered", "rto", "rto in transit", "rto delivered", "return requested", "return picked up", "return delivered", "returned"].includes(order.status.toLowerCase()) && order.payment_status !== "refunded"
+}
+
+function canCancelShipment(order: Order | OrderDetail) {
+  const status = "shipment" in order ? order.shipment?.status?.toLowerCase() : undefined
+  return Boolean(order.shipment?.shiprocket_shipment_id && status && ["pending", "confirmed", "processing", "packed", "created", "awb_assigned"].includes(status))
+}
+
+function canInitiateRefund(order: OrderDetail) {
+  return order.payment_method === "razorpay" &&
+    order.payment_status === "paid" &&
+    isRefundEligibleStatus(order.status) &&
+    !order.refunds?.some((refund) => refund.status.toLowerCase() !== "failed")
+}
+
+function isRefundEligibleStatus(status: string) {
+  return ["cancelled", "rto delivered", "return delivered", "returned"].includes(status.toLowerCase())
+}
+
+function isReturnStatus(status: string) {
+  return ["cancelled", "rto", "rto in transit", "rto delivered", "return requested", "return picked up", "return delivered", "returned"].includes(status.toLowerCase())
+}
+
+function returnEvents(events: ShipmentEvent[]) {
+  return events.filter((event) => isReturnStatus(event.status) || /rto|return|cancel/i.test(`${event.activity ?? ""} ${event.status}`))
+}
+
+function isConfirmed(status: string) {
+  return status.toLowerCase() === "confirmed"
+}
+
+function isPacked(status: string) {
+  return status.toLowerCase() === "packed"
+}
+
 function label(value: string) {
-  return value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
+  return value.replace(/[_.]/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
 function dateTime(value: string) {
@@ -865,4 +868,22 @@ function text(value: unknown) {
 function formatAddress(address?: Record<string, unknown> | null) {
   if (!address) return "—"
   return [address.address1, address.address2, address.city, address.state, address.pincode].map(text).filter(Boolean).join(", ") || "—"
+}
+
+const SHIPMENT_STAGES = ["Shipment Created", "Picked Up", "In Transit", "Out for Delivery", "Delivered"] as const
+
+function shipmentStageIndex(status: string, events: ShipmentEvent[]) {
+  const current = stageFromText(status)
+  if (current > 0) return current
+  return Math.max(0, ...events.map((event) => stageFromText(`${event.status} ${event.activity ?? ""}`)))
+}
+
+function stageFromText(value: string) {
+  const text = value.toLowerCase()
+  if (/\bdelivered\b/.test(text)) return 4
+  if (/out\s*for\s*delivery/.test(text)) return 3
+  if (/deliver/.test(text)) return 4
+  if (/in\s*transit|transit|reached/.test(text)) return 2
+  if (/picked\s*up|pickup|shipped|dispatch/.test(text)) return 1
+  return 0
 }
