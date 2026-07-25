@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import type React from "react"
 import Link from "next/link"
-import { ArrowLeft, Ban, CheckCircle2, Edit3, Eye, Search, Trash2, UserRound, Users } from "lucide-react"
+import { ArrowLeft, Ban, CheckCircle2, Edit3, Eye, Search, Trash2, Users } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { cn, formatCurrency } from "@/lib/utils"
 
@@ -31,7 +31,6 @@ type CustomerDetails = Customer & {
   activity: { at?: string | null; label?: string }[]
   orders: { id: string; number: string; status: string; payment_status: string; payment_method: string; total: number | string; created_at: string }[]
   payments: { amount?: number | string; created_at?: string; event?: string; provider?: string; status?: string }[]
-  wishlist: unknown[]
 }
 type SortBy = "created-desc" | "created-asc" | "spent-desc" | "orders-desc" | "name-asc"
 type ConfirmState = { action: "activate" | "deactivate" | "block" | "unblock" | "delete"; ids: string[] } | null
@@ -324,9 +323,6 @@ export function OryCMSCustomerDetails({ id }: { id: string }) {
                     ))}
                   </div>
                 ) : <EmptyLine>No orders yet.</EmptyLine>}
-              </Panel>
-              <Panel title="Wishlist">
-                <EmptyLine>{customer.wishlist.length ? `${customer.wishlist.length} wishlist items` : "No wishlist items yet."}</EmptyLine>
               </Panel>
             </div>
             <div className="space-y-5">

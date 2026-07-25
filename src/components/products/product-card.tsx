@@ -4,7 +4,6 @@ import { useMemo } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Star } from "lucide-react"
-import { WishlistHeartButton } from "@/features/wishlist/wishlist-heart-button"
 
 type ProductCardProps = {
   href: string
@@ -49,11 +48,9 @@ export function ProductCard({
   reviews = 199,
   className = "",
   imageSizes = "(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(50vw - 2rem), (max-width: 1279px) calc(33vw - 1.5rem), 300px",
-  slug,
 }: ProductCardProps) {
   const supportingLine = buildSubtitle(badge, subtitle)
   const gallery = useMemo(() => (images && images.length > 0 ? images : [image]), [image, images])
-  const productSlug = slug ?? href.match(/^\/products\/([^/?#]+)/)?.[1]
 
   return (
     <article
@@ -90,7 +87,6 @@ export function ProductCard({
           </div>
         ) : null}
       </Link>
-      {productSlug ? <WishlistHeartButton slug={productSlug} /> : null}
 
       <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
         <div className="h-[3.25rem] flex items-start overflow-hidden">

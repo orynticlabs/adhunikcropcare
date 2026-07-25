@@ -5,10 +5,7 @@ import Image from "next/image"
 import { ChevronLeft, ChevronRight, Leaf, Play } from "lucide-react"
 
 export type CropSuccessStory = {
-  farmer: string
-  location: string
   product: string
-  result: string
   thumbnail?: string
   video: string
 }
@@ -169,7 +166,7 @@ function CropSuccessStoriesCarousel({ stories: reelStories }: { stories: CropSuc
                     ) : story.thumbnail ? (
                       <Image
                         src={story.thumbnail}
-                        alt={`${story.result} field demonstration preview`}
+                        alt={`${story.product} field demonstration preview`}
                         fill
                         sizes="(max-width: 639px) 304px, (max-width: 1279px) 320px, 20vw"
                         className="object-cover"
@@ -196,15 +193,9 @@ function CropSuccessStoriesCarousel({ stories: reelStories }: { stories: CropSuc
                     )}
 
                     <div className="absolute inset-x-0 bottom-0 p-3 text-white sm:p-4 lg:p-5">
-                      <div className="inline-flex rounded-full bg-[#689c30] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest text-white shadow-soft sm:text-[10px] lg:text-xs">
-                        {story.result}
-                      </div>
                       <h3 className="mt-3 font-display text-base leading-tight sm:text-xl lg:text-2xl">
-                        {story.result}
+                        {story.product}
                       </h3>
-                      <p className="mt-1.5 text-[11px] leading-snug text-white/78 sm:text-xs lg:text-sm">
-                        {[story.farmer, story.location].filter(Boolean).join(" · ") || "Adhunik Crop Care"}
-                      </p>
                     </div>
                   </div>
                 </article>
@@ -241,7 +232,7 @@ function CropSuccessStoriesCarousel({ stories: reelStories }: { stories: CropSuc
                     ? "h-2 w-8 bg-[#689c30]"
                     : "h-2 w-2 bg-border hover:bg-[#689c30]"
                 }`}
-                aria-label={`Show ${story.result} story`}
+                aria-label={`Show ${story.product} story`}
               />
             ))}
           </div>

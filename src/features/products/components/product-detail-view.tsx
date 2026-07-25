@@ -8,7 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
-  Heart,
   Leaf,
   Minus,
   Plus,
@@ -21,7 +20,6 @@ import {
 import { ProductCard } from "@/components/products/product-card"
 import { useCart } from "@/features/cart/cart-context"
 import { useAuth } from "@/features/auth/auth-context"
-import { useWishlist } from "@/features/wishlist/wishlist-context"
 
 type ProductImage = {
   src: string
@@ -217,21 +215,8 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const offerTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const offerTextRef  = useRef<HTMLDivElement>(null)
-  const { user, openAuthModal } = useAuth()
+  const { user } = useAuth()
   const { addItem, openCart } = useCart()
-  const { savedSlugs, toggle: toggleWishlist } = useWishlist()
-  const targetSlug = product.slug || productHref(product.title).replace("/products/", "")
-  const isSaved = targetSlug ? savedSlugs.has(targetSlug) : false
-
-  function handleWishlistClick() {
-    if (!user) {
-      openAuthModal("signin")
-      return
-    }
-    if (targetSlug) {
-      void toggleWishlist(targetSlug)
-    }
-  }
   const [liveReviews, setLiveReviews] = useState<Review[]>([])
   const [liveAverageRating, setLiveAverageRating] = useState<number>(0)
   const [liveTotalReviews, setLiveTotalReviews] = useState<number>(0)
@@ -376,6 +361,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
         price: selected.price,
         img: product.images[0].src,
         badge: product.category,
+        productSlug: product.slug,
         size: selected.label,
       })
     }
@@ -789,20 +775,6 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               >
                 <ShoppingBag className="h-4 w-4" aria-hidden />
                 {product.stockQuantity === 0 ? "Out of Stock" : "Add to Cart"}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleWishlistClick}
-                className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
-                  isSaved
-                    ? "border-red-500 bg-red-50 text-red-500 shadow-xs"
-                    : "border-border/80 bg-white text-foreground/70 hover:border-red-500 hover:text-red-500"
-                }`}
-                aria-label={isSaved ? "Remove from wishlist" : "Add to wishlist"}
-                title={isSaved ? "Remove from wishlist" : "Add to wishlist"}
-              >
-                <Heart className={`h-5 w-5 ${isSaved ? "fill-red-500 text-red-500" : ""}`} />
               </button>
             </div>
 

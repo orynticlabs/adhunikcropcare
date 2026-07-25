@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     await requireCsrf()
     const user = await requireUser()
     const body = await request.json() as { productName?: string; type?: string }
-    const template = body.type === "wishlist" ? "wishlistUpdate" : body.type === "cart" ? "cartUpdate" : null
+    const template = body.type === "cart" ? "cartUpdate" : null
     if (!template || !body.productName?.trim()) return jsonError("Invalid email event.", 422, "INVALID_EMAIL_EVENT")
     await sendEmail({
       actionUrl: template === "cartUpdate" ? `${emailBaseUrl()}/checkout` : `${emailBaseUrl()}/account`,

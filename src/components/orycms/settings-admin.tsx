@@ -4,24 +4,18 @@ import { useEffect, useState } from "react"
 import type React from "react"
 import {
   Bell,
-  Building2,
   Check,
   CheckCircle2,
-  CreditCard,
-  Globe,
   Loader2,
   Lock,
-  Mail,
   MailPlus,
   Pencil,
   Plus,
   Save,
   Shield,
-  Smartphone,
   Store,
   Trash2,
   Truck,
-  Users,
   X,
 } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
@@ -45,13 +39,6 @@ function isValidEmail(value: string) {
 }
 
 export function OryCMSSettingsPage() {
-  // Presentational workspace settings (parity with the OryCMS reference design).
-  const [profileName, setProfileName] = useState("Tushar Gupta")
-  const [companyName, setCompanyName] = useState("OryCMS")
-  const [companyEmail, setCompanyEmail] = useState("ops@orynticlabs.com")
-  const [supportEmail, setSupportEmail] = useState("support@orynticlabs.com")
-  const [domain, setDomain] = useState("admin.orycms.in")
-  const [address, setAddress] = useState("OrynticLabs Private Limited, Bengaluru, Karnataka, India")
   const [orderPrefix, setOrderPrefix] = useState("ORY")
   const [lowStockThreshold, setLowStockThreshold] = useState("8")
   const [twoFactor, setTwoFactor] = useState(true)
@@ -100,30 +87,6 @@ export function OryCMSSettingsPage() {
 
       <div className="grid gap-5 xl:grid-cols-[1.8fr_1fr]">
         <div className="space-y-5">
-          <Card>
-            <SectionHeader
-              icon={Building2}
-              title="Organization profile"
-              description="Core identity and public contact points used across invoices, notifications, and storefront templates."
-            />
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <Field label="Workspace name" value={companyName} onChange={setCompanyName} />
-              <Field label="Admin owner" value={profileName} onChange={setProfileName} />
-              <Field label="Operations email" value={companyEmail} onChange={setCompanyEmail} />
-              <Field label="Support email" value={supportEmail} onChange={setSupportEmail} />
-              <Field label="Admin domain" value={domain} onChange={setDomain} className="md:col-span-2" />
-              <label className="space-y-1.5 md:col-span-2">
-                <span className="text-[11.5px] font-medium text-muted-foreground">Registered address</span>
-                <textarea
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
-                  rows={2}
-                  className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] outline-none focus:border-border-strong"
-                />
-              </label>
-            </div>
-          </Card>
-
           <Card>
             <SectionHeader
               icon={Store}
@@ -205,90 +168,6 @@ export function OryCMSSettingsPage() {
         </div>
 
         <div className="space-y-5">
-          <Card>
-            <SectionHeader
-              icon={CreditCard}
-              title="Plan and billing"
-              description="Commercial settings for the current workspace."
-            />
-            <div className="mt-5 space-y-4">
-              <div className="rounded-lg border border-border bg-surface-muted/40 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-[12.5px] font-medium">Growth plan</div>
-                    <div className="mt-0.5 text-[11.5px] text-muted-foreground">
-                      Monthly billing with advanced analytics and role controls
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-success/10 px-2 py-1 text-[11px] font-medium text-success">Active</span>
-                </div>
-                <div className="mt-4 flex items-end justify-between">
-                  <div>
-                    <div className="text-[22px] font-semibold">{formatCurrency(2499)}</div>
-                    <div className="text-[11.5px] text-muted-foreground">per month</div>
-                  </div>
-                  <button
-                    type="button"
-                    className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium transition-colors hover:border-border-strong hover:bg-accent"
-                  >
-                    Manage plan
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-3 text-[12px]">
-                {[
-                  "Next invoice on 01 Aug 2026",
-                  "Billing contact: finance@orynticlabs.com",
-                  "Auto-charge via corporate Visa ending in 4821",
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-2 text-muted-foreground">
-                    <Check className="h-3.5 w-3.5 text-success" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Card>
-
-          <Card>
-            <SectionHeader
-              icon={Users}
-              title="Team access"
-              description="Users currently holding privileged workspace roles."
-            />
-            <div className="mt-5 space-y-3">
-              {[
-                { name: "Tushar Gupta", role: "Owner", meta: "Full access to billing, security, and catalog operations", icon: Mail },
-                { name: "Ritika Sharma", role: "Operations Admin", meta: "Orders, warehouse flows, dispatch, and refunds", icon: Globe },
-                { name: "Aditya Mehra", role: "Security Reviewer", meta: "Fraud review queue and audit approvals", icon: Smartphone },
-              ].map((member) => {
-                const Icon = member.icon
-                return (
-                  <div key={member.name} className="rounded-lg border border-border bg-surface-muted/40 p-3">
-                    <div className="flex items-start gap-3">
-                      <div className="grid h-8 w-8 place-items-center rounded-full bg-foreground text-background">
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[12.5px] font-medium">{member.name}</span>
-                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10.5px] text-muted-foreground">{member.role}</span>
-                        </div>
-                        <div className="mt-1 text-[11.5px] leading-relaxed text-muted-foreground">{member.meta}</div>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-              <button
-                type="button"
-                className="inline-flex h-9 w-full items-center justify-center rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium transition-colors hover:border-border-strong hover:bg-accent"
-              >
-                Invite teammate
-              </button>
-            </div>
-          </Card>
-
           <Card className="border-destructive/30">
             <SectionHeader
               icon={Lock}

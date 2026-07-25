@@ -7,7 +7,7 @@ import {
 
 const ACCESS_COOKIE = "acc_access"
 const REFRESH_COOKIE = "acc_refresh"
-const PUBLIC_ORYCMS_PAGES = new Set(["/setup", "/admin/login", "/admin/setup"])
+const PUBLIC_ORYCMS_PAGES = new Set(["/setup", "/admin", "/admin/login", "/admin/setup"])
 const PUBLIC_ORYCMS_AUTH_API = new Set([
   `${ORYCMS_API_BASE_PATH}/auth/login`,
   `${ORYCMS_API_BASE_PATH}/auth/logout`,

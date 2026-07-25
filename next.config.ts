@@ -34,9 +34,10 @@ const nextConfig: NextConfig = {
 
 export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
-  project: 'adhunikcropcare',        // slug only — not the full URL
+  project: process.env.SENTRY_PROJECT ?? 'adhunikcropcare',
   authToken: process.env.SENTRY_AUTH_TOKEN,
   widenClientFileUpload: true,
   tunnelRoute: '/monitoring',
+  disableLogger: false,
   silent: !process.env.CI,
 })

@@ -1,17 +1,9 @@
-import crypto from "crypto"
 import bcrypt from "bcryptjs"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
-import { ORYCMS_SESSION_COOKIE } from "@/lib/orycms/config"
+import { createOryCMSAdminSession, setOryCMSAdminSessionCookie } from "@/lib/orycms/auth"
 import { ensureOryCMSAdminUserSchema, touchOryCMSAdminLastLogin } from "@/lib/orycms/users"
-
-const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000
-const SESSION_MAX_AGE = SESSION_TTL_MS / 1000
-
-function hashToken(rawToken: string) {
-  return crypto.createHash("sha256").update(rawToken).digest("hex")
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,16 +70,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const rawToken = crypto.randomBytes(32).toString("hex")
-    const expiresAt = new Date(Date.now() + SESSION_TTL_MS)
-    const session = await orycmsPrisma.oryCMSSession.create({
-      data: {
-        expiresAt,
-        tokenHash: hashToken(rawToken),
-        userId: user.id,
-      },
-      select: { expiresAt: true, id: true },
-    })
+    const { rawToken, session } = await createOryCMSAdminSession(user.id)
     await touchOryCMSAdminLastLogin(user.id)
 
     const response = NextResponse.json({
@@ -100,15 +83,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    response.cookies.set({
-      name: ORYCMS_SESSION_COOKIE,
-      value: rawToken,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: SESSION_MAX_AGE,
-      path: "/",
-    })
+    setOryCMSAdminSessionCookie(response, rawToken)
 
     return response
   } catch (error) {

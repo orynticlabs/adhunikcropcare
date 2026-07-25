@@ -32,10 +32,6 @@ export async function POST(request: NextRequest) {
       success: true,
       data: await createOryCMSReelVideo(file, {
         displayOrder: Number(form.get("displayOrder") ?? 0),
-        farmer: text(form.get("farmer")),
-        location: text(form.get("location")),
-        prompt: text(form.get("prompt")),
-        result: text(form.get("result")),
         status: text(form.get("status")),
         title: text(form.get("title")),
       }),

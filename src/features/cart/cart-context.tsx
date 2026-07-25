@@ -29,6 +29,7 @@ export interface CartProductInput {
   price: string
   img: string
   badge?: string
+  productSlug?: string
   size?: string       // pack / variant label, e.g. "5 kg", "1 L"
 }
 
@@ -155,8 +156,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     fetch("/api/products/availability", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ items: items.map(({ name, quantity }) => ({ name, quantity })) }) })
       .then((response) => response.json()).then((json) => {
         if (!Array.isArray(json.data)) return
-        const states = new Map<string, CartItem["availability"]>(json.data.map((item: { name: string; status: CartItem["availability"] }) => [item.name.toLowerCase(), item.status]))
-        setItems((current) => current.map((item) => ({ ...item, availability: states.get(item.name.toLowerCase()) ?? "unavailable" })))
+        const products = new Map<string, { slug?: string | null; status: CartItem["availability"] }>(
+          json.data.map((item: { name: string; slug?: string | null; status: CartItem["availability"] }) => [item.name.toLowerCase(), item])
+        )
+        setItems((current) => current.map((item) => {
+          const product = products.get(item.name.toLowerCase())
+          return {
+            ...item,
+            availability: product?.status ?? "unavailable",
+            productSlug: product?.slug ?? item.productSlug,
+          }
+        }))
       }).catch(() => undefined)
   }, [hydrated])
 

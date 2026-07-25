@@ -5,15 +5,13 @@ import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
-  User, Package, MapPin, Heart, LogOut, ChevronRight, Edit3,
+  User, Package, MapPin, LogOut, ChevronRight, Edit3,
   Phone, Mail, Calendar, ShieldCheck, Leaf, Star, Truck,
   CheckCircle2, Clock, XCircle, Plus, Trash2, BadgeCheck,
   ArrowLeft, AlertCircle,
 } from "lucide-react"
-import { ProductCard } from "@/components/products/product-card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/features/auth/auth-context"
-import { useWishlist } from "@/features/wishlist/wishlist-context"
 import AnnouncementBar from "@/components/layout/announcement-bar"
 import Header from "@/components/layout/header"
 import CartDrawer from "@/features/cart/components/cart-drawer"
@@ -21,7 +19,8 @@ import SiteFooter from "@/components/layout/site-footer"
 import { DefaultMemojiAvatar } from "@/components/auth/default-memoji-avatar"
 
 /* ── Types ─────────────────────────────────────────────────────── */
-type Tab = "profile" | "orders" | "addresses" | "wishlist"
+type Tab = "profile" | "orders" | "addresses"
+const MAX_SAVED_ADDRESSES = 4
 
 interface Order {
   id: string
@@ -50,16 +49,6 @@ interface Address {
   isDefault: boolean
 }
 
-interface WishlistItem {
-  id: string
-  name: string
-  price: number
-  img: string
-  inStock: boolean
-}
-
-const INITIAL_WISHLIST: WishlistItem[] = []
-
 /* ── Helpers ───────────────────────────────────────────────────── */
 function fmt(n: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n)
@@ -75,14 +64,6 @@ function orderDate(order: Order) {
 
 function orderTotal(order: Order) {
   return typeof order.total === "string" ? Number(order.total) : order.total
-}
-
-function productHref(name: string) {
-  return `/products/${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`
-}
-
-function comparePrice(amount: number, uplift = 1.18) {
-  return fmt(Math.ceil((amount * uplift) / 10) * 10)
 }
 
 const statusMeta: Record<Order["status"], { label: string; color: string; Icon: React.ElementType }> = {
@@ -403,6 +384,7 @@ function OrdersView({ loading, orders }: { loading: boolean; orders: Order[] }) 
 function AddressesView() {
   const { user, updateProfile } = useAuth()
   const savedAddresses = useMemo(() => readAddresses(user?.defaultAddress, user), [user])
+  const isAddressLimitReached = savedAddresses.length >= MAX_SAVED_ADDRESSES
   const emptyForm = useMemo<Address>(() => ({
     city: "",
     id: "",
@@ -466,6 +448,10 @@ function AddressesView() {
 
   async function saveAddress() {
     if (!editing) return
+    if (!editing.id && isAddressLimitReached) {
+      setError(`You can save up to ${MAX_SAVED_ADDRESSES} addresses. Delete or edit an address to continue.`)
+      return
+    }
     const nextAddress = {
       ...editing,
       city: editing.city.trim(),
@@ -478,8 +464,28 @@ function AddressesView() {
       pincode: editing.pincode.replace(/\D/g, "").slice(0, 6),
       state: editing.state.trim(),
     }
-    if (!nextAddress.name || !nextAddress.line1 || !nextAddress.city || !nextAddress.state || !/^\d{6}$/.test(nextAddress.pincode) || !/^\d{10}$/.test(nextAddress.phone)) {
-      setError("Add name, full address, city, state, valid 6-digit pincode, and 10-digit phone.")
+    if (!nextAddress.name) {
+      setError("Full name is required.")
+      return
+    }
+    if (!/^\d{10}$/.test(nextAddress.phone)) {
+      setError("Enter a valid 10-digit mobile number.")
+      return
+    }
+    if (!nextAddress.pincode) {
+      setError("Pincode is required.")
+      return
+    }
+    if (!/^\d{6}$/.test(nextAddress.pincode)) {
+      setError("Enter a valid 6-digit pincode.")
+      return
+    }
+    if (!nextAddress.line1) {
+      setError("Address line 1 is required.")
+      return
+    }
+    if (!nextAddress.city || !nextAddress.state) {
+      setError("Enter a valid pincode to detect city and state.")
       return
     }
     setSaving(true)
@@ -503,11 +509,17 @@ function AddressesView() {
         <h3 className="font-display text-2xl">Saved Addresses</h3>
         <button
           onClick={() => setEditing(emptyForm)}
-          className="flex h-9 items-center gap-2 rounded-full bg-[#033927] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black"
+          disabled={isAddressLimitReached}
+          className="flex h-9 items-center gap-2 rounded-full bg-[#033927] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Plus className="h-3.5 w-3.5" /> Add New
         </button>
       </div>
+      {isAddressLimitReached ? (
+        <p className="rounded-2xl border border-[#689c30]/25 bg-[#689c30]/10 p-3 text-sm font-medium text-muted-foreground">
+          You can save up to {MAX_SAVED_ADDRESSES} addresses. Delete an address or edit an existing one.
+        </p>
+      ) : null}
 
       {editing && (
         <div className="rounded-2xl border border-[#689c30]/30 bg-[#689c30]/5 p-5">
@@ -517,15 +529,16 @@ function AddressesView() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <AddressInput label="Label" value={editing.label} onChange={(label) => setEditing({ ...editing, label })} />
-            <AddressInput label="Full name" value={editing.name} onChange={(name) => setEditing({ ...editing, name })} />
-            <AddressInput label="Mobile number" value={editing.phone} maxLength={10} onChange={(phone) => setEditing({ ...editing, phone: phone.replace(/\D/g, "") })} />
+            <AddressInput required label="Full name" value={editing.name} onChange={(name) => setEditing({ ...editing, name })} />
+            <AddressInput required label="Mobile number" value={editing.phone} maxLength={10} onChange={(phone) => setEditing({ ...editing, phone: phone.replace(/\D/g, "") })} />
             <AddressInput
+              required
               label={pincodeLoading ? "Pincode (Detecting...)" : "Pincode"}
               value={editing.pincode}
               maxLength={6}
               onChange={(pincode) => setEditing({ ...editing, pincode: pincode.replace(/\D/g, "") })}
             />
-            <AddressInput label="Address line 1" value={editing.line1} onChange={(line1) => setEditing({ ...editing, line1 })} className="sm:col-span-2" />
+            <AddressInput required label="Address line 1" value={editing.line1} onChange={(line1) => setEditing({ ...editing, line1 })} className="sm:col-span-2" />
             <AddressInput label="Address line 2" value={editing.line2 ?? ""} onChange={(line2) => setEditing({ ...editing, line2 })} className="sm:col-span-2" />
             <AddressInput label="City" value={editing.city} onChange={() => {}} readOnly placeholder="Auto-detected from pincode" />
             <AddressInput label="State" value={editing.state} onChange={() => {}} readOnly placeholder="Auto-detected from pincode" />
@@ -621,6 +634,7 @@ function AddressInput({
   onChange,
   placeholder,
   readOnly = false,
+  required = false,
   value,
 }: {
   className?: string
@@ -629,15 +643,17 @@ function AddressInput({
   onChange: (value: string) => void
   placeholder?: string
   readOnly?: boolean
+  required?: boolean
   value: string
 }) {
   return (
     <label className={`flex flex-col gap-1.5 ${className}`}>
-      <span className="text-xs font-semibold text-foreground/80">{label}</span>
+      <span className="text-xs font-semibold text-foreground/80">{label}{required ? <span className="ml-0.5 text-red-500">*</span> : null}</span>
       <input
         value={value}
         maxLength={maxLength}
         readOnly={readOnly}
+        required={required}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
         className={`h-11 w-full rounded-xl border border-border/60 px-4 text-sm outline-none transition ${
@@ -647,83 +663,6 @@ function AddressInput({
         }`}
       />
     </label>
-  )
-}
-
-function WishlistView() {
-  const { savedSlugs } = useWishlist()
-  const [wishlist, setWishlist] = useState<WishlistItem[]>(INITIAL_WISHLIST)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    setLoading(true)
-    fetch("/api/auth/wishlist", { credentials: "include" })
-      .then((response) => response.json())
-      .then((json) => {
-        if (!Array.isArray(json.data)) return
-        setWishlist(
-          json.data.map(
-            (item: {
-              slug: string
-              name: string | null
-              price: number | null
-              sale_price: number | null
-              images: unknown
-              status: string | null
-              stock_quantity: number | null
-            }) => ({
-              id: item.slug,
-              name: item.name ?? "Unavailable product",
-              price: item.sale_price ?? item.price ?? 0,
-              img:
-                Array.isArray(item.images) && typeof item.images[0] === "object" && item.images[0] && "url" in item.images[0]
-                  ? String((item.images[0] as { url: string }).url)
-                  : "/placeholder.svg",
-              inStock: item.status === "published" && Number(item.stock_quantity) > 0,
-            })
-          )
-        )
-      })
-      .catch(() => undefined)
-      .finally(() => setLoading(false))
-  }, [])
-
-  const activeWishlist = useMemo(() => {
-    return wishlist.filter((item) => savedSlugs.has(item.id))
-  }, [wishlist, savedSlugs])
-
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <h3 className="font-display text-2xl">My Wishlist ({activeWishlist.length})</h3>
-      </div>
-      {!loading && activeWishlist.length === 0 && (
-        <div className="flex flex-col items-center gap-3 py-12 text-center">
-          <Heart className="h-12 w-12 text-muted-foreground/30" strokeWidth={1} />
-          <p className="text-muted-foreground">Your wishlist is empty.</p>
-          <Link href="/products" className="text-sm font-semibold text-[#689c30] hover:underline">
-            Browse Products
-          </Link>
-        </div>
-      )}
-      <div className="grid gap-6 sm:grid-cols-2">
-        {activeWishlist.map((item) => (
-          <div key={item.id} className="flex flex-col">
-            <ProductCard
-              slug={item.id}
-              href={`/products/${item.id}`}
-              name={item.name}
-              image={item.img}
-              price={fmt(item.price)}
-              originalPrice={comparePrice(item.price)}
-              subtitle={item.inStock ? "Saved for later from your wishlist" : "Currently unavailable in stock"}
-              overlayLabel={item.inStock ? "Wishlist" : "Out of Stock"}
-              imageSizes="(max-width: 639px) calc(100vw - 2rem), calc(50vw - 2rem)"
-            />
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }
 
@@ -745,7 +684,7 @@ export default function AccountPage() {
 
   useEffect(() => {
     const requestedTab = new URLSearchParams(window.location.search).get("tab")
-    if (requestedTab === "orders" || requestedTab === "addresses" || requestedTab === "wishlist" || requestedTab === "profile") {
+    if (requestedTab === "orders" || requestedTab === "addresses" || requestedTab === "profile") {
       setTab(requestedTab)
     }
   }, [])
@@ -800,7 +739,6 @@ export default function AccountPage() {
     { id: "profile",   label: "Profile",    Icon: User    },
     { id: "orders",    label: "Orders",     Icon: Package },
     { id: "addresses", label: "Addresses",  Icon: MapPin  },
-    { id: "wishlist",  label: "Wishlist",   Icon: Heart   },
   ]
 
   async function handleLogout() {
@@ -867,7 +805,7 @@ export default function AccountPage() {
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { label: "Orders", value: orders.length },
-                  { label: "Wishlist", value: INITIAL_WISHLIST.length },
+                  { label: "Addresses", value: readAddresses(user.defaultAddress, user).length },
                 ].map(s => (
                   <div key={s.label} className="rounded-2xl border border-border/50 bg-card p-4 text-center">
                     <p className="font-display text-2xl text-[#033927]">{s.value}</p>
@@ -906,7 +844,6 @@ export default function AccountPage() {
               {tab === "profile"   && editMode  && <EditProfileView onBack={() => setEditMode(false)} />}
               {tab === "orders"    && <OrdersView loading={loadingOrders} orders={orders} />}
               {tab === "addresses" && <AddressesView />}
-              {tab === "wishlist"  && <WishlistView />}
             </div>
           </div>
         </div>

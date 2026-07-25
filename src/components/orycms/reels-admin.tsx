@@ -7,12 +7,10 @@ import type { OryCMSReelVideoDTO } from "@/lib/orycms/reel-videos"
 
 type Message = { text: string; type: "error" | "success" }
 
+const MAX_ORYCMS_REELS = 10
+
 const EMPTY = {
   displayOrder: 0,
-  farmer: "",
-  location: "",
-  prompt: "",
-  result: "",
   status: "published",
   title: "",
 }
@@ -24,6 +22,7 @@ export function OryCMSReelsAdmin() {
   const [formOpen, setFormOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState<Message | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<OryCMSReelVideoDTO | null>(null)
   const [reels, setReels] = useState<OryCMSReelVideoDTO[]>([])
   const [saving, setSaving] = useState(false)
 
@@ -41,6 +40,10 @@ export function OryCMSReelsAdmin() {
   }, [load])
 
   function startCreate() {
+    if (reels.length >= MAX_ORYCMS_REELS) {
+      show(`You can upload up to ${MAX_ORYCMS_REELS} reels. Delete an existing reel before adding a new one.`, "error")
+      return
+    }
     setFile(null)
     setForm(EMPTY)
     setFormOpen(true)
@@ -48,6 +51,7 @@ export function OryCMSReelsAdmin() {
 
   async function save(event: React.FormEvent) {
     event.preventDefault()
+    if (reels.length >= MAX_ORYCMS_REELS) return show(`You can upload up to ${MAX_ORYCMS_REELS} reels. Delete an existing reel before adding a new one.`, "error")
     if (!file) return show("Upload a reel video first.", "error")
     if (!file.type.startsWith("video/")) return show("Upload an MP4, MOV, WebM, or M4V video.", "error")
     if (file.size > 50 * 1024 * 1024) return show("Reel video must be 50 MB or smaller.", "error")
@@ -56,10 +60,6 @@ export function OryCMSReelsAdmin() {
     const body = new FormData()
     body.append("file", file)
     body.append("title", form.title)
-    body.append("result", form.result)
-    body.append("farmer", form.farmer)
-    body.append("location", form.location)
-    body.append("prompt", form.prompt)
     body.append("status", form.status)
     body.append("displayOrder", String(form.displayOrder))
 
@@ -73,12 +73,14 @@ export function OryCMSReelsAdmin() {
     await load()
   }
 
-  async function remove(reel: OryCMSReelVideoDTO) {
-    if (!window.confirm(`Delete ${reel.title}?`)) return
+  async function remove() {
+    if (!pendingDelete) return
+    const reel = pendingDelete
     const response = await fetch(`/api/orycms/reels/${reel.id}`, { method: "DELETE" })
     const json = await response.json() as { error?: { message?: string }; success?: boolean }
     if (!json.success) return show(json.error?.message || "Unable to delete reel.", "error")
     setReels((current) => current.filter((item) => item.id !== reel.id))
+    setPendingDelete(null)
     show("Reel deleted.", "success")
   }
 
@@ -95,12 +97,17 @@ export function OryCMSReelsAdmin() {
           <h1 className="mt-1 text-[26px] font-semibold tracking-tight">Reels videos</h1>
           <p className="mt-1 text-[13.5px] text-muted-foreground">Upload Cloudinary videos for the storefront reels area.</p>
         </div>
-        <button type="button" onClick={startCreate} className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3 text-[12.5px] font-medium text-background">
+        <button type="button" onClick={startCreate} disabled={reels.length >= MAX_ORYCMS_REELS} className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3 text-[12.5px] font-medium text-background disabled:cursor-not-allowed disabled:opacity-50">
           <Plus className="h-3.5 w-3.5" /> Upload video
         </button>
       </div>
 
       {message ? <div className={`rounded-lg border px-4 py-3 text-[13px] ${message.type === "success" ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>{message.text}</div> : null}
+      {reels.length >= MAX_ORYCMS_REELS ? (
+        <div className="rounded-lg border border-border bg-surface px-4 py-3 text-[13px] text-muted-foreground">
+          You have reached the {MAX_ORYCMS_REELS} reel limit. Delete an existing reel to upload a new one.
+        </div>
+      ) : null}
 
       {loading ? (
         <div className="grid min-h-64 place-items-center rounded-xl border border-border bg-surface"><Loader2 className="h-5 w-5 animate-spin" /></div>
@@ -118,10 +125,9 @@ export function OryCMSReelsAdmin() {
               </div>
               <div className="p-4">
                 <div className="text-sm font-semibold">{reel.title}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{reel.result}</div>
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <span className="text-[11px] text-muted-foreground">Order {reel.displayOrder}</span>
-                  <button type="button" onClick={() => void remove(reel)} className="grid h-8 w-8 place-items-center rounded-lg border border-destructive/30 text-destructive" aria-label="Delete reel">
+                  <button type="button" onClick={() => setPendingDelete(reel)} className="grid h-8 w-8 place-items-center rounded-lg border border-destructive/30 text-destructive" aria-label="Delete reel">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -132,21 +138,36 @@ export function OryCMSReelsAdmin() {
       )}
 
       {formOpen ? (
-        <div className="fixed inset-0 z-[70] overflow-y-auto bg-background/85 p-4 backdrop-blur-sm">
-          <form onSubmit={save} className="mx-auto my-6 w-full max-w-3xl overflow-hidden rounded-xl border border-border bg-surface shadow-pop">
+        <div className="fixed inset-0 z-[70] overflow-y-auto bg-white p-4">
+          <form onSubmit={save} className="mx-auto my-6 w-full max-w-3xl overflow-hidden rounded-xl border border-border bg-white shadow-pop">
             <div className="flex items-center justify-between border-b border-border px-5 py-4"><div><h2 className="text-base font-semibold">Upload reel video</h2><p className="mt-0.5 text-xs text-muted-foreground">Published videos appear in the storefront reels area.</p></div><button type="button" onClick={() => setFormOpen(false)} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-accent"><X className="h-4 w-4" /></button></div>
             <div className="grid gap-5 p-5 sm:grid-cols-2">
               <Field label="Title"><input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={INPUT} placeholder="Field Story 01" /></Field>
-              <Field label="Result"><input required value={form.result} onChange={(e) => setForm({ ...form, result: e.target.value })} className={INPUT} placeholder="Increased Yield by 28%" /></Field>
-              <Field label="Farmer"><input value={form.farmer} onChange={(e) => setForm({ ...form, farmer: e.target.value })} className={INPUT} placeholder="Ramesh Patel" /></Field>
-              <Field label="Location"><input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} className={INPUT} placeholder="Nashik, Maharashtra" /></Field>
               <Field label="Status"><select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={INPUT}><option value="published">Published</option><option value="draft">Draft</option></select></Field>
               <Field label="Display order"><input type="number" min="0" value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })} className={INPUT} /></Field>
-              <Field label="Prompt" className="sm:col-span-2"><textarea value={form.prompt} onChange={(e) => setForm({ ...form, prompt: e.target.value })} className={`${INPUT} min-h-24 py-2`} placeholder="Write the reel prompt or caption note." /></Field>
               <div className="sm:col-span-2"><div className="mb-1.5 text-[12.5px] font-medium">Reel video</div><div className="flex flex-col gap-3 rounded-xl border border-dashed border-border bg-surface-muted p-4 sm:flex-row sm:items-center"><div className="grid h-28 w-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-surface"><Video className="h-7 w-7 text-muted-foreground" /></div><div><input ref={fileRef} type="file" accept="video/mp4,video/quicktime,video/webm,video/x-m4v" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /><button type="button" disabled={saving} onClick={() => fileRef.current?.click()} className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium disabled:opacity-60">{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}{file ? "Change video" : "Select video"}</button><p className="mt-2 text-[11px] text-muted-foreground">MP4, MOV, WebM, or M4V. Maximum 50 MB.</p>{file ? <p className="mt-1 text-[11px] text-muted-foreground">{file.name}</p> : null}</div></div></div>
             </div>
-            <div className="flex justify-end gap-2 border-t border-border bg-surface-muted px-5 py-4"><button type="button" onClick={() => setFormOpen(false)} className="h-9 rounded-lg border border-border bg-surface px-4 text-[12.5px]">Cancel</button><button type="submit" disabled={saving} className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-4 text-[12.5px] font-medium text-background disabled:opacity-60">{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}Upload video</button></div>
+            <div className="flex justify-end gap-2 border-t border-border bg-white px-5 py-4"><button type="button" onClick={() => setFormOpen(false)} className="h-9 rounded-lg border border-border bg-white px-4 text-[12.5px]">Cancel</button><button type="submit" disabled={saving} className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-4 text-[12.5px] font-medium text-background disabled:opacity-60">{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}Upload video</button></div>
           </form>
+        </div>
+      ) : null}
+
+      {pendingDelete ? (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/35 p-4">
+          <div className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-pop">
+            <h2 className="text-base font-semibold">Delete reel?</h2>
+            <p className="mt-2 text-[13px] leading-6 text-muted-foreground">
+              Are you sure you want to delete <span className="font-medium text-foreground">{pendingDelete.title}</span>? This reel will be removed from the storefront reels area.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setPendingDelete(null)} className="h-9 rounded-lg border border-border bg-white px-4 text-[12.5px]">
+                Cancel
+              </button>
+              <button type="button" onClick={() => void remove()} className="h-9 rounded-lg bg-destructive px-4 text-[12.5px] font-medium text-white">
+                Delete reel
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
     </section>

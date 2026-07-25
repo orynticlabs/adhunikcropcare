@@ -11,6 +11,8 @@ export const CSRF_COOKIE = "acc_csrf"
 const ACCESS_TTL_SECONDS = 15 * 60
 const REFRESH_TTL_SECONDS = 30 * 24 * 60 * 60
 const AUTH_SECRET = process.env.STOREFRONT_AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? "dev-storefront-auth-secret-change-me"
+const EMAIL_VERIFICATION_REQUIRED_MESSAGE = "Please verify your email before creating your account."
+const MAX_SAVED_ADDRESSES = 4
 const rateHits = new Map<string, { count: number; resetAt: number }>()
 
 export type StorefrontUserDTO = {
@@ -110,7 +112,7 @@ export async function createUser(input: {
   if (!validateEmail(email)) throw new Error("Enter a valid email.")
   if (!validatePassword(input.password)) throw new Error("Password must include 8 characters, an uppercase letter, and a number.")
   if (!validateStorefrontPhone(phone)) throw new Error("Enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.")
-  if (!input.emailVerificationToken) throw new Error("Verify your email with the OTP before creating your account.")
+  if (!input.emailVerificationToken) throw new Error(EMAIL_VERIFICATION_REQUIRED_MESSAGE)
 
   const [existing] = await orycmsPrisma.$queryRaw<{ id: string }[]>`
     SELECT id FROM storefront_users WHERE lower(email) = lower(${email}) LIMIT 1
@@ -132,7 +134,7 @@ export async function createUser(input: {
     FROM claimed_otp
     RETURNING *
   `
-  if (!user) throw new Error("Email verification has expired. Send and verify a new OTP.")
+  if (!user) throw new Error(EMAIL_VERIFICATION_REQUIRED_MESSAGE)
 
   return { user: toUserDTO(user) }
 }
@@ -243,6 +245,7 @@ export async function updateUserProfile(userId: string, input: Partial<Storefron
 
   if (!firstName || !lastName) throw new Error("Name is required.")
   if (phone && !validateStorefrontPhone(phone)) throw new Error("Enter a valid 10-digit mobile number starting with 6, 7, 8, or 9.")
+  validateSavedAddresses(defaultAddress)
 
   const [user] = await orycmsPrisma.$queryRaw<UserRow[]>`
     UPDATE storefront_users
@@ -256,6 +259,32 @@ export async function updateUserProfile(userId: string, input: Partial<Storefron
   `
 
   return toUserDTO(user)
+}
+
+function validateSavedAddresses(value: Prisma.JsonValue | Record<string, unknown> | null) {
+  if (!value || typeof value !== "object" || Array.isArray(value) || !Array.isArray(value.addresses)) return
+  if (value.addresses.length > MAX_SAVED_ADDRESSES) {
+    throw new Error(`You can save up to ${MAX_SAVED_ADDRESSES} addresses.`)
+  }
+  for (const address of value.addresses) {
+    if (!address || typeof address !== "object") continue
+    const savedAddress = address as { address1?: unknown; line1?: unknown; name?: unknown; phone?: unknown; pincode?: unknown }
+    if (!String(savedAddress.name ?? "").trim()) {
+      throw new Error("Full name is required.")
+    }
+    if (!/^\d{10}$/.test(String(savedAddress.phone ?? ""))) {
+      throw new Error("Enter a valid 10-digit mobile number.")
+    }
+    if (!String(savedAddress.pincode ?? "").trim()) {
+      throw new Error("Pincode is required.")
+    }
+    if (!/^\d{6}$/.test(String(savedAddress.pincode))) {
+      throw new Error("Enter a valid 6-digit pincode.")
+    }
+    if (!String(savedAddress.address1 ?? savedAddress.line1 ?? "").trim()) {
+      throw new Error("Address line 1 is required.")
+    }
+  }
 }
 
 export async function createSessionCookies(userId: string) {

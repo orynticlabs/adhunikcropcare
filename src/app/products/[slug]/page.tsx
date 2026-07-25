@@ -177,10 +177,7 @@ async function loadProduct(slug: string) {
 async function getPublishedReels() {
   try {
     return (await listOryCMSReelVideos({ publishedOnly: true })).map((reel) => ({
-      farmer: reel.farmer,
-      location: reel.location,
       product: reel.title,
-      result: reel.result,
       thumbnail: reel.posterUrl,
       video: reel.videoUrl,
     }))
