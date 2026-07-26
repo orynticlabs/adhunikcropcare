@@ -115,6 +115,13 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
           },
           {
             section: "Content",
+            label: "Contact",
+            href: adminHref("/collections/contact"),
+            slug: "collections/contact",
+            description: "Review Frontstore Contact Us enquiries.",
+          },
+          {
+            section: "Content",
             label: "COD Rules",
             href: adminHref("/collections/cod-rules"),
             slug: "collections/cod-rules",

@@ -487,6 +487,7 @@ model StorefrontEmailPreference {
 
 model StorefrontContactEnquiry {
   id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticketId         String?  @unique @map("ticket_id")
   fullName         String   @map("full_name")
   countryCode      String   @default("+91") @map("country_code")
   mobileNumber     String   @map("mobile_number")
@@ -743,4 +744,3 @@ model OryCMSCodRule {
 
   @@map("orycms_cod_rules")
 }
-
