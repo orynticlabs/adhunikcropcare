@@ -15,6 +15,7 @@ import {
   Shield,
   Store,
   Trash2,
+  Truck,
   X,
 } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
@@ -29,6 +30,26 @@ type NotificationEmail = {
   enabled: boolean
   id: string
   label: string | null
+}
+
+type ShiprocketSettings = {
+  apiEmail: string | null
+  apiPasswordSet: boolean
+  channelId: string | null
+  enabled: boolean
+  packageBreadthCm: number
+  packageHeightCm: number
+  packageLengthCm: number
+  packageWeightKg: number
+  pickupAddress1: string | null
+  pickupAddress2: string | null
+  pickupCity: string | null
+  pickupCountry: string | null
+  pickupLocation: string | null
+  pickupName: string | null
+  pickupPhone: string | null
+  pickupPincode: string | null
+  pickupState: string | null
 }
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
@@ -104,6 +125,8 @@ export function OryCMSSettingsPage() {
           </Card>
 
           <OrderNotificationEmailsCard onToast={toast} />
+
+          <ShiprocketSettingsCard onToast={toast} />
 
           <ShipmentNotificationsCard onToast={toast} />
 
@@ -450,6 +473,160 @@ type NotificationToggles = {
   outForDelivery: boolean
   delivered: boolean
   cancelled: boolean
+}
+
+function ShiprocketSettingsCard({ onToast }: { onToast: (message: string, tone: Toast["tone"]) => void }) {
+  const [form, setForm] = useState({
+    apiEmail: "",
+    apiPassword: "",
+    channelId: "",
+    enabled: false,
+    packageBreadthCm: "10",
+    packageHeightCm: "10",
+    packageLengthCm: "10",
+    packageWeightKg: "0.5",
+    pickupAddress1: "",
+    pickupAddress2: "",
+    pickupCity: "",
+    pickupCountry: "India",
+    pickupLocation: "",
+    pickupName: "",
+    pickupPhone: "",
+    pickupPincode: "",
+    pickupState: "",
+  })
+  const [apiPasswordSet, setApiPasswordSet] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    fetch("/api/orycms/settings/shiprocket", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!active || !json.success || !json.data) return
+        const data = json.data as ShiprocketSettings
+        setApiPasswordSet(Boolean(data.apiPasswordSet))
+        setForm({
+          apiEmail: data.apiEmail ?? "",
+          apiPassword: "",
+          channelId: data.channelId ?? "",
+          enabled: Boolean(data.enabled),
+          packageBreadthCm: String(data.packageBreadthCm ?? 10),
+          packageHeightCm: String(data.packageHeightCm ?? 10),
+          packageLengthCm: String(data.packageLengthCm ?? 10),
+          packageWeightKg: String(data.packageWeightKg ?? 0.5),
+          pickupAddress1: data.pickupAddress1 ?? "",
+          pickupAddress2: data.pickupAddress2 ?? "",
+          pickupCity: data.pickupCity ?? "",
+          pickupCountry: data.pickupCountry ?? "India",
+          pickupLocation: data.pickupLocation ?? "",
+          pickupName: data.pickupName ?? "",
+          pickupPhone: data.pickupPhone ?? "",
+          pickupPincode: data.pickupPincode ?? "",
+          pickupState: data.pickupState ?? "",
+        })
+      })
+      .catch((error) => {
+        if (active) onToast(error instanceof Error ? error.message : "Failed to load Shiprocket settings.", "error")
+      })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function setValue(key: keyof typeof form, value: string | boolean) {
+    setForm((current) => ({ ...current, [key]: value }))
+  }
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault()
+    setSaving(true)
+    try {
+      const json = await fetch("/api/orycms/settings/shiprocket", {
+        body: JSON.stringify({
+          ...form,
+          packageBreadthCm: Number(form.packageBreadthCm),
+          packageHeightCm: Number(form.packageHeightCm),
+          packageLengthCm: Number(form.packageLengthCm),
+          packageWeightKg: Number(form.packageWeightKg),
+        }),
+        headers: { "content-type": "application/json" },
+        method: "PUT",
+      }).then((response) => response.json())
+      if (!json.success) throw new Error(json.error?.message ?? "Failed to save Shiprocket settings.")
+      setApiPasswordSet(Boolean(json.data?.apiPasswordSet))
+      setForm((current) => ({ ...current, apiPassword: "" }))
+      onToast("Shiprocket settings saved.", "success")
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : "Failed to save Shiprocket settings.", "error")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card>
+      <div className="flex items-start justify-between gap-3">
+        <SectionHeader
+          icon={Truck}
+          title="Connect Shiprocket"
+          description="Connect your Shiprocket account to create shipments, AWB, labels, and live tracking from OryCMS."
+        />
+        <Toggle checked={form.enabled} disabled={saving || loading} onChange={(value) => setValue("enabled", value)} />
+      </div>
+      {loading ? (
+        <div className="mt-5 grid min-h-[64px] place-items-center text-[12.5px] text-muted-foreground">
+          <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</span>
+        </div>
+      ) : (
+        <form onSubmit={save} className="mt-5 space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Shiprocket login email / mobile number" value={form.apiEmail} onChange={(value) => setValue("apiEmail", value.trim())} />
+            <label className="space-y-1.5">
+              <span className="text-[11.5px] font-medium text-muted-foreground">API password</span>
+              <input
+                type="password"
+                value={form.apiPassword}
+                onChange={(event) => setValue("apiPassword", event.target.value)}
+                placeholder={apiPasswordSet ? "Password saved — leave blank to keep" : "Enter Shiprocket API password"}
+                className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
+              />
+            </label>
+            <Field label="Channel ID (optional)" value={form.channelId} onChange={(value) => setValue("channelId", value)} />
+            <Field label="Pickup location" value={form.pickupLocation} onChange={(value) => setValue("pickupLocation", value)} />
+            <Field label="Pickup name" value={form.pickupName} onChange={(value) => setValue("pickupName", value)} />
+            <Field label="Pickup phone" value={form.pickupPhone} onChange={(value) => setValue("pickupPhone", value.replace(/\D/g, "").slice(0, 10))} />
+            <Field label="Pickup address line 1" value={form.pickupAddress1} onChange={(value) => setValue("pickupAddress1", value)} />
+            <Field label="Pickup address line 2" value={form.pickupAddress2} onChange={(value) => setValue("pickupAddress2", value)} />
+            <Field label="Pickup city" value={form.pickupCity} onChange={(value) => setValue("pickupCity", value)} />
+            <Field label="Pickup state" value={form.pickupState} onChange={(value) => setValue("pickupState", value)} />
+            <Field label="Pickup country" value={form.pickupCountry} onChange={(value) => setValue("pickupCountry", value)} />
+            <Field label="Pickup pincode" value={form.pickupPincode} onChange={(value) => setValue("pickupPincode", value.replace(/\D/g, "").slice(0, 6))} />
+          </div>
+          <div className="grid gap-4 md:grid-cols-4">
+            <Field label="Length (cm)" value={form.packageLengthCm} onChange={(value) => setValue("packageLengthCm", value)} />
+            <Field label="Breadth (cm)" value={form.packageBreadthCm} onChange={(value) => setValue("packageBreadthCm", value)} />
+            <Field label="Height (cm)" value={form.packageHeightCm} onChange={(value) => setValue("packageHeightCm", value)} />
+            <Field label="Weight (kg)" value={form.packageWeightKg} onChange={(value) => setValue("packageWeightKg", value)} />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-muted/40 p-3">
+            <p className="text-[11.5px] text-muted-foreground">
+              Env only needs <code>SHIPROCKET_ENCRYPTION_KEY</code>, <code>SHIPROCKET_WEBHOOK_TOKEN</code>, and optional <code>SHIPROCKET_CRON_TOKEN</code>.
+            </p>
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3 text-[12.5px] font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+            >
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              Connect Shiprocket
+            </button>
+          </div>
+        </form>
+      )}
+    </Card>
+  )
 }
 
 type OryCMSNotificationToggles = {

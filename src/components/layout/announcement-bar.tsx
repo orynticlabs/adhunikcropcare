@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ChevronLeft, ChevronRight, Tag } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 
 type AnnouncementDTO = {
   id: string
@@ -13,33 +13,6 @@ type AnnouncementDTO = {
   bgColor: string | null
   textColor: string | null
 }
-
-const STATIC_ANNOUNCEMENTS = [
-  {
-    text: "Free shipping on all orders above",
-    highlight: "₹999",
-    suffix: " — Pan India delivery",
-    code: false,
-  },
-  {
-    text: "Kharif Season Sale —",
-    highlight: "Up to 35% off",
-    suffix: " on crop fertilizers",
-    code: false,
-  },
-  {
-    text: "Buy 2 Get 1 FREE",
-    highlight: null,
-    suffix: " on all bio products this week only",
-    code: false,
-  },
-  {
-    text: "Smart Drip Kits now restocked —",
-    highlight: "Limited stock",
-    suffix: ", order today",
-    code: false,
-  },
-]
 
 const INTERVAL_MS = 4000
 const FADE_MS     = 320
@@ -57,12 +30,14 @@ export default function AnnouncementBar() {
         if (json.success && Array.isArray(json.data) && json.data.length > 0) {
           setLiveData(json.data)
           setIndex(0)
+        } else {
+          setLiveData([])
         }
       })
-      .catch(() => {})
+      .catch(() => setLiveData([]))
   }, [])
 
-  const totalCount = liveData ? liveData.length : STATIC_ANNOUNCEMENTS.length
+  const totalCount = liveData?.length ?? 0
 
   function goTo(next: number) {
     const el = textRef.current
@@ -90,15 +65,18 @@ export default function AnnouncementBar() {
   }
 
   useEffect(() => {
+    if (totalCount === 0) return
     resetTimer()
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, totalCount])
 
+  if (totalCount === 0) return null
+
   const safeIndex = index % totalCount
 
-  const bgColor   = liveData ? (liveData[safeIndex]?.bgColor ?? "#043927") : "#043927"
-  const textColor = liveData ? (liveData[safeIndex]?.textColor ?? "#ffffff") : "#ffffff"
+  const bgColor   = liveData?.[safeIndex]?.bgColor ?? "#043927"
+  const textColor = liveData?.[safeIndex]?.textColor ?? "#ffffff"
 
   return (
     <div
@@ -126,44 +104,21 @@ export default function AnnouncementBar() {
           color: textColor,
         }}
       >
-        {liveData ? (
-          /* Live DB content — rich text HTML */
-          <>
-            {liveData[safeIndex]?.content && (
-              <span
-                className="richtext-inline"
-                // Sanitized server-side before storage
-                dangerouslySetInnerHTML={{ __html: liveData[safeIndex].content }}
-              />
-            )}
-            {liveData[safeIndex]?.ctaText && liveData[safeIndex]?.ctaUrl && (
-              <a
-                href={liveData[safeIndex].ctaUrl!}
-                className="ml-2 underline font-semibold hover:opacity-80 transition"
-                style={{ color: textColor }}
-              >
-                {liveData[safeIndex].ctaText}
-              </a>
-            )}
-          </>
-        ) : (
-          /* Static fallback — same UI as before */
-          <>
-            {STATIC_ANNOUNCEMENTS[safeIndex].code && (
-              <Tag className="h-3 w-3 shrink-0 text-[#e9c46a]" aria-hidden />
-            )}
-            <span>{STATIC_ANNOUNCEMENTS[safeIndex].text}&nbsp;</span>
-            {STATIC_ANNOUNCEMENTS[safeIndex].highlight && (
-              STATIC_ANNOUNCEMENTS[safeIndex].code ? (
-                <span className="inline-flex items-center rounded px-1.5 py-0.5 bg-white/20 font-mono font-bold tracking-wider text-white leading-none">
-                  {STATIC_ANNOUNCEMENTS[safeIndex].highlight}
-                </span>
-              ) : (
-                <span className="font-semibold text-[#e9c46a]">{STATIC_ANNOUNCEMENTS[safeIndex].highlight}</span>
-              )
-            )}
-            {STATIC_ANNOUNCEMENTS[safeIndex].suffix && <span>{STATIC_ANNOUNCEMENTS[safeIndex].suffix}</span>}
-          </>
+        {liveData?.[safeIndex]?.content && (
+          <span
+            className="richtext-inline"
+            // Sanitized server-side before storage
+            dangerouslySetInnerHTML={{ __html: liveData[safeIndex].content }}
+          />
+        )}
+        {liveData?.[safeIndex]?.ctaText && liveData[safeIndex]?.ctaUrl && (
+          <a
+            href={liveData[safeIndex].ctaUrl!}
+            className="ml-2 underline font-semibold hover:opacity-80 transition"
+            style={{ color: textColor }}
+          >
+            {liveData[safeIndex].ctaText}
+          </a>
         )}
       </div>
 

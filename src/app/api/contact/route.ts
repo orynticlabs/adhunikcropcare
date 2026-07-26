@@ -1,6 +1,8 @@
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 import { validateContactForm } from "@/lib/contact-form"
+import { generateContactTicketId } from "@/lib/orycms/contact-enquiries"
+import { createOryCMSNotification } from "@/lib/orycms/notifications"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { rateLimit, requestKey, requireCsrf } from "@/lib/storefront-auth"
 
@@ -36,24 +38,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const enquiry = await orycmsPrisma.storefrontContactEnquiry.create({
-      data: {
-        countryCode: "+91",
-        email: validation.values.email,
-        fullName: validation.values.fullName,
-        location: validation.values.location,
-        message: validation.values.message,
-        mobileNumber: validation.values.mobileNumber,
-        topic: validation.values.topic,
-      },
-      select: { id: true },
-    })
+    const ticketId = await generateContactTicketId()
+    const [enquiry] = await orycmsPrisma.$queryRaw<{ id: string; ticket_id: string }[]>`
+      INSERT INTO storefront_contact_enquiries (ticket_id, full_name, country_code, mobile_number, email, topic, location, message)
+      VALUES (${ticketId}, ${validation.values.fullName}, '+91', ${validation.values.mobileNumber}, ${validation.values.email}, ${validation.values.topic}, ${validation.values.location}, ${validation.values.message})
+      RETURNING id, ticket_id
+    `
+
+    await createOryCMSNotification({
+      type: "customer",
+      title: `New Contact Enquiry ${enquiry.ticket_id}`,
+      message: `${validation.values.fullName} submitted a ${validation.values.topic.replace(/_/g, " ")} enquiry.`,
+      entityId: enquiry.id,
+      entityType: "contact",
+      targetUrl: `/admin/collections/contact?highlight=${enquiry.id}`,
+    }).catch((error) => console.error("OryCMS notification failed", error))
 
     return NextResponse.json(
       {
         success: true,
         data: {
           id: enquiry.id,
+          ticketId: enquiry.ticket_id,
           message: "Thank you. Your enquiry has been received and our team will contact you soon.",
         },
       },

@@ -98,7 +98,7 @@ export function MarketplaceProductsSection({
             })
           ) : (
             <div className="min-w-full rounded-3xl border border-dashed border-border bg-card p-10 text-center text-muted-foreground">
-              Publish products from OryCMS to show marketplace items here.
+              Product Not Found.
             </div>
           )}
         </div>

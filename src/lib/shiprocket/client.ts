@@ -38,7 +38,7 @@ async function login(): Promise<string> {
     body: JSON.stringify({ email: creds.email, password: creds.password }),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }).catch((error) => {
-    throw new ShiprocketError(error instanceof Error ? error.message : "Shiprocket authentication timed out.", 504, null, "AUTH_NETWORK_ERROR")
+    throw new ShiprocketError(shiprocketNetworkMessage(error, "Shiprocket authentication timed out."), 504, null, "AUTH_NETWORK_ERROR")
   })
   const json = (await response.json().catch(() => ({}))) as { token?: string; message?: string }
   if (!response.ok || !json.token) {
@@ -67,7 +67,7 @@ async function request<T>(path: string, init: { method?: string; body?: unknown;
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   }).catch(async (error) => {
-    const message = error instanceof Error ? error.message : "Shiprocket request timed out."
+    const message = shiprocketNetworkMessage(error, "Shiprocket request timed out.")
     await recordApiLog({
       orderId: init.context?.orderId ?? null,
       shipmentId: init.context?.shipmentId ?? null,
@@ -124,6 +124,15 @@ function summarizeResponse(json: Record<string, unknown>): Record<string, unknow
     if (json[key] !== undefined) summary[key] = json[key]
   }
   return Object.keys(summary).length > 0 ? summary : { ok: true }
+}
+
+function shiprocketNetworkMessage(error: unknown, fallback: string) {
+  if (isTimeoutError(error)) return "Shiprocket is taking too long to respond. Please try again."
+  return error instanceof Error && error.message ? error.message : fallback
+}
+
+function isTimeoutError(error: unknown) {
+  return error instanceof DOMException && (error.name === "TimeoutError" || error.name === "AbortError")
 }
 
 export type CreateOrderPayload = {

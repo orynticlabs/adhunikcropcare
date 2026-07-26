@@ -149,7 +149,7 @@ export async function upsertShiprocketSettings(input: ShiprocketSettingsInput): 
   }
 
   if (merged.enabled) {
-    if (!merged.apiEmail || !/^\S+@\S+\.\S+$/.test(merged.apiEmail)) throw new Error("Valid Shiprocket API email is required.")
+    if (!isValidShiprocketLogin(merged.apiEmail)) throw new Error("Valid Shiprocket API login email or mobile number is required.")
     if (!passwordEncrypted || !decryptSecret(passwordEncrypted)) throw new Error("Shiprocket API password is required.")
     if (!merged.pickupLocation) throw new Error("Shiprocket pickup location is required.")
     if (!merged.pickupPincode || !/^\d{6}$/.test(merged.pickupPincode.replace(/\D/g, ""))) throw new Error("Valid Shiprocket pickup pincode is required.")
@@ -222,4 +222,9 @@ function normalizePincode(value: string | null) {
   if (!value) return null
   const digits = value.replace(/\D/g, "").slice(0, 6)
   return digits || null
+}
+
+function isValidShiprocketLogin(value: string | null | undefined) {
+  const login = String(value ?? "").trim()
+  return /^\S+@\S+\.\S+$/.test(login) || /^[6-9]\d{9}$/.test(login.replace(/\D/g, ""))
 }

@@ -17,17 +17,6 @@ import SiteFooter from "@/components/layout/site-footer"
 import { formatCurrency } from "@/features/cart/cart-context"
 import { matchesSearchQuery } from "@/lib/search"
 
-/* ── Constants ──────────────────────────────────────── */
-const CATEGORIES = [
-  "All",
-  "Fertilizers",
-  "Organic",
-  "Bio Products",
-  "Soil Care",
-  "Pest Management",
-  "Irrigation",
-]
-
 const PRICE_RANGES = [
   { label: "All Prices",        min: 0,    max: Infinity },
   { label: "Under ₹500",       min: 0,    max: 499      },
@@ -42,15 +31,6 @@ const SORT_OPTIONS = [
   { label: "Price: High to Low", value: "price-desc" },
   { label: "Top Rated",          value: "rating"     },
 ]
-
-const CATEGORY_SEARCH_TERMS: Record<string, string> = {
-  Fertilizers: "crop fertilizer fertilizers nutrition npk plant growth promoter",
-  Organic: "organic products natural compost manure",
-  "Bio Products": "bio biological biofertilizer products",
-  "Soil Care": "soil care conditioner booster",
-  "Pest Management": "pest management pesticide insecticide crop protection neem weedicide",
-  Irrigation: "irrigation drip sprinkler water",
-}
 
 type StoreProduct = {
   badge: string
@@ -77,6 +57,10 @@ type CmsProduct = {
   salePrice: number | null
   shortDescription: string
   slug: string
+}
+
+type CmsCategory = {
+  name: string
 }
 
 function slugify(value: string) {
@@ -119,21 +103,26 @@ function ProductsPageContent() {
   const [priceOpen,     setPriceOpen]     = useState(false)
   const [sortOpen,      setSortOpen]      = useState(false)
   const [cmsProducts,   setCmsProducts]   = useState<StoreProduct[]>([])
+  const [cmsCategories, setCmsCategories] = useState<string[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
   useEffect(() => {
     let alive = true
 
-    fetch("/api/products")
-      .then((response) => response.json())
-      .then((json) => {
-        if (alive && json.success && Array.isArray(json.data)) {
-          setCmsProducts(json.data.map(cmsProductToStoreProduct))
+    Promise.all([
+      fetch("/api/products").then((response) => response.json()),
+      fetch("/api/categories").then((response) => response.json()),
+    ])
+      .then(([productsJson, categoriesJson]) => {
+        if (!alive) return
+        if (productsJson.success && Array.isArray(productsJson.data)) {
+          setCmsProducts(productsJson.data.map(cmsProductToStoreProduct))
+        }
+        if (categoriesJson.success && Array.isArray(categoriesJson.data)) {
+          setCmsCategories(categoriesJson.data.map((category: CmsCategory) => category.name).filter(Boolean))
         }
       })
       .catch(() => undefined)
-      .finally(() => {
-        if (alive) setProductsLoading(false)
-      })
+      .finally(() => { if (alive) setProductsLoading(false) })
 
     return () => {
       alive = false
@@ -142,8 +131,8 @@ function ProductsPageContent() {
 
   const products = cmsProducts
   const categories = useMemo(
-    () => Array.from(new Set([...CATEGORIES, ...products.map((product) => product.category)])),
-    [products],
+    () => ["All", ...Array.from(new Set((cmsCategories.length > 0 ? cmsCategories : products.map((product) => product.category)).filter(Boolean)))],
+    [cmsCategories, products],
   )
   const filtered = useMemo(() => {
     let result = [...products]
@@ -154,7 +143,6 @@ function ProductsPageContent() {
           product.category,
           product.badge,
           product.sizes?.join(" "),
-          CATEGORY_SEARCH_TERMS[product.category],
         ]),
       )
     }
