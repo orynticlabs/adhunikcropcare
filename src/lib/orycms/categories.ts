@@ -2,6 +2,8 @@ import type { Prisma } from "@prisma/client"
 import { revalidateTag, unstable_cache } from "next/cache"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 
+import { getOrSetCache, invalidateCacheTag } from "@/lib/cache/memory-cache"
+
 export const CATEGORY_STATUSES = ["active", "inactive"] as const
 
 export type CategoryStatus = (typeof CATEGORY_STATUSES)[number]
@@ -50,23 +52,26 @@ type OryCMSCategoryRow = {
 
 const STOREFRONT_CATEGORIES_CACHE_TAG = "storefront-categories"
 
-const listActiveCategoriesCached = unstable_cache(
-  async () => {
-    await ensureOryCMSCategoriesSchema()
-    const categories = await orycmsPrisma.$queryRaw<OryCMSCategoryRow[]>`
-      SELECT c.*, p.name AS parent_name, COUNT(pr.id) AS product_count
-      FROM orycms_categories c
-      LEFT JOIN orycms_categories p ON p.id = c.parent_id
-      LEFT JOIN orycms_products pr ON pr.category = c.name
-      WHERE c.deleted_at IS NULL AND c.status = 'active'
-      GROUP BY c.id, p.name
-      ORDER BY c.display_order ASC, c.name ASC
-    `
-    return categories.map(toCategoryDTO)
-  },
-  ["active-orycms-categories"],
-  { revalidate: 300, tags: [STOREFRONT_CATEGORIES_CACHE_TAG] },
-)
+const listActiveCategoriesCached = async () => {
+  return getOrSetCache(
+    "active-orycms-categories",
+    async () => {
+      await ensureOryCMSCategoriesSchema()
+      const categories = await orycmsPrisma.$queryRaw<OryCMSCategoryRow[]>`
+        SELECT c.*, p.name AS parent_name, COUNT(pr.id) AS product_count
+        FROM orycms_categories c
+        LEFT JOIN orycms_categories p ON p.id = c.parent_id
+        LEFT JOIN orycms_products pr ON pr.category = c.name
+        WHERE c.deleted_at IS NULL AND c.status = 'active'
+        GROUP BY c.id, p.name
+        ORDER BY c.display_order ASC, c.name ASC
+      `
+      return categories.map(toCategoryDTO)
+    },
+    300,
+    [STOREFRONT_CATEGORIES_CACHE_TAG]
+  )
+}
 
 export async function listOryCMSCategories(options: { activeOnly?: boolean } = {}) {
   if (options.activeOnly) return listActiveCategoriesCached()
@@ -158,6 +163,7 @@ export async function saveOryCMSCategory(input: OryCMSCategoryInput, id?: string
   if (!category) throw new Error("Category not found.")
 
   try {
+    invalidateCacheTag(STOREFRONT_CATEGORIES_CACHE_TAG)
     revalidateTag(STOREFRONT_CATEGORIES_CACHE_TAG, { expire: 0 })
   } catch {
     // Ignore outside request context
@@ -178,6 +184,7 @@ export async function deleteOryCMSCategory(id: string) {
   `
 
   try {
+    invalidateCacheTag(STOREFRONT_CATEGORIES_CACHE_TAG)
     revalidateTag(STOREFRONT_CATEGORIES_CACHE_TAG, { expire: 0 })
   } catch {
     // Ignore outside request context

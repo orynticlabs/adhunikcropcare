@@ -324,6 +324,7 @@ function uploadMedia(file: File, mediaName: string) {
     const form = new FormData()
     form.append("file", file)
     form.append("mediaName", mediaName)
+    form.append("purpose", "profile")
     request.onerror = () => reject(new Error("Upload failed."))
     request.onload = () => {
       const json = JSON.parse(request.responseText || "{}") as { success: boolean; data?: { secure_url: string }; error?: { message: string } }

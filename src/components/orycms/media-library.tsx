@@ -703,6 +703,7 @@ function uploadFile(file: File, mediaName: string, onProgress: (progress: number
 
     form.append("file", file)
     form.append("mediaName", mediaName.trim() || file.name)
+    form.append("purpose", "general")
     onProgress(1)
 
     request.upload.onprogress = (event) => {

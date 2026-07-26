@@ -1,4 +1,5 @@
 import { revalidateTag, unstable_cache } from "next/cache"
+import { getOrSetCache, invalidateCacheTag } from "@/lib/cache/memory-cache"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { sanitizeRichText } from "@/lib/orycms/sanitize-html"
 
@@ -54,25 +55,29 @@ function toDTO(row: AnnouncementRow): AnnouncementDTO {
 
 const STOREFRONT_ANNOUNCEMENTS_CACHE_TAG = "storefront-announcements"
 
-const getActiveAnnouncementsCached = unstable_cache(
-  async () => {
-    const now = new Date()
-    const rows = await orycmsPrisma.$queryRaw<AnnouncementRow[]>`
-      SELECT * FROM orycms_announcements
-      WHERE deleted_at IS NULL
-        AND active = true
-        AND (starts_at IS NULL OR starts_at <= ${now})
-        AND (ends_at IS NULL OR ends_at >= ${now})
-      ORDER BY priority DESC, created_at DESC
-    `
-    return rows.map(toDTO)
-  },
-  ["active-orycms-announcements"],
-  { revalidate: 60, tags: [STOREFRONT_ANNOUNCEMENTS_CACHE_TAG] },
-)
+const getActiveAnnouncementsCached = async () => {
+  return getOrSetCache(
+    "active-orycms-announcements",
+    async () => {
+      const now = new Date()
+      const rows = await orycmsPrisma.$queryRaw<AnnouncementRow[]>`
+        SELECT * FROM orycms_announcements
+        WHERE deleted_at IS NULL
+          AND active = true
+          AND (starts_at IS NULL OR starts_at <= ${now})
+          AND (ends_at IS NULL OR ends_at >= ${now})
+        ORDER BY priority DESC, created_at DESC
+      `
+      return rows.map(toDTO)
+    },
+    60,
+    [STOREFRONT_ANNOUNCEMENTS_CACHE_TAG]
+  )
+}
 
 function invalidateAnnouncementsCache() {
   try {
+    invalidateCacheTag(STOREFRONT_ANNOUNCEMENTS_CACHE_TAG)
     revalidateTag(STOREFRONT_ANNOUNCEMENTS_CACHE_TAG, { expire: 0 })
   } catch {
     // Ignore outside request context

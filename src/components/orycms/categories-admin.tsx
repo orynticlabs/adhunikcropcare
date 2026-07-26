@@ -838,6 +838,7 @@ function uploadCategoryImage(
 
     form.append("file", file)
     form.append("mediaName", mediaName.trim() || file.name)
+    form.append("purpose", "category")
     onProgress(1)
     request.upload.onprogress = (event) => {
       if (event.lengthComputable) onProgress(Math.max(1, Math.min(95, Math.round((event.loaded / event.total) * 95))))

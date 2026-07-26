@@ -113,6 +113,7 @@ export function OryCMSCertificatesAdmin() {
     const body = new FormData()
     body.append("file", file)
     body.append("mediaName", form.title.trim() || file.name)
+    body.append("purpose", "certificate")
     const response = await fetch("/api/orycms/media", { body, method: "POST" })
     const json = await response.json() as { data?: { asset_id?: string; original_filename?: string; secure_url?: string }; error?: { message?: string }; success?: boolean }
     setUploading(false)

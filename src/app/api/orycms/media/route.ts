@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
         data: await uploadOryCMSMedia(file, {
           mediaName: typeof mediaName === "string" ? mediaName : undefined,
           productImage: purpose === "product",
+          purpose: typeof purpose === "string" ? purpose : undefined,
         }),
       },
       { status: 201 },

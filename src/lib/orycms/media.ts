@@ -48,9 +48,18 @@ type CloudinaryUploadResponse = {
   width?: number
 }
 
+export type OryCMSMediaPurpose =
+  | "product"
+  | "certificate"
+  | "category"
+  | "profile"
+  | "reel"
+  | "general"
+
 type UploadOptions = {
   mediaName?: string
   productImage?: boolean
+  purpose?: OryCMSMediaPurpose | string
 }
 
 export function toMediaDTO(asset: {
@@ -138,6 +147,60 @@ export async function listOryCMSMedia(search: string) {
   return assets.map(toMediaDTO)
 }
 
+export function resolveCloudinaryFolder(
+  file: File,
+  options: UploadOptions = {},
+): { folder: string; resourceType: "image" | "video" | "raw" } {
+  const isImage = file.type.startsWith("image/") || allowedTypes.has(file.type)
+  const isVideo = file.type.startsWith("video/") || allowedVideoTypes.has(file.type)
+  const resourceType: "image" | "video" | "raw" = isImage ? "image" : isVideo ? "video" : "raw"
+
+  const purpose = options.productImage ? "product" : (options.purpose ?? "general")
+
+  let folder: string
+
+  switch (purpose) {
+    case "product":
+      folder = process.env.CLOUDINARY_ORYCMS_PRODUCTS_FOLDER ?? "adhunik/orycms/images/products"
+      break
+    case "certificate":
+      folder = process.env.CLOUDINARY_ORYCMS_CERTIFICATES_FOLDER ?? "adhunik/orycms/images/certificates"
+      break
+    case "category":
+      folder = process.env.CLOUDINARY_ORYCMS_CATEGORIES_FOLDER ?? "adhunik/orycms/images/categories"
+      break
+    case "profile":
+      folder = process.env.CLOUDINARY_ORYCMS_PROFILES_FOLDER ?? "adhunik/orycms/images/profiles"
+      break
+    case "reel":
+      folder = process.env.CLOUDINARY_ORYCMS_REELS_FOLDER ?? "adhunik/orycms/videos/reels"
+      break
+    default:
+      if (resourceType === "image") {
+        folder =
+          process.env.CLOUDINARY_ORYCMS_IMAGES_FOLDER ??
+          (process.env.CLOUDINARY_ORYCMS_FOLDER
+            ? `${process.env.CLOUDINARY_ORYCMS_FOLDER.replace(/\/+$/, "")}/images/general`
+            : "adhunik/orycms/images/general")
+      } else if (resourceType === "video") {
+        folder =
+          process.env.CLOUDINARY_ORYCMS_VIDEOS_FOLDER ??
+          (process.env.CLOUDINARY_ORYCMS_FOLDER
+            ? `${process.env.CLOUDINARY_ORYCMS_FOLDER.replace(/\/+$/, "")}/videos/general`
+            : "adhunik/orycms/videos/general")
+      } else {
+        folder =
+          process.env.CLOUDINARY_ORYCMS_ASSETS_FOLDER ??
+          (process.env.CLOUDINARY_ORYCMS_FOLDER
+            ? `${process.env.CLOUDINARY_ORYCMS_FOLDER.replace(/\/+$/, "")}/assets/general`
+            : "adhunik/orycms/assets/general")
+      }
+      break
+  }
+
+  return { folder, resourceType }
+}
+
 export async function uploadOryCMSMedia(file: File, options: UploadOptions = {}) {
   await ensureOryCMSMediaSchema()
 
@@ -147,15 +210,18 @@ export async function uploadOryCMSMedia(file: File, options: UploadOptions = {})
     throw new Error(validationError)
   }
 
-  if (options.productImage && !["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type)) {
+  const isProduct = options.productImage || options.purpose === "product"
+  if (isProduct && !["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type)) {
     throw new Error("Product images must be JPG, PNG, or WebP files.")
   }
 
+  const resolved = resolveCloudinaryFolder(file, options)
+
   return uploadToCloudinary(file, {
-    folder: process.env.CLOUDINARY_ORYCMS_FOLDER ?? "orycms/media",
+    folder: resolved.folder,
     mediaName: options.mediaName,
-    productImage: options.productImage,
-    resourceType: "image",
+    productImage: isProduct,
+    resourceType: resolved.resourceType,
   })
 }
 
@@ -168,8 +234,10 @@ export async function uploadOryCMSReelVideo(file: File, options: UploadOptions =
     throw new Error(validationError)
   }
 
+  const resolved = resolveCloudinaryFolder(file, { ...options, purpose: "reel" })
+
   return uploadToCloudinary(file, {
-    folder: process.env.CLOUDINARY_ORYCMS_REELS_FOLDER ?? "orycms/reels",
+    folder: resolved.folder,
     mediaName: options.mediaName,
     resourceType: "video",
   })
@@ -177,7 +245,7 @@ export async function uploadOryCMSReelVideo(file: File, options: UploadOptions =
 
 async function uploadToCloudinary(
   file: File,
-  options: UploadOptions & { folder: string; resourceType: "image" | "video" },
+  options: UploadOptions & { folder: string; resourceType: "image" | "video" | "raw" },
 ) {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME
   const apiKey = process.env.CLOUDINARY_API_KEY
@@ -265,7 +333,7 @@ export async function deleteOryCMSMedia(id: string) {
     throw new Error("Media asset not found.")
   }
 
-  await deleteOryCMSCloudinaryAsset(asset.publicId)
+  await deleteOryCMSCloudinaryAsset(asset.publicId, (asset.resourceType as "image" | "video" | "raw") ?? "image")
   await orycmsPrisma.oryCMSMediaAsset.delete({ where: { id } })
 }
 
@@ -281,7 +349,7 @@ export async function deleteOryCMSMediaIfUnreferenced(reference: { id?: string; 
 
   if (!asset || await isMediaAssetReferenced(asset.id, asset.secureUrl)) return false
 
-  await deleteOryCMSCloudinaryAsset(asset.publicId)
+  await deleteOryCMSCloudinaryAsset(asset.publicId, (asset.resourceType as "image" | "video" | "raw") ?? "image")
   await orycmsPrisma.oryCMSMediaAsset.delete({ where: { id: asset.id } })
   return true
 }
@@ -318,7 +386,7 @@ function jsonContainsMedia(value: unknown, id: string, url: string): boolean {
   return Object.values(item).some((nested) => jsonContainsMedia(nested, id, url))
 }
 
-export async function deleteOryCMSCloudinaryAsset(publicId: string, resourceType: "image" | "video" = "image") {
+export async function deleteOryCMSCloudinaryAsset(publicId: string, resourceType: "image" | "video" | "raw" = "image") {
   const cloudName = process.env.CLOUDINARY_CLOUD_NAME
   const apiKey = process.env.CLOUDINARY_API_KEY
   const apiSecret = process.env.CLOUDINARY_API_SECRET
