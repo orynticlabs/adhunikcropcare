@@ -867,7 +867,7 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                       <button
                         type="button"
                         onClick={() => setPrimaryImage(index)}
-                        className="absolute bottom-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-background/90 text-chart-3 shadow-xs transition-colors hover:bg-chart-3 hover:text-background"
+                        className="absolute bottom-1 left-1 grid h-6 w-6 place-items-center rounded-full bg-background/90 text-chart-3 shadow-xs transition-colors hover:bg-[var(--orycms-orange)] hover:text-white"
                         aria-label="Set as primary image"
                       >
                         <Star className="h-3.5 w-3.5" />

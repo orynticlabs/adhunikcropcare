@@ -14,7 +14,7 @@ export function OryCMSBreadcrumbs({ items }: { items: OryCMSBreadcrumbItem[] }) 
           <Link
             href={item.href}
             aria-current={index === items.length - 1 ? "page" : undefined}
-            className="rounded-sm transition-colors hover:text-chart-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="rounded-sm transition-colors hover:text-[var(--orycms-orange)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {item.label}
           </Link>

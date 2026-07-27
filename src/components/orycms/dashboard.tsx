@@ -16,6 +16,7 @@ import {
   CreditCard,
   Database,
   FileText,
+  HelpCircle,
   Image as ImageIcon,
   LayoutDashboard,
   Layers,
@@ -118,6 +119,7 @@ const ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Customers: Users,
   Database,
   Discounts: Percent,
+  "Help Center": HelpCircle,
   Inventory: Boxes,
   Marketing: Megaphone,
   Media: ImageIcon,
@@ -417,11 +419,11 @@ function DashboardShell({
           <span className="text-[13px] font-semibold lg:hidden">{section}</span>
           {/* Desktop: full breadcrumb */}
           <div className="hidden items-center gap-1.5 text-sm lg:flex">
-            <Link href="/admin" className="text-muted-foreground transition-colors hover:text-chart-3">
+            <Link href="/admin" className="text-muted-foreground transition-colors hover:text-[var(--orycms-orange)]">
               OryCMS
             </Link>
             <span className="text-muted-foreground/50">/</span>
-            <Link href={sectionHref(section)} className="font-medium transition-colors hover:text-chart-3">
+            <Link href={sectionHref(section)} className="font-medium transition-colors hover:text-[var(--orycms-orange)]">
               {section}
             </Link>
           </div>
@@ -1126,6 +1128,7 @@ function label(value: string) {
 function sectionHref(section: string) {
   const routes: Record<string, string> = {
     Categories: "/admin/categories",
+    "Help Center": "/admin/help-center",
     Media: "/admin/media",
     Overview: "/admin",
     Products: "/admin/products",
