@@ -232,6 +232,18 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
       },
     ],
   },
+  {
+    section: "Help Center",
+    items: [
+      {
+        section: "Help Center",
+        label: "Help Center",
+        href: adminHref("/help-center"),
+        slug: "help-center",
+        description: "Connect with the OryCMS team for support, onboarding, and platform guidance.",
+      },
+    ],
+  },
 ]
 
 export const ORYCMS_ADMIN_SEARCH_ITEMS = ORYCMS_ADMIN_MENU.flatMap((group) =>
