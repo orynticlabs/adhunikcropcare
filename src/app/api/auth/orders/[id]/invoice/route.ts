@@ -1,15 +1,12 @@
 import { buildInvoicePdf } from "@/lib/storefront-orders"
 import { jsonError, requireUser } from "@/lib/storefront-auth"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
-import { getShipmentByOrderId } from "@/lib/shiprocket/shipments"
-import { proxyDocument } from "@/lib/shiprocket/documents"
 
 export const runtime = "nodejs"
 
 /**
- * Customer invoice download. Prefers the Shiprocket-generated GST invoice once a
- * shipment exists; falls back to the in-app PDF for orders not yet shipped. The
- * order is verified against the signed-in user before anything is generated.
+ * Customer invoice download. The order is verified against the signed-in user
+ * before the in-app GST invoice is generated.
  */
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -22,21 +19,12 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     `
     if (!owned) return jsonError("Order not found.", 404, "ORDER_NOT_FOUND")
 
-    const shipment = await getShipmentByOrderId(owned.id)
-    if (shipment?.shiprocket_order_id) {
-      try {
-        return await proxyDocument(owned.id, "invoice", owned.number)
-      } catch (error) {
-        // Fall through to the in-app invoice if Shiprocket cannot produce one yet.
-        console.error("Shiprocket invoice unavailable, using fallback", error)
-      }
-    }
-
     const invoice = await buildInvoicePdf(user.id, id)
     return new Response(new Uint8Array(invoice.bytes), {
       headers: {
         "content-disposition": `attachment; filename="${invoice.filename}"`,
         "content-type": "application/pdf",
+        "x-content-type-options": "nosniff",
       },
     })
   } catch (error) {

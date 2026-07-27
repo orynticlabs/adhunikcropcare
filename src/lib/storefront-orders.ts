@@ -1,4 +1,7 @@
 import crypto from "crypto"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
+import sharp from "sharp"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { ensureStorefrontAuthSchema, normalizePhone, validateEmail } from "@/lib/storefront-auth"
 import { emailBaseUrl, sendAdminEmail, sendEmail, sendOrderAdminNotifications } from "@/lib/email/mailer"
@@ -402,18 +405,10 @@ export async function buildAdminInvoicePdf(orderId: string) {
   return invoicePdfForOrder(order)
 }
 
-function invoicePdfForOrder(order: StorefrontOrderRow) {
-  const lines = [
-    "Adhunik Crop Care",
-    `Invoice: ${order.invoice_number ?? `INV-${order.number}`}`,
-    `Order: ${order.number}`,
-    `Date: ${new Date(order.created_at).toLocaleDateString("en-IN")}`,
-    `Payment: ${order.payment_method} / ${order.payment_status}`,
-    `Total: INR ${Number(order.total).toFixed(2)}`,
-  ]
+async function invoicePdfForOrder(order: StorefrontOrderRow) {
   return {
     filename: `${order.invoice_number ?? order.number}.pdf`,
-    bytes: makeSimplePdf(lines),
+    bytes: await makeInvoicePdf(order),
   }
 }
 
@@ -777,24 +772,440 @@ function money(value: unknown) {
   return Math.max(0, Math.round(Number(value || 0) * 100) / 100)
 }
 
-function makeSimplePdf(lines: string[]) {
-  const text = lines.map((line, index) => `BT /F1 12 Tf 50 ${760 - index * 22} Td (${escapePdf(line)}) Tj ET`).join("\n")
-  const objects = [
-    "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
-    "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj",
-    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj",
-    "4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj",
-    `5 0 obj << /Length ${text.length} >> stream\n${text}\nendstream endobj`,
+type InvoiceContact = { email?: string; firstName?: string; lastName?: string; phone?: string; gstNumber?: string }
+type InvoiceAddress = { address1?: string; address2?: string; city?: string; pincode?: string; state?: string; country?: string; gstNumber?: string }
+type InvoiceLineItem = CheckoutItem & {
+  productSlug?: string
+  sku?: string
+  hsn?: string
+  hsnCode?: string
+  hsnSac?: string
+  gstRate?: number
+  taxRate?: number
+  discount?: number
+  discountAmount?: number
+}
+
+const COMPANY = {
+  name: "Adhunik CropCare Private Limited",
+  mobile: "+91 9205762766",
+  email: "support@adhunikcropcare.com",
+  gstin: "06AAHCA5011F1Z8",
+  registeredAddress: ["SCO 323, 2nd Floor", "Sector 40-D", "Chandigarh - 160036"],
+  warehouseAddress: ["KHEWAT NO. 349", "KHATONI NO. 440", "VILLAGE BHADOG, TEHSIL NARAINGARH"],
+}
+
+type PdfImage = { dataHex: string; height: number; name: string; width: number }
+
+async function makeInvoicePdf(order: StorefrontOrderRow) {
+  const pdf = new PdfBuilder()
+  const logo = await loadInvoiceLogo()
+  drawInvoicePage(pdf, order, logo)
+  return pdf.toBuffer()
+}
+
+async function loadInvoiceLogo(): Promise<PdfImage | null> {
+  try {
+    const input = await readFile(path.join(process.cwd(), "public", "fevicon.png"))
+    const { data, info } = await sharp(input)
+      .resize(96, 96, { fit: "contain", background: { r: 255, g: 255, b: 255, alpha: 0 } })
+      .flatten({ background: { r: 255, g: 255, b: 255 } })
+      .raw()
+      .toBuffer({ resolveWithObject: true })
+    return { name: "Logo", width: info.width, height: info.height, dataHex: data.toString("hex").toUpperCase() }
+  } catch (error) {
+    console.error("Invoice logo unavailable", error)
+    return null
+  }
+}
+
+function drawInvoicePage(pdf: PdfBuilder, order: StorefrontOrderRow, logo: PdfImage | null) {
+  const contact = objectOf<InvoiceContact>(order.contact)
+  const address = objectOf<InvoiceAddress>(order.shipping_address)
+  const items = Array.isArray(order.items) ? (order.items as InvoiceLineItem[]) : []
+  const invoiceNo = order.invoice_number ?? `INV-${order.number}`
+  const subtotal = money(order.subtotal)
+  const discount = money(order.discount_total)
+  const shipping = money(order.shipping_total)
+  const grandTotal = money(order.total)
+  const taxable = Math.max(0, subtotal - discount)
+  const gstTotal = Math.max(0, grandTotal - taxable - shipping)
+  const isInterstate = String(address.state ?? "").trim().toLowerCase() !== "haryana"
+  const cgst = isInterstate ? 0 : round2(gstTotal / 2)
+  const sgst = isInterstate ? 0 : round2(gstTotal / 2)
+  const igst = isInterstate ? gstTotal : 0
+  const computed = taxable + shipping + cgst + sgst + igst
+  const roundOff = round2(grandTotal - computed)
+
+  drawHeader(pdf, logo)
+  drawInfoTable(pdf, [
+    ["Invoice Number", invoiceNo],
+    ["Order Number", order.number],
+    ["Invoice Date", dateIn(order.packed_at ?? new Date())],
+    ["Order Date", dateIn(order.created_at)],
+    ["Payment Method", titleCase(order.payment_method.replace(/_/g, " "))],
+    ["Payment Status", titleCase(order.payment_status)],
+    ["Order Status", titleCase(order.status)],
+    ["Shipping Method", titleCase(order.delivery_method ?? "Standard")],
+  ], 38, 650, 520, 70)
+
+  const buyerLines = [
+    fullName(contact),
+    contact.phone ? `Mobile: ${contact.phone}` : null,
+    contact.email ? `Email: ${contact.email}` : null,
+    address.address1,
+    address.address2,
+    [address.city, address.state, address.pincode].filter(Boolean).join(", "),
+    address.country ?? "India",
+    address.gstNumber || contact.gstNumber ? `GST Number: ${address.gstNumber ?? contact.gstNumber}` : null,
+  ].filter(Boolean) as string[]
+  const sellerLines = [
+    COMPANY.name,
+    `GSTIN: ${COMPANY.gstin}`,
+    `Registered: ${COMPANY.registeredAddress.join(", ")}`,
+    `Warehouse: ${COMPANY.warehouseAddress.join(", ")}`,
+    `Support: ${COMPANY.email}`,
+    `Phone: ${COMPANY.mobile}`,
   ]
-  let offset = "%PDF-1.4\n".length
-  const xref = objects.map((object) => {
-    const current = offset
-    offset += object.length + 1
-    return current
+  drawBoxedText(pdf, "Bill To", buyerLines, 38, 565, 250, 112)
+  drawBoxedText(pdf, "Sold By", sellerLines, 308, 565, 250, 112)
+
+  const tableBottom = drawProductTable(pdf, items, 38, 430)
+  let summaryTop = Math.min(tableBottom - 18, 250)
+  if (tableBottom < 300) {
+    drawFooter(pdf)
+    pdf.addPage()
+    pdf.text("TAX INVOICE", 38, 800, 14, "bold")
+    pdf.text(`${invoiceNo} / ${order.number}`, 330, 802, 8, "normal", 210, [90, 90, 90], "right")
+    pdf.line(38, 784, 558, 784)
+    summaryTop = 742
+  }
+  drawTotals(pdf, {
+    subtotal,
+    discount,
+    shipping,
+    taxable,
+    cgst,
+    sgst,
+    igst,
+    roundOff,
+    grandTotal,
+  }, 333, summaryTop)
+
+  pdf.text("Amount in Words", 38, summaryTop - 8, 8, "bold")
+  pdf.text(`${amountWords(Math.round(grandTotal))} only`, 38, summaryTop - 21, 8, "normal", 270)
+
+  drawNotes(pdf, 38, 118)
+  drawSignature(pdf, 355, 115)
+  drawFooter(pdf)
+}
+
+function drawHeader(pdf: PdfBuilder, logo: PdfImage | null) {
+  pdf.rect(38, 735, 520, 72)
+  pdf.fillRect(50, 756, 42, 34, [235, 244, 230])
+  if (logo) {
+    pdf.image(logo, 54, 758, 34, 30)
+  } else {
+    pdf.circle(71, 773, 13, [104, 156, 48])
+    pdf.text("ACC", 61, 769, 9, "bold", 42, "white")
+  }
+  pdf.text("TAX INVOICE", 38, 817, 15, "bold")
+  pdf.text(COMPANY.name, 108, 786, 14, "bold")
+  pdf.text(`Mobile: ${COMPANY.mobile}`, 108, 770, 8)
+  pdf.text(`Email: ${COMPANY.email}`, 108, 758, 8)
+  pdf.text(`GSTIN: ${COMPANY.gstin}`, 108, 746, 8, "bold")
+  pdf.text(COMPANY.registeredAddress.join(", "), 330, 786, 8, "normal", 210, "black", "right")
+  pdf.text(`Warehouse: ${COMPANY.warehouseAddress.join(", ")}`, 330, 758, 8, "normal", 210, "black", "right")
+}
+
+function drawInfoTable(pdf: PdfBuilder, rows: Array<[string, string]>, x: number, y: number, w: number, h: number) {
+  pdf.rect(x, y, w, h)
+  const colW = w / 4
+  const rowH = h / 2
+  rows.forEach(([label, value], index) => {
+    const cx = x + (index % 4) * colW
+    const cy = y + (index < 4 ? rowH : 0)
+    if (index % 4 > 0) pdf.line(cx, y, cx, y + h)
+    if (index === 4) pdf.line(x, y + rowH, x + w, y + rowH)
+    pdf.text(label, cx + 6, cy + rowH - 15, 6.8, "bold", colW - 12, [90, 90, 90])
+    pdf.text(value, cx + 6, cy + rowH - 30, 8, "normal", colW - 12)
   })
-  const body = `%PDF-1.4\n${objects.join("\n")}\n`
-  const table = `xref\n0 6\n0000000000 65535 f \n${xref.map((n) => `${String(n).padStart(10, "0")} 00000 n `).join("\n")}\n`
-  return Buffer.from(`${body}${table}trailer << /Size 6 /Root 1 0 R >>\nstartxref\n${body.length}\n%%EOF`)
+}
+
+function drawBoxedText(pdf: PdfBuilder, title: string, lines: string[], x: number, y: number, w: number, h: number) {
+  pdf.rect(x, y, w, h)
+  pdf.fillRect(x, y + h - 22, w, 22, [245, 247, 245])
+  pdf.text(title, x + 9, y + h - 15, 9, "bold")
+  let cy = y + h - 36
+  for (const line of lines) {
+    const used = pdf.text(line, x + 9, cy, 7.6, "normal", w - 18)
+    cy -= used + 3
+    if (cy < y + 8) break
+  }
+}
+
+function drawProductTable(pdf: PdfBuilder, items: InvoiceLineItem[], x: number, topY: number) {
+  const widths = [25, 116, 55, 43, 28, 55, 46, 34, 52, 66]
+  const headers = ["S.No.", "Product Name", "SKU", "HSN/SAC", "Qty", "Unit Price", "Discount", "Tax %", "GST Amount", "Total"]
+  let y = topY
+  pdf.fillRect(x, y, 520, 22, [239, 243, 238])
+  pdf.rect(x, y, 520, 22)
+  let cx = x
+  headers.forEach((header, index) => {
+    pdf.text(header, cx + 3, y + 8, 6.5, "bold", widths[index] - 6, [40, 40, 40], index >= 4 ? "right" : "left")
+    if (index > 0) pdf.line(cx, y, cx, y + 22)
+    cx += widths[index]
+  })
+  y -= 1
+
+  const rows = items.length ? items : [{ name: "Order Item", price: Number(orderTotalFallback(items)), quantity: 1 }]
+  rows.forEach((item, index) => {
+    const qty = Math.max(1, Number(item.quantity ?? 1))
+    const unit = money(item.price)
+    const discount = money(item.discountAmount ?? item.discount ?? 0)
+    const taxRate = Number(item.gstRate ?? item.taxRate ?? 0)
+    const lineTaxable = Math.max(0, unit * qty - discount)
+    const gst = round2(lineTaxable * taxRate / 100)
+    const total = lineTaxable + gst
+    const rowY = y - 34
+    pdf.rect(x, rowY, 520, 34)
+    cx = x
+    const cells = [
+      String(index + 1),
+      String(item.name ?? "Product"),
+      String(item.sku ?? item.productSlug ?? item.id ?? "-"),
+      String(item.hsnSac ?? item.hsnCode ?? item.hsn ?? "-"),
+      String(qty),
+      inr(unit),
+      inr(discount),
+      taxRate ? `${taxRate}%` : "-",
+      inr(gst),
+      inr(total || unit * qty),
+    ]
+    cells.forEach((cell, cellIndex) => {
+      pdf.text(cell, cx + 3, rowY + 20, 6.7, "normal", widths[cellIndex] - 6, "black", cellIndex >= 4 ? "right" : "left")
+      if (cellIndex > 0) pdf.line(cx, rowY, cx, rowY + 34)
+      cx += widths[cellIndex]
+    })
+    y = rowY
+  })
+  return y
+}
+
+function drawTotals(pdf: PdfBuilder, totals: Record<string, number>, x: number, y: number) {
+  const allRows: Array<[string, number, boolean?]> = [
+    ["Subtotal", totals.subtotal],
+    ["Discount", -totals.discount],
+    ["Shipping Charge", totals.shipping],
+    ["Taxable Amount", totals.taxable],
+    ["CGST", totals.cgst],
+    ["SGST", totals.sgst],
+    ["IGST", totals.igst],
+    ["Round Off", totals.roundOff],
+    ["Grand Total", totals.grandTotal, true],
+  ]
+  const rows = allRows.filter(([label, value]) => label === "Grand Total" || value !== 0)
+  const rowH = 17
+  const h = rows.length * rowH
+  pdf.rect(x, y - h, 225, h)
+  rows.forEach(([label, value, strong], index) => {
+    const cy = y - (index + 1) * rowH
+    if (strong) pdf.fillRect(x, cy, 225, rowH, [235, 244, 230])
+    pdf.line(x, cy, x + 225, cy)
+    pdf.text(label, x + 8, cy + 5, strong ? 8.5 : 7.5, strong ? "bold" : "normal")
+    pdf.text(inr(value), x + 122, cy + 5, strong ? 8.5 : 7.5, strong ? "bold" : "normal", 92, "black", "right")
+  })
+}
+
+function drawNotes(pdf: PdfBuilder, x: number, y: number) {
+  pdf.text("Notes", x, y + 34, 8, "bold")
+  const notes = [
+    "Goods once sold are not returnable unless applicable.",
+    "Please retain this invoice for warranty purposes.",
+    "This is a computer-generated invoice.",
+  ]
+  notes.forEach((note, index) => pdf.text(`${index + 1}. ${note}`, x, y + 19 - index * 12, 7))
+}
+
+function drawSignature(pdf: PdfBuilder, x: number, y: number) {
+  pdf.line(x, y + 34, x + 165, y + 34)
+  pdf.text("Authorized Signature", x + 48, y + 20, 8, "bold")
+  pdf.text(COMPANY.name, x + 12, y + 8, 7, "normal", 150, [90, 90, 90], "center")
+}
+
+function drawFooter(pdf: PdfBuilder) {
+  pdf.text("Auto Generated Invoice by OryCMS", 160, 35, 7, "normal", 275, [120, 120, 120], "center")
+  pdf.text("Powered by OrynticLabs Private Limited", 160, 24, 7, "normal", 275, [120, 120, 120], "center")
+}
+
+class PdfBuilder {
+  private pages: string[][] = [[]]
+  private images = new Map<string, PdfImage>()
+
+  addPage() {
+    this.pages.push([])
+  }
+
+  private get commands() {
+    return this.pages[this.pages.length - 1]
+  }
+
+  rect(x: number, y: number, w: number, h: number, color: PdfColor = [120, 120, 120]) {
+    this.commands.push(`${stroke(color)} ${fmt(x)} ${fmt(y)} ${fmt(w)} ${fmt(h)} re S`)
+  }
+
+  fillRect(x: number, y: number, w: number, h: number, color: PdfColor) {
+    this.commands.push(`${fill(color)} ${fmt(x)} ${fmt(y)} ${fmt(w)} ${fmt(h)} re f`)
+  }
+
+  line(x1: number, y1: number, x2: number, y2: number, color: PdfColor = [190, 190, 190]) {
+    this.commands.push(`${stroke(color)} ${fmt(x1)} ${fmt(y1)} m ${fmt(x2)} ${fmt(y2)} l S`)
+  }
+
+  circle(cx: number, cy: number, r: number, color: PdfColor) {
+    this.commands.push(`${fill(color)} ${fmt(cx - r)} ${fmt(cy - r)} ${fmt(r * 2)} ${fmt(r * 2)} re f`)
+  }
+
+  image(image: PdfImage, x: number, y: number, w: number, h: number) {
+    this.images.set(image.name, image)
+    this.commands.push(`q ${fmt(w)} 0 0 ${fmt(h)} ${fmt(x)} ${fmt(y)} cm /${image.name} Do Q`)
+  }
+
+  text(value: string, x: number, y: number, size = 8, weight: "normal" | "bold" = "normal", maxWidth = 999, color: PdfColor | "black" | "white" = "black", align: "left" | "right" | "center" = "left") {
+    const clean = ascii(value)
+    const lines = wrap(clean, maxWidth, size)
+    lines.forEach((line, index) => {
+      const width = textWidth(line, size)
+      const dx = align === "right" ? maxWidth - width : align === "center" ? (maxWidth - width) / 2 : 0
+      this.commands.push(`${fill(color)} BT /${weight === "bold" ? "F2" : "F1"} ${fmt(size)} Tf ${fmt(x + Math.max(0, dx))} ${fmt(y - index * (size + 2))} Td (${escapePdf(line)}) Tj ET`)
+    })
+    return lines.length * (size + 2)
+  }
+
+  toBuffer() {
+    const font1Obj = 3 + this.pages.length * 2
+    const font2Obj = font1Obj + 1
+    const imageList = Array.from(this.images.values())
+    const imageObjStart = font2Obj + 1
+    const xobjects = imageList.length
+      ? ` /XObject << ${imageList.map((image, index) => `/${image.name} ${imageObjStart + index} 0 R`).join(" ")} >>`
+      : ""
+    const objects = [
+      "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj",
+      `2 0 obj << /Type /Pages /Kids [${this.pages.map((_, index) => `${3 + index * 2} 0 R`).join(" ")}] /Count ${this.pages.length} >> endobj`,
+    ]
+    this.pages.forEach((commands, index) => {
+      const pageObj = 3 + index * 2
+      const contentObj = pageObj + 1
+      const stream = commands.join("\n")
+      objects.push(`${pageObj} 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${font1Obj} 0 R /F2 ${font2Obj} 0 R >>${xobjects} >> /Contents ${contentObj} 0 R >> endobj`)
+      objects.push(`${contentObj} 0 obj << /Length ${Buffer.byteLength(stream)} >> stream\n${stream}\nendstream endobj`)
+    })
+    objects.push(`${font1Obj} 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj`)
+    objects.push(`${font2Obj} 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj`)
+    imageList.forEach((image, index) => {
+      const stream = `${image.dataHex}>`
+      objects.push(`${imageObjStart + index} 0 obj << /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /ASCIIHexDecode /Length ${Buffer.byteLength(stream)} >> stream\n${stream}\nendstream endobj`)
+    })
+    let offset = "%PDF-1.4\n".length
+    const xref = objects.map((object) => {
+      const current = offset
+      offset += Buffer.byteLength(`${object}\n`)
+      return current
+    })
+    const body = `%PDF-1.4\n${objects.join("\n")}\n`
+    const table = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${xref.map((n) => `${String(n).padStart(10, "0")} 00000 n `).join("\n")}\n`
+    return Buffer.from(`${body}${table}trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${Buffer.byteLength(body)}\n%%EOF`)
+  }
+}
+
+type PdfColor = [number, number, number]
+
+function objectOf<T extends object>(value: unknown): Partial<T> {
+  return value && typeof value === "object" ? value as Partial<T> : {}
+}
+
+function fullName(contact: Partial<InvoiceContact>) {
+  return [contact.firstName, contact.lastName].filter(Boolean).join(" ") || "Customer"
+}
+
+function titleCase(value: string) {
+  return value.replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function inr(value: number) {
+  const sign = value < 0 ? "-" : ""
+  return `${sign}INR ${Math.abs(value).toFixed(2)}`
+}
+
+function dateIn(value: Date | string | null | undefined) {
+  const date = value ? new Date(value) : new Date()
+  return Number.isNaN(date.getTime()) ? "-" : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })
+}
+
+function round2(value: number) {
+  return Math.round(value * 100) / 100
+}
+
+function orderTotalFallback(items: InvoiceLineItem[]) {
+  return items.reduce((sum, item) => sum + money(item.price) * Math.max(1, Number(item.quantity ?? 1)), 0)
+}
+
+function amountWords(value: number) {
+  if (value === 0) return "Zero rupees"
+  const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"]
+  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"]
+  const below100 = (n: number) => n < 20 ? ones[n] : `${tens[Math.floor(n / 10)]}${n % 10 ? ` ${ones[n % 10]}` : ""}`
+  const below1000 = (n: number) => `${n >= 100 ? `${ones[Math.floor(n / 100)]} Hundred${n % 100 ? " " : ""}` : ""}${n % 100 ? below100(n % 100) : ""}`
+  const crore = Math.floor(value / 10000000)
+  const lakh = Math.floor(value / 100000) % 100
+  const thousand = Math.floor(value / 1000) % 100
+  const rest = value % 1000
+  return [
+    crore ? `${below100(crore)} Crore` : "",
+    lakh ? `${below100(lakh)} Lakh` : "",
+    thousand ? `${below100(thousand)} Thousand` : "",
+    rest ? below1000(rest) : "",
+    "Rupees",
+  ].filter(Boolean).join(" ")
+}
+
+function wrap(value: string, maxWidth: number, size: number) {
+  const words = value.split(/\s+/).filter(Boolean)
+  const lines: string[] = []
+  let line = ""
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word
+    if (textWidth(next, size) <= maxWidth || !line) {
+      line = next
+    } else {
+      lines.push(line)
+      line = word
+    }
+  }
+  if (line) lines.push(line)
+  return lines.length ? lines : [""]
+}
+
+function textWidth(value: string, size: number) {
+  return value.length * size * 0.47
+}
+
+function fill(color: PdfColor | "black" | "white") {
+  const [r, g, b] = color === "black" ? [0, 0, 0] : color === "white" ? [255, 255, 255] : color
+  return `${fmt(r / 255)} ${fmt(g / 255)} ${fmt(b / 255)} rg`
+}
+
+function stroke(color: PdfColor) {
+  return `${fmt(color[0] / 255)} ${fmt(color[1] / 255)} ${fmt(color[2] / 255)} RG`
+}
+
+function fmt(value: number) {
+  return Number(value.toFixed(2))
+}
+
+function ascii(value: string) {
+  return String(value).replace(/[₹–—]/g, "-").replace(/[^\x20-\x7E]/g, "")
 }
 
 function escapePdf(value: string) {

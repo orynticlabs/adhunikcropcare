@@ -88,21 +88,22 @@ async function request<T>(path: string, init: { method?: string; body?: unknown;
   }
 
   const json = (await response.json().catch(() => ({}))) as Record<string, unknown>
-  if (!response.ok) {
-    const message = typeof json.message === "string" ? json.message : `Shiprocket request failed (${response.status}).`
+  const businessError = shiprocketBusinessError(json)
+  if (!response.ok || businessError) {
+    const message = businessError ?? (typeof json.message === "string" ? json.message : `Shiprocket request failed (${response.status}).`)
     const errorCode = json.status_code != null ? String(json.status_code) : String(response.status)
     await recordApiLog({
       orderId: init.context?.orderId ?? null,
       shipmentId: init.context?.shipmentId ?? null,
       endpoint,
       method,
-      statusCode: response.status,
+      statusCode: response.ok ? 502 : response.status,
       ok: false,
       errorCode,
       errorMessage: message,
       responseSummary: json,
     })
-    throw new ShiprocketError(message, response.status, json, errorCode)
+    throw new ShiprocketError(message, response.ok ? 502 : response.status, json, errorCode)
   }
   await recordApiLog({
     orderId: init.context?.orderId ?? null,
@@ -135,6 +136,34 @@ function isTimeoutError(error: unknown) {
   return error instanceof DOMException && (error.name === "TimeoutError" || error.name === "AbortError")
 }
 
+function shiprocketBusinessError(json: Record<string, unknown>): string | null {
+  const statusCode = json.status_code
+  const failed =
+    statusCode === 0 ||
+    statusCode === "0" ||
+    json.status === false ||
+    json.errors !== undefined
+  if (!failed) return null
+
+  const errors = flattenShiprocketErrors(json.errors)
+  if (errors.length > 0) return errors.join(" ")
+  return typeof json.message === "string" && json.message.trim()
+    ? json.message.trim()
+    : "Shiprocket rejected the request."
+}
+
+function flattenShiprocketErrors(value: unknown): string[] {
+  if (!value) return []
+  if (typeof value === "string") return [value]
+  if (Array.isArray(value)) return value.flatMap(flattenShiprocketErrors)
+  if (typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).flatMap(([key, item]) =>
+      flattenShiprocketErrors(item).map((message) => `${key}: ${message}`),
+    )
+  }
+  return [String(value)]
+}
+
 export type CreateOrderPayload = {
   order_id: string
   order_date: string
@@ -158,6 +187,32 @@ export type CreateOrderPayload = {
   breadth: number
   height: number
   weight: number
+}
+
+export type ShiprocketPickupLocation = {
+  id: number | string
+  pickup_location: string
+  address?: string | null
+  address_2?: string | null
+  city?: string | null
+  state?: string | null
+  country?: string | null
+  pin_code?: string | number | null
+  email?: string | null
+  phone?: string | number | null
+  name?: string | null
+  status?: number | string | null
+}
+
+type PickupLocationsResponse = {
+  data?: {
+    shipping_address?: ShiprocketPickupLocation[]
+  }
+}
+
+export async function getPickupLocations(): Promise<ShiprocketPickupLocation[]> {
+  const json = await request<PickupLocationsResponse>("/settings/company/pickup")
+  return json.data?.shipping_address ?? []
 }
 
 export type CreateOrderResponse = {
@@ -253,19 +308,54 @@ export async function cancelShiprocketOrder(orderIds: Array<string | number>, co
 
 // --- Documents ---
 
-export type InvoiceResponse = { is_invoice_created?: boolean; invoice_url?: string; not_created?: unknown[] }
+export type InvoiceResponse = { is_invoice_created?: boolean; invoice_url?: string; response?: unknown; not_created?: unknown[] }
 export async function generateInvoice(orderIds: Array<string | number>, context?: ApiContext): Promise<InvoiceResponse> {
   return request<InvoiceResponse>("/orders/print/invoice", { method: "POST", body: { ids: orderIds }, context })
 }
 
-export type LabelResponse = { label_created?: number; label_url?: string; response?: string; not_created?: unknown[] }
+export type LabelResponse = { label_created?: number; label_url?: string; response?: unknown; not_created?: unknown[] }
 export async function generateLabel(shipmentIds: Array<string | number>, context?: ApiContext): Promise<LabelResponse> {
   return request<LabelResponse>("/courier/generate/label", { method: "POST", body: { shipment_id: shipmentIds }, context })
 }
 
-export type ManifestGenerateResponse = { status?: number; manifest_url?: string }
+export type ManifestGenerateResponse = { status?: number; manifest_url?: string; response?: unknown; not_created?: unknown[] }
 export async function generateManifest(shipmentIds: Array<string | number>, context?: ApiContext): Promise<ManifestGenerateResponse> {
   return request<ManifestGenerateResponse>("/manifests/generate", { method: "POST", body: { shipment_id: shipmentIds }, context })
+}
+
+export function shiprocketDocumentUrl(response: unknown, key: "invoice_url" | "label_url" | "manifest_url"): string | null {
+  if (!response || typeof response !== "object") return null
+  const direct = (response as Record<string, unknown>)[key]
+  if (typeof direct === "string" && direct.trim()) return direct.trim()
+  return firstUrl(response)
+}
+
+export function shiprocketDocumentError(response: unknown, kind: "invoice" | "label" | "manifest"): string {
+  const messages = flattenShiprocketErrors((response as Record<string, unknown> | null)?.not_created)
+  if (messages.length > 0) return messages.join(" ")
+  const message = (response as Record<string, unknown> | null)?.message
+  if (typeof message === "string" && message.trim()) return message.trim()
+  return `Shiprocket did not return a ${kind} URL.`
+}
+
+function firstUrl(value: unknown): string | null {
+  if (typeof value === "string") {
+    const match = value.match(/https?:\/\/[^\s"'<>]+/i)
+    return match?.[0] ?? null
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const url = firstUrl(item)
+      if (url) return url
+    }
+  }
+  if (value && typeof value === "object") {
+    for (const item of Object.values(value as Record<string, unknown>)) {
+      const url = firstUrl(item)
+      if (url) return url
+    }
+  }
+  return null
 }
 
 export type ManifestPrintResponse = { status?: number; manifest_url?: string }

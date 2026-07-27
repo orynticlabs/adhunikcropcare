@@ -713,24 +713,10 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                       <Truck className="h-4 w-4 text-[#689c30]" aria-hidden />
                       Delivery available to {checkedPin}
                     </p>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      {serviceability.estimatedDeliveryDate && (
-                        <span><span className="text-foreground/60">Est. delivery:</span> <strong>{serviceability.estimatedDeliveryDate}</strong></span>
-                      )}
-                      {!serviceability.estimatedDeliveryDate && serviceability.estimatedDeliveryDays && (
-                        <span><span className="text-foreground/60">Est. delivery:</span> <strong>{serviceability.estimatedDeliveryDays} days</strong></span>
-                      )}
-                      <span>
-                        <span className="text-foreground/60">COD:</span>{" "}
-                        <strong>{serviceability.codAvailable ? "Available" : "Not available"}</strong>
-                      </span>
-                    </div>
-                    {serviceability.couriers.length > 0 && (
-                      <div className="text-xs text-foreground/70">
-                        <span className="text-foreground/60">Couriers:</span>{" "}
-                        {serviceability.couriers.slice(0, 3).map((c) => c.name).join(", ")}
-                      </div>
-                    )}
+                    <p className="text-xs">
+                      <span className="text-foreground/60">Est. delivery:</span>{" "}
+                      <strong>{serviceability.estimatedDeliveryDate ?? "To be confirmed"}</strong>
+                    </p>
                   </div>
                 ) : (
                   <p className="mt-3 flex items-center gap-2 text-sm text-red-600">
@@ -875,7 +861,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
             {/* Guarantee */}
             <div className="flex items-center justify-between rounded-xl bg-[#689c30]/10 p-5">
               <p className="text-base font-bold text-[#033927]">
-                30 days Guaranteed Replacement of Damaged Product
+                7 days Guaranteed Replacement of Damaged Product
               </p>
               <Sparkles className="h-8 w-8 shrink-0 text-[#689c30]" aria-hidden />
             </div>

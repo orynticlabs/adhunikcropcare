@@ -23,14 +23,15 @@ export async function proxyDocument(orderId: string, kind: PublicDocumentKind, f
   if (!upstream.ok || !upstream.body) {
     throw new Error(`Unable to fetch ${kind} document (${upstream.status}).`)
   }
-  const contentType = upstream.headers.get("content-type") ?? CONTENT_TYPES[kind]
-  const extension = contentType.includes("pdf") ? "pdf" : "bin"
+  const contentType = CONTENT_TYPES[kind]
+  const extension = "pdf"
   return new Response(upstream.body, {
     status: 200,
     headers: {
       "content-type": contentType,
       "content-disposition": `inline; filename="${filenameBase}-${kind}.${extension}"`,
       "cache-control": "private, max-age=300",
+      "x-content-type-options": "nosniff",
     },
   })
 }

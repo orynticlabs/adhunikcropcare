@@ -19,12 +19,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!order) {
       return NextResponse.json({ success: false, error: { code: "NOT_FOUND", message: "Order not found." } }, { status: 404 })
     }
-    if (kind === "invoice" && !order.shipment?.shiprocket_order_id) {
+    if (kind === "invoice") {
       const invoice = await buildAdminInvoicePdf(order.id)
       return new Response(new Uint8Array(invoice.bytes), {
         headers: {
           "content-disposition": `inline; filename="${invoice.filename}"`,
           "content-type": "application/pdf",
+          "x-content-type-options": "nosniff",
         },
       })
     }

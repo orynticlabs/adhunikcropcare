@@ -5,7 +5,7 @@ import { confirmOryCMSOrder, getOryCMSOrder, packOryCMSOrder } from "@/lib/orycm
 import { cancelOrderByAdmin } from "@/lib/storefront-orders"
 import { enqueueJob } from "@/lib/shiprocket/jobs"
 import { getShipmentByOrderId } from "@/lib/shiprocket/shipments"
-import { generateLabel, ShiprocketError } from "@/lib/shiprocket/client"
+import { generateLabel, ShiprocketError, shiprocketDocumentUrl } from "@/lib/shiprocket/client"
 import { cancelShipment } from "@/lib/shiprocket/fulfillment"
 
 export const runtime = "nodejs"
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       const shipmentIds = found.map((shipment) => shipment.shiprocket_shipment_id).filter((value): value is string => Boolean(value))
       if (shipmentIds.length === 0) return bad("None of the selected orders have a Shiprocket shipment yet.")
       const response = await generateLabel(shipmentIds)
-      return NextResponse.json({ success: true, data: { action, url: response.label_url ?? null, count: shipmentIds.length, missing } })
+      return NextResponse.json({ success: true, data: { action, url: shiprocketDocumentUrl(response, "label_url"), count: shipmentIds.length, missing } })
     }
 
     return bad("Unknown action.")
