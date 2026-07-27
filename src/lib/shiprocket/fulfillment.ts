@@ -15,6 +15,8 @@ import {
   requestPickup,
   reschedulePickup,
   ShiprocketError,
+  shiprocketDocumentError,
+  shiprocketDocumentUrl,
   type CreateOrderPayload,
 } from "@/lib/shiprocket/client"
 import { getShiprocketSettings } from "@/lib/shiprocket/settings"
@@ -104,7 +106,7 @@ export async function confirmAndCreateShipment(orderId: string, actor?: OryCMSAu
   const shiprocketOrderId = created.order_id != null ? String(created.order_id) : null
   const shiprocketShipmentId = created.shipment_id != null ? String(created.shipment_id) : null
   if (!shiprocketOrderId || !shiprocketShipmentId) {
-    const error = new ShiprocketError("Shiprocket did not return order_id and shipment_id.", 502, created)
+    const error = new ShiprocketError(shiprocketCreateErrorMessage(created), 502, created)
     await recordShipmentError(orderId, error)
     throw error
   }
@@ -442,20 +444,21 @@ export async function ensureDocument(orderId: string, kind: DocumentKind, force 
 
   const ctx = { orderId, shipmentId: shipment.id }
   let url: string | null = null
+  let response: unknown = null
   if (kind === "invoice") {
     if (!shipment.shiprocket_order_id) throw new ShiprocketError("Shiprocket order id missing for invoice.", 400)
-    const res = await generateInvoice([shipment.shiprocket_order_id], ctx)
-    url = res.invoice_url ?? null
+    response = await generateInvoice([shipment.shiprocket_order_id], ctx)
+    url = shiprocketDocumentUrl(response, "invoice_url")
   } else if (kind === "label") {
     if (!shipment.shiprocket_shipment_id) throw new ShiprocketError("Shipment id missing for label.", 400)
-    const res = await generateLabel([shipment.shiprocket_shipment_id], ctx)
-    url = res.label_url ?? null
+    response = await generateLabel([shipment.shiprocket_shipment_id], ctx)
+    url = shiprocketDocumentUrl(response, "label_url")
   } else {
     if (!shipment.shiprocket_shipment_id) throw new ShiprocketError("Shipment id missing for manifest.", 400)
-    const res = await generateManifest([shipment.shiprocket_shipment_id], ctx)
-    url = res.manifest_url ?? null
+    response = await generateManifest([shipment.shiprocket_shipment_id], ctx)
+    url = shiprocketDocumentUrl(response, "manifest_url")
   }
-  if (!url) throw new ShiprocketError(`Shiprocket did not return a ${kind} URL.`, 502)
+  if (!url) throw new ShiprocketError(shiprocketDocumentError(response, kind), 502)
 
   const column = kind === "invoice" ? "invoice_url" : kind === "label" ? "label_url" : "manifest_url"
   await orycmsPrisma.$executeRawUnsafe(
@@ -620,6 +623,28 @@ function validateShipmentOrderInput(order: StorefrontOrderRow, settings: NonNull
   if (![settings.packageLengthCm, settings.packageBreadthCm, settings.packageHeightCm, settings.packageWeightKg].every((value) => Number(value) > 0)) {
     throw new ShiprocketError("Package weight and dimensions must be configured before creating a shipment.", 400)
   }
+}
+
+function shiprocketCreateErrorMessage(response: CreateOrderPayload | unknown): string {
+  if (!response || typeof response !== "object") return "Shiprocket did not return order_id and shipment_id."
+  const body = response as Record<string, unknown>
+  const errors = flattenResponseErrors(body.errors)
+  if (errors.length > 0) return errors.join(" ")
+  return typeof body.message === "string" && body.message.trim()
+    ? body.message.trim()
+    : "Shiprocket did not return order_id and shipment_id."
+}
+
+function flattenResponseErrors(value: unknown): string[] {
+  if (!value) return []
+  if (typeof value === "string") return [value]
+  if (Array.isArray(value)) return value.flatMap(flattenResponseErrors)
+  if (typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>).flatMap(([key, item]) =>
+      flattenResponseErrors(item).map((message) => `${key}: ${message}`),
+    )
+  }
+  return [String(value)]
 }
 
 type InsertShipmentInput = {

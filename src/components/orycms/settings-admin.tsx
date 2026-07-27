@@ -52,6 +52,19 @@ type ShiprocketSettings = {
   pickupState: string | null
 }
 
+type ShiprocketPickupLocationOption = {
+  id: string
+  pickupLocation: string
+  name: string | null
+  phone: string | null
+  address1: string | null
+  address2: string | null
+  city: string | null
+  state: string | null
+  country: string | null
+  pincode: string | null
+}
+
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/
 
 function isValidEmail(value: string) {
@@ -496,6 +509,8 @@ function ShiprocketSettingsCard({ onToast }: { onToast: (message: string, tone: 
     pickupState: "",
   })
   const [apiPasswordSet, setApiPasswordSet] = useState(false)
+  const [pickupLocations, setPickupLocations] = useState<ShiprocketPickupLocationOption[]>([])
+  const [loadingPickupLocations, setLoadingPickupLocations] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -526,6 +541,7 @@ function ShiprocketSettingsCard({ onToast }: { onToast: (message: string, tone: 
           pickupPincode: data.pickupPincode ?? "",
           pickupState: data.pickupState ?? "",
         })
+        if (data.apiEmail && data.apiPasswordSet) void loadPickupLocations(active)
       })
       .catch((error) => {
         if (active) onToast(error instanceof Error ? error.message : "Failed to load Shiprocket settings.", "error")
@@ -537,6 +553,36 @@ function ShiprocketSettingsCard({ onToast }: { onToast: (message: string, tone: 
 
   function setValue(key: keyof typeof form, value: string | boolean) {
     setForm((current) => ({ ...current, [key]: value }))
+  }
+
+  async function loadPickupLocations(active = true) {
+    setLoadingPickupLocations(true)
+    try {
+      const json = await fetch("/api/orycms/settings/shiprocket/pickup-locations", { cache: "no-store" }).then((response) => response.json())
+      if (!active) return
+      if (!json.success) throw new Error(json.error?.message ?? "Failed to load Shiprocket pickup locations.")
+      setPickupLocations(json.data ?? [])
+    } catch (error) {
+      if (active) onToast(error instanceof Error ? error.message : "Failed to load Shiprocket pickup locations.", "error")
+    } finally {
+      if (active) setLoadingPickupLocations(false)
+    }
+  }
+
+  function selectPickupLocation(value: string) {
+    const selected = pickupLocations.find((location) => location.pickupLocation === value)
+    setForm((current) => ({
+      ...current,
+      pickupLocation: value,
+      pickupName: selected?.name ?? current.pickupName,
+      pickupPhone: selected?.phone?.replace(/\D/g, "").slice(0, 10) ?? current.pickupPhone,
+      pickupAddress1: selected?.address1 ?? current.pickupAddress1,
+      pickupAddress2: selected?.address2 ?? current.pickupAddress2,
+      pickupCity: selected?.city ?? current.pickupCity,
+      pickupState: selected?.state ?? current.pickupState,
+      pickupCountry: selected?.country ?? current.pickupCountry,
+      pickupPincode: selected?.pincode ?? current.pickupPincode,
+    }))
   }
 
   async function save(event: React.FormEvent) {
@@ -557,6 +603,7 @@ function ShiprocketSettingsCard({ onToast }: { onToast: (message: string, tone: 
       if (!json.success) throw new Error(json.error?.message ?? "Failed to save Shiprocket settings.")
       setApiPasswordSet(Boolean(json.data?.apiPasswordSet))
       setForm((current) => ({ ...current, apiPassword: "" }))
+      if (json.data?.apiEmail && json.data?.apiPasswordSet) void loadPickupLocations()
       onToast("Shiprocket settings saved.", "success")
     } catch (error) {
       onToast(error instanceof Error ? error.message : "Failed to save Shiprocket settings.", "error")
@@ -594,11 +641,26 @@ function ShiprocketSettingsCard({ onToast }: { onToast: (message: string, tone: 
               />
             </label>
             <Field label="Channel ID (optional)" value={form.channelId} onChange={(value) => setValue("channelId", value)} />
-            <Field label="Pickup location" value={form.pickupLocation} onChange={(value) => setValue("pickupLocation", value)} />
-            <Field label="Pickup name" value={form.pickupName} onChange={(value) => setValue("pickupName", value)} />
-            <Field label="Pickup phone" value={form.pickupPhone} onChange={(value) => setValue("pickupPhone", value.replace(/\D/g, "").slice(0, 10))} />
-            <Field label="Pickup address line 1" value={form.pickupAddress1} onChange={(value) => setValue("pickupAddress1", value)} />
-            <Field label="Pickup address line 2" value={form.pickupAddress2} onChange={(value) => setValue("pickupAddress2", value)} />
+            {pickupLocations.length > 0 ? (
+              <label className="space-y-1.5">
+                <span className="text-[11.5px] font-medium text-muted-foreground">Pickup location</span>
+                <select
+                  value={form.pickupLocation}
+                  onChange={(event) => selectPickupLocation(event.target.value)}
+                  className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
+                >
+                  <option value="">Choose pickup location</option>
+                  {pickupLocations.map((location) => (
+                    <option key={location.id} value={location.pickupLocation}>
+                      {location.pickupLocation}
+                      {location.pincode ? ` · ${location.pincode}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <Field label={loadingPickupLocations ? "Pickup location (loading…)" : "Pickup location"} value={form.pickupLocation} onChange={(value) => setValue("pickupLocation", value)} />
+            )}
             <Field label="Pickup city" value={form.pickupCity} onChange={(value) => setValue("pickupCity", value)} />
             <Field label="Pickup state" value={form.pickupState} onChange={(value) => setValue("pickupState", value)} />
             <Field label="Pickup country" value={form.pickupCountry} onChange={(value) => setValue("pickupCountry", value)} />
@@ -611,9 +673,6 @@ function ShiprocketSettingsCard({ onToast }: { onToast: (message: string, tone: 
             <Field label="Weight (kg)" value={form.packageWeightKg} onChange={(value) => setValue("packageWeightKg", value)} />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-muted/40 p-3">
-            <p className="text-[11.5px] text-muted-foreground">
-              Env only needs <code>SHIPROCKET_ENCRYPTION_KEY</code>, <code>SHIPROCKET_WEBHOOK_TOKEN</code>, and optional <code>SHIPROCKET_CRON_TOKEN</code>.
-            </p>
             <button
               type="submit"
               disabled={saving}
