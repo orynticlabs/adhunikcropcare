@@ -22,8 +22,27 @@ import CropSuccessStories from "@/components/home/crop-success-stories"
 import { listOryCMSCertificates, type OryCMSCertificateDTO } from "@/lib/orycms/certificates"
 
 export const metadata: Metadata = {
-  title: "Certifications & Quality | Adhunik Crop Care",
-  description: "View Adhunik Crop Care company certificates, quality practices, verification process, and responsible agriculture commitments.",
+  title: "Quality Assurance & Manufacturing | Adhunik Crop Care",
+  description:
+    "Discover Adhunik Crop Care's advanced manufacturing infrastructure, strict quality control processes, and commitment to international standards.",
+  keywords: [
+    "ISO certified pesticide manufacturing India",
+    "advanced manufacturing infrastructure pesticides",
+    "strict quality assurance chemicals",
+    "Adhunik Crop Care certifications",
+  ],
+  openGraph: {
+    title: "Quality Assurance & Manufacturing | Adhunik Crop Care",
+    description:
+      "Discover Adhunik Crop Care's advanced manufacturing infrastructure, strict quality control processes, and commitment to international standards.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Quality Assurance & Manufacturing | Adhunik Crop Care",
+    description:
+      "Discover Adhunik Crop Care's advanced manufacturing infrastructure, strict quality control processes, and commitment to international standards.",
+  },
 }
 
 const STANDARDS = [

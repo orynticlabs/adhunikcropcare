@@ -9,7 +9,30 @@ import CartDrawer from "@/features/cart/components/cart-drawer"
 import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 import CropSuccessStories from "@/components/home/crop-success-stories"
 
-export const metadata: Metadata = { title: "Knowledge Center | Adhunik Crop Care", description: "Sample crop-learning resources, field notes, and practical guides from Adhunik Crop Care." }
+export const metadata: Metadata = {
+  title: "Farmer Knowledge Center | Adhunik Crop Care India",
+  description:
+    "Expert agricultural guides on pest management, herbicide application, fungicide selection, and bio fertilizer usage for Indian farming success.",
+  keywords: [
+    "pesticide application guides",
+    "insecticide dosage tips",
+    "herbicide weed control guide",
+    "fungicide disease control tips",
+    "farmer education India",
+  ],
+  openGraph: {
+    title: "Farmer Knowledge Center | Adhunik Crop Care India",
+    description:
+      "Expert agricultural guides on pest management, herbicide application, fungicide selection, and bio fertilizer usage for Indian farming success.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Farmer Knowledge Center | Adhunik Crop Care India",
+    description:
+      "Expert agricultural guides on pest management, herbicide application, fungicide selection, and bio fertilizer usage for Indian farming success.",
+  },
+}
 
 const RESOURCES = [
   ["Seasonal note", "Preparing the field before the next crop cycle", "A sample checklist for soil observation, residue management, and input planning."],

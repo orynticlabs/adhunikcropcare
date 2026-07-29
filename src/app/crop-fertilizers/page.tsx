@@ -23,9 +23,28 @@ import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-
 import CropSuccessStories from "@/components/home/crop-success-stories"
 
 export const metadata: Metadata = {
-  title: "Crop Fertilizers | Adhunik Crop Care",
+  title: "Bio Fertilizers & Plant Nutrition | Adhunik Crop Care",
   description:
-    "Explore balanced crop fertilizers, water-soluble nutrition, micronutrients, and soil-building solutions from Adhunik Crop Care.",
+    "Innovative bio fertilizers, Bio DAP, micronutrients & plant growth promoters enhancing root growth, soil fertility, and crop yields across India.",
+  keywords: [
+    "bio fertilizer manufacturing company in India",
+    "Bio DAP manufacturer India",
+    "plant growth promoters India",
+    "soil conditioners",
+    "micronutrient formulations agriculture",
+  ],
+  openGraph: {
+    title: "Bio Fertilizers & Plant Nutrition | Adhunik Crop Care",
+    description:
+      "Innovative bio fertilizers, Bio DAP, micronutrients & plant growth promoters enhancing root growth, soil fertility, and crop yields across India.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bio Fertilizers & Plant Nutrition | Adhunik Crop Care",
+    description:
+      "Innovative bio fertilizers, Bio DAP, micronutrients & plant growth promoters enhancing root growth, soil fertility, and crop yields across India.",
+  },
 }
 
 const PROGRAMS = [

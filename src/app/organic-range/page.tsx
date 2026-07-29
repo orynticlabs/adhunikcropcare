@@ -22,9 +22,28 @@ import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-
 import CropSuccessStories from "@/components/home/crop-success-stories"
 
 export const metadata: Metadata = {
-  title: "Organic Range | Adhunik Crop Care",
+  title: "Organic Crop Protection Solutions | Adhunik Crop Care",
   description:
-    "Discover compost, vermicompost, neem cake, and organic plant care solutions created for living soil and resilient crops.",
+    "Organic crop protection products for fruits, vegetables & grains. Eco-responsible formulas enhancing crop health with zero harmful residues.",
+  keywords: [
+    "organic crop protection India",
+    "bio organic pesticides",
+    "zero chemical residue crops",
+    "organic farming solutions India",
+    "natural crop care chemicals",
+  ],
+  openGraph: {
+    title: "Organic Crop Protection Solutions | Adhunik Crop Care",
+    description:
+      "Organic crop protection products for fruits, vegetables & grains. Eco-responsible formulas enhancing crop health with zero harmful residues.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Organic Crop Protection Solutions | Adhunik Crop Care",
+    description:
+      "Organic crop protection products for fruits, vegetables & grains. Eco-responsible formulas enhancing crop health with zero harmful residues.",
+  },
 }
 
 const CYCLE = [

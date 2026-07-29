@@ -23,9 +23,27 @@ import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-
 import CropSuccessStories from "@/components/home/crop-success-stories"
 
 export const metadata: Metadata = {
-  title: "Contact Us | Adhunik Crop Care",
+  title: "Contact Adhunik Crop Care | Pesticides Company India",
   description:
-    "Contact Adhunik Crop Care for product guidance, farmer support, dealership inquiries, and agricultural solutions.",
+    "Contact Adhunik Crop Care for pesticide supplies, agricultural queries, dealer partnerships, and agronomy advice. We are here to serve Indian farmers.",
+  keywords: [
+    "contact Adhunik Crop Care",
+    "pesticides company contact India",
+    "agricultural chemical support",
+    "dealer distributor inquiry pesticides",
+  ],
+  openGraph: {
+    title: "Contact Adhunik Crop Care | Pesticides Company India",
+    description:
+      "Contact Adhunik Crop Care for pesticide supplies, agricultural queries, dealer partnerships, and agronomy advice. We are here to serve Indian farmers.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Contact Adhunik Crop Care | Pesticides Company India",
+    description:
+      "Contact Adhunik Crop Care for pesticide supplies, agricultural queries, dealer partnerships, and agronomy advice. We are here to serve Indian farmers.",
+  },
 }
 
 const CHANNELS = [

@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -22,14 +23,41 @@ import {
 } from "@/lib/orycms/products"
 import { listOryCMSReelVideos } from "@/lib/orycms/reel-videos"
 
+export const metadata: Metadata = {
+  title: "Adhunik Crop Care | Pesticides & Bio Fertilizers India",
+  description:
+    "Trusted pesticides and agricultural chemicals manufacturer in India. High quality insecticides, fungicides, herbicides, biopesticides & fertilizers.",
+  keywords: [
+    "pesticides manufacturer in India",
+    "insecticides manufacturers in India",
+    "herbicides manufacturer India",
+    "fungicides manufacturer India",
+    "biopesticides India",
+    "bio fertilizers India",
+    "Adhunik Crop Care",
+  ],
+  openGraph: {
+    title: "Adhunik Crop Care | Pesticides & Bio Fertilizers India",
+    description:
+      "Trusted pesticides and agricultural chemicals manufacturer in India. High quality insecticides, fungicides, herbicides, biopesticides & fertilizers.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Adhunik Crop Care | Pesticides & Bio Fertilizers India",
+    description:
+      "Trusted pesticides and agricultural chemicals manufacturer in India. High quality insecticides, fungicides, herbicides, biopesticides & fertilizers.",
+  },
+}
+
 /* ─── Data ───────────────────────────────────────────────── */
 const CATEGORIES = [
-  { icon: Sprout,       title: "Crop Fertilizers", desc: "NPK blends, micronutrients, growth boosters.", from: "from-[#689c30]/20", to: "to-[#033927]/30" },
-  { icon: Leaf,         title: "Organic Range",    desc: "Compost, vermicompost, neem cake.",            from: "from-[#e9c46a]/20", to: "to-[#689c30]/20" },
-  { icon: FlaskConical, title: "Bio Products",     desc: "Rhizobium, mycorrhiza, beneficial microbes.",  from: "from-[#033927]/30", to: "to-[#689c30]/20" },
-  { icon: Droplets,     title: "Soil Care",        desc: "pH balancers, conditioners, gypsum.",          from: "from-[#3d2b1f]/15", to: "to-[#e9c46a]/20" },
-  { icon: Tractor,      title: "Irrigation",       desc: "Drip systems, sprinklers, smart valves.",      from: "from-[#689c30]/25", to: "to-[#e9c46a]/15" },
-  { icon: Bug,          title: "Pest Management",  desc: "Bio-pesticides, IPM kits, traps.",             from: "from-[#033927]/20", to: "to-[#3d2b1f]/15" },
+  { icon: Bug,          title: "Insecticides",     desc: "Control sucking pests, borers & caterpillars with Chlorpyrifos, Emamectin, & Cypermethrin.", from: "from-[#033927]/20", to: "to-[#3d2b1f]/15", href: "/insecticides" },
+  { icon: Leaf,         title: "Herbicides",       desc: "Selective & non-selective weed control including Glyphosate 41 SL for higher crop yields.",    from: "from-[#e9c46a]/20", to: "to-[#689c30]/20", href: "/herbicides" },
+  { icon: FlaskConical, title: "Fungicides",       desc: "Mancozeb, Copper Oxychloride & Hexaconazole protecting crops from blights & rust.",           from: "from-[#033927]/30", to: "to-[#689c30]/20", href: "/fungicides" },
+  { icon: Sprout,       title: "Bio-Pesticides",   desc: "Sustainable biopesticides reducing chemical residue and enriching soil microflora.",          from: "from-[#689c30]/20", to: "to-[#033927]/30", href: "/bio-products" },
+  { icon: Droplets,     title: "Bio Fertilizers",  desc: "Bio DAP, Plant Growth Promoters, Micronutrient Formulations & Soil Conditioners.",           from: "from-[#3d2b1f]/15", to: "to-[#e9c46a]/20", href: "/crop-fertilizers" },
+  { icon: Tractor,      title: "Crop Management",  desc: "Integrated pest control programs for Rice, Cotton, Tomato, Okra & Vegetables.",               from: "from-[#689c30]/25", to: "to-[#e9c46a]/15", href: "/farmer-services" },
 ]
 
 const TUTORIALS = [
@@ -168,7 +196,7 @@ export default async function Home() {
             </div>
 
             <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {CATEGORIES.map(({ icon: Icon, title, desc, from, to }) => (
+              {CATEGORIES.map(({ icon: Icon, title, desc, from, to, href }) => (
                 <div
                   key={title}
                   className={`group relative overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br ${from} ${to} p-7 shadow-soft transition-all duration-500 hover:-translate-y-1 hover:shadow-luxe`}
@@ -181,19 +209,7 @@ export default async function Home() {
                     <h3 className="font-display text-2xl">{title}</h3>
                     <p className="mt-2 text-foreground/70">{desc}</p>
                     <Link
-                      href={
-                        title === "Crop Fertilizers"
-                          ? "/crop-fertilizers"
-                          : title === "Organic Range"
-                            ? "/organic-range"
-                            : title === "Bio Products"
-                              ? "/bio-products"
-                              : title === "Soil Care"
-                                ? "/soil-care"
-                                : title === "Irrigation"
-                                  ? "/irrigation-solutions"
-                                  : "/products"
-                      }
+                      href={href}
                       className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-[#033927] hover:gap-2 transition-all"
                     >
                       Explore <ArrowRight className="h-4 w-4" aria-hidden />
@@ -220,6 +236,94 @@ export default async function Home() {
               </h2>
             </div>
             <KnowledgeTabs />
+          </div>
+        </section>
+
+        {/* ══ Range of Crop Protection Products ══════════════ */}
+        <section className="relative py-12 sm:py-20 bg-muted/30 border-y border-border/50">
+          <div className="mx-auto max-w-7xl px-4">
+            <div className="text-center mx-auto max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
+                <ShieldCheck className="h-3.5 w-3.5 text-[#689c30]" aria-hidden /> Trusted Pesticides Manufacturer in India
+              </div>
+              <h2 className="mt-4 font-display text-3xl sm:text-4xl lg:text-5xl leading-[1.1] tracking-tight">
+                Range of Crop Protection & Soil Care Solutions
+              </h2>
+              <p className="mt-3 text-base text-foreground/75 leading-relaxed">
+                Adhunik Crop Care manufactures high-quality pesticides, insecticides, fungicides, herbicides, biopesticides, and bio fertilizers designed to help Indian farmers protect crops, increase yields, and practice sustainable modern farming.
+              </p>
+            </div>
+
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-soft hover:shadow-luxe transition">
+                <div className="inline-grid h-12 w-12 place-items-center rounded-2xl bg-[#033927]/10 text-[#033927] mb-4">
+                  <Bug className="h-6 w-6" />
+                </div>
+                <h3 className="font-display text-xl font-bold">Insecticides</h3>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  Chlorpyrifos, Emamectin Benzoate 5 SG, Cypermethrin, Deltamethrin, Cartap, Chlorantraniliprole, Diflubenzuron, Malathion, Monocrotophos.
+                </p>
+                <Link href="/insecticides" className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#033927] hover:text-[#689c30]">
+                  View Insecticides <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+
+              <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-soft hover:shadow-luxe transition">
+                <div className="inline-grid h-12 w-12 place-items-center rounded-2xl bg-[#e9c46a]/20 text-[#033927] mb-4">
+                  <Leaf className="h-6 w-6" />
+                </div>
+                <h3 className="font-display text-xl font-bold">Herbicides</h3>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  Selective & non-selective herbicides including Glyphosate 41 SL. Pre & post-emergence weed control for maximum crop nutrient absorption.
+                </p>
+                <Link href="/herbicides" className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#033927] hover:text-[#689c30]">
+                  View Herbicides <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+
+              <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-soft hover:shadow-luxe transition">
+                <div className="inline-grid h-12 w-12 place-items-center rounded-2xl bg-[#033927]/10 text-[#033927] mb-4">
+                  <FlaskConical className="h-6 w-6" />
+                </div>
+                <h3 className="font-display text-xl font-bold">Fungicides</h3>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  Mancozeb, Copper Oxychloride, Hexaconazole, combination fungicides, seed treatment, and organic fungicides for fruits and grapes.
+                </p>
+                <Link href="/fungicides" className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#033927] hover:text-[#689c30]">
+                  View Fungicides <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+
+              <div className="rounded-3xl border border-border/60 bg-card p-6 shadow-soft hover:shadow-luxe transition">
+                <div className="inline-grid h-12 w-12 place-items-center rounded-2xl bg-[#689c30]/20 text-[#033927] mb-4">
+                  <Sprout className="h-6 w-6" />
+                </div>
+                <h3 className="font-display text-xl font-bold">Bio Fertilizers</h3>
+                <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                  Bio DAP, Bio Fertilizers, Plant Growth Promoters, Soil Conditioners, and Micronutrient Formulations for enhanced root growth and soil fertility.
+                </p>
+                <Link href="/crop-fertilizers" className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#033927] hover:text-[#689c30]">
+                  View Bio Fertilizers <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Serving Farmers Across India */}
+            <div className="mt-12 rounded-3xl bg-[#033927] p-8 text-white shadow-xl">
+              <div className="grid gap-6 lg:grid-cols-3 lg:items-center">
+                <div className="lg:col-span-2">
+                  <h3 className="font-display text-2xl sm:text-3xl">Why Choose Adhunik Crop Care?</h3>
+                  <p className="mt-2 text-sm text-white/80 leading-relaxed">
+                    Advanced manufacturing infrastructure, strict quality assurance processes, experienced research & development team, and dealer/distributor support across India ensuring competitive pricing and reliable supply.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3 lg:justify-end">
+                  <Link href="/bulk-support" className="inline-flex h-11 items-center gap-2 rounded-full bg-[#bdd879] px-6 text-sm font-bold text-[#17382d] transition-colors hover:bg-white hover:text-[#17382d]">
+                    Become a Dealer <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

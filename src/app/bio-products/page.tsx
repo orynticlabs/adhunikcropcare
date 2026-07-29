@@ -9,7 +9,30 @@ import CartDrawer from "@/features/cart/components/cart-drawer"
 import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 import CropSuccessStories from "@/components/home/crop-success-stories"
 
-export const metadata: Metadata = { title: "Bio Products | Adhunik Crop Care", description: "Explore microbial biofertilizers and biological crop-support products." }
+export const metadata: Metadata = {
+  title: "Bio Pesticides & Organics | Adhunik Crop Care India",
+  description:
+    "Eco-friendly bio pesticides & organic crop protection reducing chemical residues, enriching soil microflora, and supporting sustainable agriculture.",
+  keywords: [
+    "biopesticides India",
+    "bio pesticides manufacturer in India",
+    "organic crop protection",
+    "reduce chemical residues crops",
+    "soil microflora health",
+  ],
+  openGraph: {
+    title: "Bio Pesticides & Organics | Adhunik Crop Care India",
+    description:
+      "Eco-friendly bio pesticides & organic crop protection reducing chemical residues, enriching soil microflora, and supporting sustainable agriculture.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bio Pesticides & Organics | Adhunik Crop Care India",
+    description:
+      "Eco-friendly bio pesticides & organic crop protection reducing chemical residues, enriching soil microflora, and supporting sustainable agriculture.",
+  },
+}
 
 const CULTURES = [
   [Dna,"Nitrogen fixers","Support biological nitrogen availability around active roots."],

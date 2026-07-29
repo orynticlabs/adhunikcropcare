@@ -10,8 +10,28 @@ import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-
 import CropSuccessStories from "@/components/home/crop-success-stories"
 
 export const metadata: Metadata = {
-  title: "Soil Care | Adhunik Crop Care",
-  description: "Explore soil conditioners, pH support, root-zone care, and practical soil health solutions.",
+  title: "Soil Care & Conditioners | Adhunik Crop Care India",
+  description:
+    "Soil conditioners, micronutrient formulations, and biological nutrition products improving soil health, nutrient absorption, and crop productivity.",
+  keywords: [
+    "soil care products India",
+    "soil conditioners manufacturer",
+    "micronutrient formulations",
+    "soil health improvement India",
+    "bio fertilizers soil fertility",
+  ],
+  openGraph: {
+    title: "Soil Care & Conditioners | Adhunik Crop Care India",
+    description:
+      "Soil conditioners, micronutrient formulations, and biological nutrition products improving soil health, nutrient absorption, and crop productivity.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Soil Care & Conditioners | Adhunik Crop Care India",
+    description:
+      "Soil conditioners, micronutrient formulations, and biological nutrition products improving soil health, nutrient absorption, and crop productivity.",
+  },
 }
 
 const LAYERS = [

@@ -9,7 +9,30 @@ import CartDrawer from "@/features/cart/components/cart-drawer"
 import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 import CropSuccessStories from "@/components/home/crop-success-stories"
 
-export const metadata: Metadata = { title: "Bulk Support | Adhunik Crop Care", description: "Sample bulk-order and dealership support information from Adhunik Crop Care." }
+export const metadata: Metadata = {
+  title: "Bulk Orders & Dealer Support | Adhunik Crop Care",
+  description:
+    "Partner with Adhunik Crop Care as a dealer or distributor. Advanced manufacturing, reliable supply, and premium crop protection chemicals across India.",
+  keywords: [
+    "pesticide dealer network India",
+    "pesticide distributor inquiry",
+    "bulk pesticide orders India",
+    "fertilizer wholesale supplier",
+    "Adhunik Crop Care dealership",
+  ],
+  openGraph: {
+    title: "Bulk Orders & Dealer Support | Adhunik Crop Care",
+    description:
+      "Partner with Adhunik Crop Care as a dealer or distributor. Advanced manufacturing, reliable supply, and premium crop protection chemicals across India.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Bulk Orders & Dealer Support | Adhunik Crop Care",
+    description:
+      "Partner with Adhunik Crop Care as a dealer or distributor. Advanced manufacturing, reliable supply, and premium crop protection chemicals across India.",
+  },
+}
 
 export default function BulkSupportPage() {
   return (

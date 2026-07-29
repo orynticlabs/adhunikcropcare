@@ -23,9 +23,28 @@ import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-
 import CropSuccessStories from "@/components/home/crop-success-stories"
 
 export const metadata: Metadata = {
-  title: "About Us | Adhunik Crop Care",
+  title: "About Us | Adhunik Crop Care Pesticides Manufacturer",
   description:
-    "Learn about Adhunik Crop Care, our farmer-first philosophy, agricultural expertise, and commitment to dependable crop solutions.",
+    "Learn about Adhunik Crop Care, a trusted pesticide manufacturer in India offering high-quality crop protection and bio plant nutrition solutions.",
+  keywords: [
+    "about Adhunik Crop Care",
+    "pesticides manufacturer India",
+    "insecticides R&D facility India",
+    "biopesticide production",
+    "agricultural solutions India",
+  ],
+  openGraph: {
+    title: "About Us | Adhunik Crop Care Pesticides Manufacturer",
+    description:
+      "Learn about Adhunik Crop Care, a trusted pesticide manufacturer in India offering high-quality crop protection and bio plant nutrition solutions.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "About Us | Adhunik Crop Care Pesticides Manufacturer",
+    description:
+      "Learn about Adhunik Crop Care, a trusted pesticide manufacturer in India offering high-quality crop protection and bio plant nutrition solutions.",
+  },
 }
 
 const VALUES = [
@@ -174,24 +193,29 @@ export default function AboutPage() {
               </h2>
               <div className="mt-7 space-y-5 text-base leading-7 text-foreground/68">
                 <p>
-                  Adhunik Crop Care was shaped by a straightforward belief: farmers
-                  deserve solutions that perform in real conditions and guidance they
-                  can confidently put into practice.
+                  Adhunik Crop Care is a name in India when it comes to manufacturing pesticides, insecticides, herbicides, fungicides, biopesticides, and specialized agricultural chemicals for farming. We provide reliable solutions for farmers and agricultural professionals to protect crops and maximize harvest yields.
                 </p>
                 <p>
-                  Our work connects crop protection, plant nutrition, organic care,
-                  soil health, and farmer education. This integrated approach helps us
-                  look beyond a single problem and support the complete crop journey.
+                  Our comprehensive product line includes active technical formulations such as <strong>Chlorpyrifos, Emamectin Benzoate 5 SG, Cypermethrin, Deltamethrin, Cartap Hydrochloride, Chlorantraniliprole, Glyphosate 41 SL, Mancozeb, Copper Oxychloride, Hexaconazole, and Bio DAP</strong>.
                 </p>
                 <p>
-                  As agriculture evolves, we continue to invest in stronger products,
-                  clearer knowledge, and closer relationships with the people who grow
-                  the food and raw materials our communities depend on.
+                  With state-of-the-art manufacturing facilities, automated production lines, strict quality assurance testing, an experienced agronomy R&D team, and a robust dealer and distributor network across India, Adhunik Crop Care ensures consistent quality, competitive pricing, and sustainable farming success.
                 </p>
               </div>
-              <Link href="/products" className="mt-8 inline-flex items-center gap-2 text-sm font-bold text-[#033927]">
-                Explore our solutions <ArrowRight className="h-4 w-4" />
-              </Link>
+              <div className="mt-8 flex flex-wrap gap-4">
+                <Link href="/insecticides" className="inline-flex items-center gap-1.5 rounded-full bg-[#033927] px-5 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">
+                  Insecticides <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+                <Link href="/herbicides" className="inline-flex items-center gap-1.5 rounded-full bg-[#033927] px-5 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">
+                  Herbicides <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+                <Link href="/fungicides" className="inline-flex items-center gap-1.5 rounded-full bg-[#033927] px-5 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">
+                  Fungicides <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+                <Link href="/bio-products" className="inline-flex items-center gap-1.5 rounded-full bg-[#033927] px-5 py-2.5 text-xs font-bold text-white transition-colors hover:bg-[#689c30] hover:!text-black">
+                  Bio Products <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
             </div>
           </div>
         </section>

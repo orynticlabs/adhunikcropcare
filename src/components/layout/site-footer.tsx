@@ -31,18 +31,19 @@ const FOOTER_COLUMNS = [
     ],
   },
   {
-    heading: "Explore",
+    heading: "Crop Protection",
     links: [
-      ["All Products", "/products"],
-      ["Crop Fertilizers", "/crop-fertilizers"],
-      ["Organic Range", "/organic-range"],
-      ["Bio Products", "/bio-products"],
-      ["Irrigation", "/irrigation-solutions"],
+      ["Insecticides", "/insecticides"],
+      ["Herbicides", "/herbicides"],
+      ["Fungicides", "/fungicides"],
+      ["Bio-Pesticides", "/bio-products"],
+      ["Bio Fertilizers", "/crop-fertilizers"],
     ],
   },
   {
     heading: "Farmer Support",
     links: [
+      ["All Products", "/products"],
       ["Farmer Services", "/farmer-services"],
       ["Knowledge Center", "/knowledge-center"],
       ["Soil Care", "/soil-care"],

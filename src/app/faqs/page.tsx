@@ -11,7 +11,25 @@ import { listOryCMSFaqs } from "@/lib/orycms/faqs"
 export const metadata: Metadata = {
   title: "Frequently Asked Questions | Adhunik Crop Care",
   description:
-    "Find answers to common questions about Adhunik Crop Care organic products, pan-India delivery, certifications, dealer inquiries, and agricultural guidance.",
+    "Get answers on pesticide application, insecticide safety, bio fertilizer benefits, quality standards, and ordering options from Adhunik Crop Care.",
+  keywords: [
+    "pesticide FAQs India",
+    "insecticide safety guidelines",
+    "bio fertilizer usage questions",
+    "Adhunik Crop Care FAQs",
+  ],
+  openGraph: {
+    title: "Frequently Asked Questions | Adhunik Crop Care",
+    description:
+      "Get answers on pesticide application, insecticide safety, bio fertilizer benefits, quality standards, and ordering options from Adhunik Crop Care.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Frequently Asked Questions | Adhunik Crop Care",
+    description:
+      "Get answers on pesticide application, insecticide safety, bio fertilizer benefits, quality standards, and ordering options from Adhunik Crop Care.",
+  },
 }
 
 export default async function FaqsPage() {
