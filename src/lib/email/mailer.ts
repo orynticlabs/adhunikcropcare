@@ -24,7 +24,35 @@ export function emailBaseUrl() {
 }
 
 export function isEmailDeliveryConfigured() {
-  return Boolean(process.env.SMTP_GMAIL_USER && process.env.SMTP_GMAIL_APP_PASSWORD)
+  return Boolean(getSmtpTransporter())
+}
+
+function getSmtpTransporter() {
+  const host = process.env.SMTP_HOST
+  const portStr = process.env.SMTP_PORT
+  const port = portStr ? parseInt(portStr, 10) : 465
+  const user = process.env.SMTP_USER
+  const pass = process.env.SMTP_PASSWORD
+  const from = process.env.SMTP_EMAIL_FROM ?? process.env.ORDER_EMAIL_FROM ?? user
+  const replyTo = process.env.SMTP_REPLY_TO
+
+  if (!pass || (!host && !user)) {
+    return null
+  }
+
+  const transporter = host
+    ? nodemailer.createTransport({
+        host,
+        port,
+        secure: port === 465,
+        auth: user ? { user, pass } : undefined,
+      })
+    : nodemailer.createTransport({
+        service: "gmail",
+        auth: { user: user!, pass },
+      })
+
+  return { transporter, from: from ?? "", replyTo }
 }
 
 function preferenceToken(userId: string) {
@@ -62,22 +90,26 @@ async function canSend(userId: string | undefined, template: EmailTemplateName) 
 
 export async function sendEmail(input: SendInput) {
   if (!(await canSend(input.userId, input.template))) return { skipped: true }
-  const user = process.env.SMTP_GMAIL_USER
-  const pass = process.env.SMTP_GMAIL_APP_PASSWORD
-  if (!user || !pass) {
-    console.warn(`Email ${input.template} skipped: Gmail SMTP is not configured.`)
+  const smtp = getSmtpTransporter()
+  if (!smtp) {
+    console.warn(`Email ${input.template} skipped: SMTP is not configured.`)
     return { skipped: true }
   }
   const rendered = emailTemplates[input.template]({ ...input, unsubscribeUrl: unsubscribeUrl(input.userId) })
-  const transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } })
-  const info = await transporter.sendMail({
-    from: process.env.SMTP_EMAIL_FROM ?? user,
-    to: input.to,
-    subject: rendered.subject,
-    text: rendered.text,
-    html: rendered.html,
-  })
-  return { messageId: info.messageId, skipped: false }
+  try {
+    const info = await smtp.transporter.sendMail({
+      from: smtp.from,
+      replyTo: smtp.replyTo,
+      to: input.to,
+      subject: rendered.subject,
+      text: rendered.text,
+      html: rendered.html,
+    })
+    return { messageId: info.messageId, skipped: false }
+  } catch (error) {
+    console.error(`[SMTP Error] Delivery failed for template "${input.template}" to "${input.to}":`, error)
+    return { error: error instanceof Error ? error.message : String(error), skipped: true }
+  }
 }
 
 export async function sendAdminEmail(input: Omit<SendInput, "to" | "userId">) {
@@ -108,47 +140,55 @@ export type LowStockAdminNotificationData = {
  * Sends the detailed "new order" notification to admin-configured recipients
  * (managed on the Settings page). No unsubscribe/preference gating is applied —
  * these are operational admin addresses, not customers. Skips silently when no
- * recipients are configured or Gmail SMTP is not set up, so a missing config
+ * recipients are configured or SMTP is not set up, so a missing config
  * never blocks order placement.
  */
 export async function sendOrderAdminNotifications(recipients: string[], data: OrderAdminNotificationData) {
   const unique = Array.from(new Set(recipients.map((email) => email.trim().toLowerCase()).filter(Boolean)))
   if (unique.length === 0) return { skipped: true }
-  const user = process.env.SMTP_GMAIL_USER
-  const pass = process.env.SMTP_GMAIL_APP_PASSWORD
-  if (!user || !pass) {
-    console.warn("Order admin notification skipped: Gmail SMTP is not configured.")
+  const smtp = getSmtpTransporter()
+  if (!smtp) {
+    console.warn("Order admin notification skipped: SMTP is not configured.")
     return { skipped: true }
   }
   const rendered = emailTemplates.adminOrderNotification({ ...data, unsubscribeUrl: `${emailBaseUrl()}/admin/settings` })
-  const transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } })
-  const info = await transporter.sendMail({
-    from: process.env.SMTP_EMAIL_FROM ?? user,
-    to: unique.join(", "),
-    subject: rendered.subject,
-    text: rendered.text,
-    html: rendered.html,
-  })
-  return { messageId: info.messageId, recipients: unique, skipped: false }
+  try {
+    const info = await smtp.transporter.sendMail({
+      from: smtp.from,
+      replyTo: smtp.replyTo,
+      to: unique.join(", "),
+      subject: rendered.subject,
+      text: rendered.text,
+      html: rendered.html,
+    })
+    return { messageId: info.messageId, recipients: unique, skipped: false }
+  } catch (error) {
+    console.error("[SMTP Error] Order admin notification delivery failed:", error)
+    return { error: error instanceof Error ? error.message : String(error), recipients: unique, skipped: true }
+  }
 }
 
 export async function sendLowStockAdminNotifications(recipients: string[], data: LowStockAdminNotificationData) {
   const unique = Array.from(new Set(recipients.map((email) => email.trim().toLowerCase()).filter(Boolean)))
   if (unique.length === 0) return { skipped: true }
-  const user = process.env.SMTP_GMAIL_USER
-  const pass = process.env.SMTP_GMAIL_APP_PASSWORD
-  if (!user || !pass) {
-    console.warn("Low stock admin notification skipped: Gmail SMTP is not configured.")
+  const smtp = getSmtpTransporter()
+  if (!smtp) {
+    console.warn("Low stock admin notification skipped: SMTP is not configured.")
     return { skipped: true }
   }
   const rendered = emailTemplates.adminLowStockNotification({ ...data, unsubscribeUrl: `${emailBaseUrl()}/admin/settings` })
-  const transporter = nodemailer.createTransport({ service: "gmail", auth: { user, pass } })
-  const info = await transporter.sendMail({
-    from: process.env.SMTP_EMAIL_FROM ?? user,
-    to: unique.join(", "),
-    subject: rendered.subject,
-    text: rendered.text,
-    html: rendered.html,
-  })
-  return { messageId: info.messageId, recipients: unique, skipped: false }
+  try {
+    const info = await smtp.transporter.sendMail({
+      from: smtp.from,
+      replyTo: smtp.replyTo,
+      to: unique.join(", "),
+      subject: rendered.subject,
+      text: rendered.text,
+      html: rendered.html,
+    })
+    return { messageId: info.messageId, recipients: unique, skipped: false }
+  } catch (error) {
+    console.error("[SMTP Error] Low stock admin notification delivery failed:", error)
+    return { error: error instanceof Error ? error.message : String(error), recipients: unique, skipped: true }
+  }
 }

@@ -606,28 +606,19 @@ export async function sendOrderConfirmationEmail(order: StorefrontOrderRow) {
     SELECT id FROM storefront_email_logs WHERE order_id = ${order.id}::uuid AND type = 'order_confirmation' LIMIT 1
   `
   if (existing) return
-  await Promise.all([
+  const [customerEmailResult] = await Promise.all([
     sendOrderEventEmail(order, "orderPlaced"),
     sendAdminEmail({ firstName: contact?.firstName, orderNumber: order.number, template: "orderPlaced", total: Number(order.total), unsubscribeUrl: "" }),
-  ]).catch((error) => console.error("Order SMTP email failed", error))
+  ]).catch((error) => {
+    console.error("Order SMTP email failed", error)
+    return [{ skipped: true }]
+  })
   await sendConfiguredAdminOrderNotifications(order).catch((error) => console.error("Admin order notification failed", error))
-  let status = "skipped"
-  let providerId: string | null = null
-  if (process.env.RESEND_API_KEY && process.env.ORDER_EMAIL_FROM) {
-    const response = await fetch("https://api.resend.com/emails", {
-      body: JSON.stringify({
-        from: process.env.ORDER_EMAIL_FROM,
-        to: recipient,
-        subject: `Adhunik Crop Care order ${order.number}`,
-        html: `<p>Hello ${contact?.firstName ?? ""},</p><p>Your order <strong>${order.number}</strong> is confirmed.</p><p>Total: ₹${Number(order.total).toFixed(2)}</p>`,
-      }),
-      headers: { authorization: `Bearer ${process.env.RESEND_API_KEY}`, "content-type": "application/json" },
-      method: "POST",
-    })
-    const json = await response.json().catch(() => ({})) as { id?: string }
-    status = response.ok ? "sent" : "failed"
-    providerId = json.id ?? null
-  }
+  
+  const messageId = customerEmailResult && "messageId" in customerEmailResult ? customerEmailResult.messageId : null
+  const status = customerEmailResult?.skipped ? "skipped" : messageId ? "sent" : "failed"
+  const providerId = messageId
+
   await orycmsPrisma.$executeRaw`
     INSERT INTO storefront_email_logs (order_id, type, recipient, provider_id, status)
     VALUES (${order.id}::uuid, 'order_confirmation', ${recipient}, ${providerId}, ${status})
