@@ -37,16 +37,6 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/orycms/auth/setup-status")
-      .then((r) => r.json())
-      .then((data: { success: boolean; data?: { initialized: boolean } }) => {
-        if (data.success && !data.data?.initialized) router.replace("/setup");
-      })
-      .catch(() => {});
-  }, [router]);
-
   const handleSignIn = async () => {
     setError(null);
     setIsSubmitting(true);

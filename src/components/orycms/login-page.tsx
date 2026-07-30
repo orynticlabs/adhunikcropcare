@@ -51,15 +51,6 @@ function LoginForm() {
     router.replace(adminDestination(searchParams.get("from")))
   }, [loaded, router, searchParams, user])
 
-  useEffect(() => {
-    fetch("/api/orycms/auth/setup-status")
-      .then((response) => response.json())
-      .then((data: { success: boolean; data?: { initialized: boolean } }) => {
-        if (data.success && !data.data?.initialized) router.replace("/admin/setup")
-      })
-      .catch(() => {})
-  }, [router])
-
   async function handleSignIn() {
     setError(null)
     setIsSubmitting(true)
