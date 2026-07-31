@@ -26,6 +26,7 @@ export function MarketplaceProductsSection({
 }: {
   products: OryCMSProductDTO[]
 }) {
+  const featuredProducts = products.filter((p) => p.featured)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   function scroll(direction: "left" | "right") {
@@ -74,8 +75,8 @@ export function MarketplaceProductsSection({
           ref={scrollRef}
           className="mx-0 sm:-mx-4 mt-7 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-5 scrollbar-none sm:mt-10 sm:gap-5 sm:pb-6 scroll-smooth"
         >
-          {products.length > 0 ? (
-            products.map((p) => {
+          {featuredProducts.length > 0 ? (
+            featuredProducts.map((p) => {
               const price = p.salePrice ?? p.price
 
               return (

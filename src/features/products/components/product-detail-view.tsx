@@ -14,6 +14,7 @@ import {
   ShoppingBag,
   Sparkles,
   Star,
+  Tag,
   Truck,
   X,
 } from "lucide-react"
@@ -47,6 +48,7 @@ type RecommendedProduct = {
 export type ProductDetail = {
   brand?: string
   category: string
+  defaultOptionIndex?: number
   description: string
   dosage: string[]
   images: ProductImage[]
@@ -198,7 +200,7 @@ function isHtml(value?: string) {
 export default function ProductDetailView({ product }: { product: ProductDetail }) {
   const [activeImage, setActiveImage] = useState(0)
   const [imgVisible, setImgVisible] = useState(true)
-  const [activeOption, setActiveOption] = useState(0)
+  const [activeOption, setActiveOption] = useState(product.defaultOptionIndex ?? 0)
   const [quantity, setQuantity] = useState(1)
   const [pincode, setPincode] = useState("")
   const [checkedPin, setCheckedPin] = useState("")
@@ -206,7 +208,15 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
   const [checkingPin, setCheckingPin] = useState(false)
   const [pinError, setPinError] = useState("")
   const [couponCopied, setCouponCopied] = useState(false)
-  const [openSpec, setOpenSpec] = useState<string>("Product Specifications")
+  const [openSpec, setOpenSpec] = useState<string>(
+    product.specifications?.trim()
+      ? "Product Specifications"
+      : product.howToUse?.trim()
+      ? "How to Use"
+      : product.shippingReturns?.trim()
+      ? "Shipping & Returns"
+      : ""
+  )
   const [visibleReviews, setVisibleReviews] = useState(3)
 
   type LiveOffer = { id: string; name: string; code: string | null; shortText: string | null; bgColor: string | null; textColor: string | null; badgeText: string | null; buttonText: string | null }
@@ -446,89 +456,94 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
 
   const specLines = contentLines(product.specifications)
   const howToUseLines = contentLines(product.howToUse)
-  const usageLines = howToUseLines.length > 0 ? howToUseLines : product.usage
 
   const specSections: Array<{ title: string; render: () => ReactNode }> = [
-    {
-      title: "Product Specifications",
-      render: () => {
-        if (isHtml(product.specifications)) {
-          return (
-            <div
-              className="richtext text-sm text-foreground/75"
-              dangerouslySetInnerHTML={{ __html: product.specifications as string }}
-            />
-          )
-        }
-        // "Key: value" lines render as a definition grid; anything else falls back
-        // to the derived spec rows so the section is never empty.
-        const paired = specLines
-          .map((line) => {
-            const idx = line.indexOf(":")
-            return idx > 0 ? ([line.slice(0, idx).trim(), line.slice(idx + 1).trim()] as [string, string]) : null
-          })
-          .filter((row): row is [string, string] => row !== null)
-        const rows = paired.length > 0 ? paired : specLines.length === 0 ? specRows : null
+    ...(product.specifications?.trim()
+      ? [
+          {
+            title: "Product Specifications",
+            render: () => {
+              if (isHtml(product.specifications)) {
+                return (
+                  <div
+                    className="richtext text-sm text-foreground/75"
+                    dangerouslySetInnerHTML={{ __html: product.specifications as string }}
+                  />
+                )
+              }
+              const paired = specLines
+                .map((line) => {
+                  const idx = line.indexOf(":")
+                  return idx > 0 ? ([line.slice(0, idx).trim(), line.slice(idx + 1).trim()] as [string, string]) : null
+                })
+                .filter((row): row is [string, string] => row !== null)
 
-        if (rows) {
-          return (
-            <dl className="grid grid-cols-2 gap-3 text-sm">
-              {rows.map(([key, value]) => (
-                <div key={key} className="contents">
-                  <dt className="text-foreground/60">{key}</dt>
-                  <dd className="font-medium">{value}</dd>
-                </div>
-              ))}
-            </dl>
-          )
-        }
+              if (paired.length > 0) {
+                return (
+                  <dl className="grid grid-cols-2 gap-3 text-sm">
+                    {paired.map(([key, value]) => (
+                      <div key={key} className="contents">
+                        <dt className="text-foreground/60">{key}</dt>
+                        <dd className="font-medium">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )
+              }
 
-        return (
-          <ul className="space-y-2 text-sm leading-6 text-foreground/75">
-            {specLines.map((item) => (
-              <li key={item} className="flex gap-2">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#689c30]" aria-hidden />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        )
-      },
-    },
-    {
-      title: "How to Use",
-      render: () =>
-        isHtml(product.howToUse) ? (
-          <div
-            className="richtext text-sm text-foreground/75"
-            dangerouslySetInnerHTML={{ __html: product.howToUse as string }}
-          />
-        ) : (
-          <ul className="space-y-2 text-sm leading-6 text-foreground/75">
-            {usageLines.map((item) => (
-              <li key={item} className="flex gap-2">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#689c30]" aria-hidden />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        ),
-    },
-    {
-      title: "Shipping & Returns",
-      render: () =>
-        isHtml(product.shippingReturns) ? (
-          <div
-            className="richtext text-sm text-foreground/75"
-            dangerouslySetInnerHTML={{ __html: product.shippingReturns as string }}
-          />
-        ) : (
-          <p className="text-sm leading-6 text-foreground/75">
-            {product.shippingReturns?.trim() ||
-              "Free shipping on orders above ₹499. 30-day replacement for damaged products. Dispatched within 24–48 hours of order confirmation."}
-          </p>
-        ),
-    },
+              return (
+                <ul className="space-y-2 text-sm leading-6 text-foreground/75">
+                  {specLines.map((item) => (
+                    <li key={item} className="flex gap-2">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#689c30]" aria-hidden />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              )
+            },
+          },
+        ]
+      : []),
+    ...(product.howToUse?.trim()
+      ? [
+          {
+            title: "How to Use",
+            render: () =>
+              isHtml(product.howToUse) ? (
+                <div
+                  className="richtext text-sm text-foreground/75"
+                  dangerouslySetInnerHTML={{ __html: product.howToUse as string }}
+                />
+              ) : (
+                <ul className="space-y-2 text-sm leading-6 text-foreground/75">
+                  {howToUseLines.map((item) => (
+                    <li key={item} className="flex gap-2">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#689c30]" aria-hidden />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              ),
+          },
+        ]
+      : []),
+    ...(product.shippingReturns?.trim()
+      ? [
+          {
+            title: "Shipping & Returns",
+            render: () =>
+              isHtml(product.shippingReturns) ? (
+                <div
+                  className="richtext text-sm text-foreground/75"
+                  dangerouslySetInnerHTML={{ __html: product.shippingReturns as string }}
+                />
+              ) : (
+                <p className="text-sm leading-6 text-foreground/75">{product.shippingReturns?.trim()}</p>
+              ),
+          },
+        ]
+      : []),
   ]
 
   const isNotCurrentProduct = (item: RecommendedProduct) =>
@@ -761,79 +776,72 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               </button>
             </div>
 
-            {/* Offers */}
-            {(offers === null || offers.length > 0) && (
+            {/* Offers / Coupon Card — Only rendered when active coupons exist */}
+            {offers && offers.length > 0 ? (
               <div>
-                <p className="text-base font-bold">Offers for you</p>
+                <div className="flex items-center gap-2">
+                  <Tag className="h-4 w-4 text-[#689c30]" aria-hidden />
+                  <p className="text-base font-bold text-[#033927]">Exclusive Offers for You</p>
+                </div>
+
                 <div
                   ref={offerTextRef}
-                  className="mt-3 rounded-lg border border-dashed border-[#689c30]/50 p-4"
-                  style={{
-                    backgroundColor: offers?.[offerIndex % (offers.length || 1)]?.bgColor ?? "rgba(104,156,48,0.1)",
-                    transition: "opacity 300ms ease, transform 300ms ease",
-                  }}
+                  className="mt-3 relative overflow-hidden rounded-xl border border-[#689c30]/30 bg-gradient-to-r from-[#f7faf5] via-[#f1f6ec] to-[#eaf2e3] p-4 shadow-xs transition-all duration-300"
                 >
-                  {offers && offers.length > 0 ? (
-                    <>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {offers[offerIndex % offers.length]?.badgeText && (
-                            <span className="rounded bg-[#033927] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                              {offers[offerIndex % offers.length].badgeText}
-                            </span>
-                          )}
-                          <p
-                            className="font-semibold"
-                            style={{ color: offers[offerIndex % offers.length]?.textColor ?? "#033927" }}
-                          >
-                            {offers[offerIndex % offers.length]?.name}
-                          </p>
-                        </div>
-                        {offers[offerIndex % offers.length]?.code && (
-                          <button
-                            type="button"
-                            onClick={() => copyOfferCode(offers[offerIndex % offers.length].code!)}
-                            className="inline-flex items-center gap-1 text-sm font-semibold text-[#033927] transition-colors hover:text-[#689c30]"
-                          >
-                            {copiedCode === offers[offerIndex % offers.length].code ? "Copied!" : offers[offerIndex % offers.length].code}
-                            <Copy className="h-3.5 w-3.5" aria-hidden />
-                          </button>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {offers[offerIndex % offers.length]?.badgeText && (
+                        <span className="rounded-full bg-[#033927] px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-[#eaf2e3] shadow-2xs">
+                          {offers[offerIndex % offers.length].badgeText}
+                        </span>
+                      )}
+                      <p className="font-bold text-sm tracking-tight text-[#033927]">
+                        {offers[offerIndex % offers.length]?.name}
+                      </p>
+                    </div>
+                    {offers[offerIndex % offers.length]?.code && (
+                      <button
+                        type="button"
+                        onClick={() => copyOfferCode(offers[offerIndex % offers.length].code!)}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#689c30]/40 bg-white/90 px-3 py-1 text-xs font-mono font-bold text-[#033927] shadow-2xs transition-all hover:bg-white hover:border-[#689c30] hover:shadow-xs active:scale-95 cursor-pointer"
+                        title="Click to copy coupon code"
+                      >
+                        <span>{copiedCode === offers[offerIndex % offers.length].code ? "COPIED!" : offers[offerIndex % offers.length].code}</span>
+                        {copiedCode === offers[offerIndex % offers.length].code ? (
+                          <Check className="h-3.5 w-3.5 text-[#689c30]" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5 text-[#689c30]" />
                         )}
+                      </button>
+                    )}
+                  </div>
+                  {offers[offerIndex % offers.length]?.shortText && (
+                    <p className="mt-1.5 text-xs text-foreground/75 font-medium leading-relaxed">
+                      {offers[offerIndex % offers.length].shortText}
+                    </p>
+                  )}
+                  {offers.length > 1 && (
+                    <div className="mt-3 flex items-center justify-between border-t border-[#689c30]/15 pt-2">
+                      <div className="flex items-center gap-1.5">
+                        {offers.map((_, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setOfferIndex(i)}
+                            className={`rounded-full transition-all duration-300 cursor-pointer ${
+                              i === (offerIndex % offers.length) ? "w-4 h-1.5 bg-[#033927]" : "w-1.5 h-1.5 bg-[#033927]/30 hover:bg-[#033927]/60"
+                            }`}
+                            aria-label={`Go to offer ${i + 1}`}
+                          />
+                        ))}
                       </div>
-                      {offers[offerIndex % offers.length]?.shortText && (
-                        <p className="mt-1 text-sm text-foreground/70">{offers[offerIndex % offers.length].shortText}</p>
-                      )}
-                      {offers.length > 1 && (
-                        <div className="mt-2 flex items-center gap-1">
-                          {offers.map((_, i) => (
-                            <button
-                              key={i}
-                              onClick={() => setOfferIndex(i)}
-                              className={`rounded-full transition-all duration-300 ${i === offerIndex % offers.length ? "w-3.5 h-[3px] bg-[#033927]" : "w-[3px] h-[3px] bg-[#033927]/30"}`}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    /* Loading / fallback state */
-                    <>
-                      <div className="flex items-center justify-between">
-                        <p className="font-semibold text-[#033927]">10% off unlocked!</p>
-                        <button
-                          type="button"
-                          onClick={copyCoupon}
-                          className="inline-flex items-center gap-1 text-sm font-semibold text-[#033927] transition-colors hover:text-[#689c30]"
-                        >
-                          {couponCopied ? "Copied" : "ADHUNIK10"} <Copy className="h-3.5 w-3.5" aria-hidden />
-                        </button>
-                      </div>
-                      <p className="mt-1 text-sm text-foreground/70">Free shipping + Flat 10% off unlocked!</p>
-                    </>
+                      <span className="text-[11px] font-semibold text-[#033927]/70">
+                        Offer {(offerIndex % offers.length) + 1} of {offers.length}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
-            )}
+            ) : null}
 
             {/* Description */}
             {product.description.trim() &&

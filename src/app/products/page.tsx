@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   ChevronRight, Leaf, SlidersHorizontal,
   ChevronDown, X,
@@ -79,10 +79,12 @@ function cmsProductToStoreProduct(product: CmsProduct): StoreProduct {
   const images = product.images.map((image) => image.url).filter(Boolean)
   const priceValue = product.salePrice ?? product.price
 
+  const defaultPack = product.packSizes.find((p) => Math.abs(p.price - priceValue) < 0.01) ?? product.packSizes[0]
+
   return {
     badge: product.featured ? "Featured" : product.category,
     category: product.category,
-    defaultSize: product.packSizes[0]?.size,
+    defaultSize: defaultPack?.size,
     images,
     img: images[0] || "/placeholder.svg",
     name: product.name,
@@ -95,8 +97,11 @@ function cmsProductToStoreProduct(product: CmsProduct): StoreProduct {
 
 /* ── Page ───────────────────────────────────────────── */
 function ProductsPageContent() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get("q")?.trim() ?? ""
+  const urlCategoryParam = searchParams.get("category")?.trim() || searchParams.get("cat")?.trim() || ""
+
   const [activeCategory, setActiveCategory] = useState("All")
   const [priceRange,    setPriceRange]    = useState(0)
   const [sortBy,        setSortBy]        = useState("featured")
@@ -105,6 +110,7 @@ function ProductsPageContent() {
   const [cmsProducts,   setCmsProducts]   = useState<StoreProduct[]>([])
   const [cmsCategories, setCmsCategories] = useState<string[]>([])
   const [productsLoading, setProductsLoading] = useState(true)
+
   useEffect(() => {
     let alive = true
 
@@ -134,6 +140,31 @@ function ProductsPageContent() {
     () => ["All", ...Array.from(new Set((cmsCategories.length > 0 ? cmsCategories : products.map((product) => product.category)).filter(Boolean)))],
     [cmsCategories, products],
   )
+
+  // Keep active category synced with URL search query param (?category=...)
+  useEffect(() => {
+    if (urlCategoryParam) {
+      const match = categories.find((c) => c.toLowerCase() === urlCategoryParam.toLowerCase())
+      setActiveCategory(match || urlCategoryParam)
+    } else {
+      setActiveCategory("All")
+    }
+  }, [urlCategoryParam, categories])
+
+  function handleCategorySelect(cat: string) {
+    setActiveCategory(cat)
+    const params = new URLSearchParams(searchParams.toString())
+    if (cat === "All") {
+      params.delete("category")
+      params.delete("cat")
+    } else {
+      params.set("category", cat)
+    }
+    const newQuery = params.toString()
+    const newPath = newQuery ? `/products?${newQuery}` : "/products"
+    router.push(newPath, { scroll: false })
+  }
+
   const filtered = useMemo(() => {
     let result = [...products]
     if (searchQuery) {
@@ -146,7 +177,7 @@ function ProductsPageContent() {
         ]),
       )
     }
-    if (activeCategory !== "All") result = result.filter(p => p.category === activeCategory)
+    if (activeCategory !== "All") result = result.filter(p => p.category.toLowerCase() === activeCategory.toLowerCase())
     const { min, max } = PRICE_RANGES[priceRange]
     result = result.filter(p => p.priceValue >= min && p.priceValue <= max)
     if (sortBy === "price-asc")  result.sort((a, b) => a.priceValue - b.priceValue)
@@ -157,7 +188,7 @@ function ProductsPageContent() {
 
   const activeFiltersCount = (activeCategory !== "All" ? 1 : 0) + (priceRange !== 0 ? 1 : 0)
 
-  function clearFilters() { setActiveCategory("All"); setPriceRange(0) }
+  function clearFilters() { handleCategorySelect("All"); setPriceRange(0) }
 
   return (
     <div className="min-h-screen bg-background">
@@ -231,7 +262,7 @@ function ProductsPageContent() {
                     <button
                       key={cat}
                       type="button"
-                      onClick={() => setActiveCategory(cat)}
+                      onClick={() => handleCategorySelect(cat)}
                       className={`shrink-0 rounded-full px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium transition-all duration-200 ${
                         activeCategory === cat
                           ? "bg-[#033927] text-white shadow-sm"

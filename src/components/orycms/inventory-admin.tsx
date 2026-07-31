@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { AlertTriangle, Download, Eye, FileSpreadsheet, FileText, ImageIcon, PackageSearch, Search } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { cn, formatCurrency } from "@/lib/utils"
 
 type InventoryItem = {
@@ -293,7 +294,15 @@ function Empty({ message }: { message: string }) {
 }
 
 function Select({ children, onChange, value }: { children: React.ReactNode; onChange: (value: string) => void; value: string }) {
-  return <select value={value} onChange={(event) => onChange(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">{children}</select>
+  const options = (Array.isArray(children) ? children : [children]).flatMap((child) => {
+    if (child && typeof child === "object" && "props" in child) {
+      const val = child.props.value !== undefined ? child.props.value : String(child.props.children || "")
+      const label = String(child.props.children || val)
+      return [{ label, value: String(val) }]
+    }
+    return []
+  })
+  return <OryCMSSelect value={value} onChange={onChange} options={options} className="min-w-36 flex-1 sm:flex-none" />
 }
 
 function StockBadge({ status }: { status: InventoryItem["stockStatus"] }) {

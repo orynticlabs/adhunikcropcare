@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Activity, AlertTriangle, CheckCircle2, Database, RefreshCw, Search, Server, Table2, XCircle } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { cn } from "@/lib/utils"
 
 const PAGE_SIZE = 10
@@ -155,11 +156,16 @@ export function OryCMSDatabaseDashboard() {
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tables or logs…" className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-[13px] outline-none focus:border-border-strong" />
           </div>
-          <select value={tableStatus} onChange={(event) => setTableStatus(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            <option value="all">All table status</option>
-            <option value="Healthy">Healthy</option>
-            <option value="Warning">Warning</option>
-          </select>
+          <OryCMSSelect
+            value={tableStatus}
+            onChange={(val) => setTableStatus(val)}
+            options={[
+              { label: "All table status", value: "all" },
+              { label: "Healthy", value: "Healthy" },
+              { label: "Warning", value: "Warning" },
+            ]}
+            className="w-auto"
+          />
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-left text-[13px]">
@@ -198,17 +204,22 @@ export function OryCMSDatabaseDashboard() {
             <h2 className="text-[14px] font-semibold">Database Logs</h2>
             <p className="mt-0.5 text-[12px] text-muted-foreground">Connection logs, query signals, errors, slow queries, failed queries, migrations, and backup notes.</p>
           </div>
-          <select value={logFilter} onChange={(event) => setLogFilter(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            <option value="all">All logs</option>
-            <option value="connection">Connection Logs</option>
-            <option value="query">Query Logs</option>
-            <option value="error">Error Logs</option>
-            <option value="slow-query">Slow Queries</option>
-            <option value="failed-query">Failed Queries</option>
-            <option value="migration">Migrations</option>
-            <option value="backup">Backup Logs</option>
-            <option value="warning">Warnings</option>
-          </select>
+          <OryCMSSelect
+            value={logFilter}
+            onChange={(val) => setLogFilter(val)}
+            options={[
+              { label: "All logs", value: "all" },
+              { label: "Connection Logs", value: "connection" },
+              { label: "Query Logs", value: "query" },
+              { label: "Error Logs", value: "error" },
+              { label: "Slow Queries", value: "slow-query" },
+              { label: "Failed Queries", value: "failed-query" },
+              { label: "Migrations", value: "migration" },
+              { label: "Backup Logs", value: "backup" },
+              { label: "Warnings", value: "warning" },
+            ]}
+            className="w-auto"
+          />
         </div>
         <div className="divide-y divide-border">
           {pagedLogs.length === 0 ? (

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { AlertTriangle, BarChart3, Brain, CalendarDays, Package, RefreshCw, ShoppingBag, TrendingUp, Users } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { cn, formatCurrency } from "@/lib/utils"
 
 type RangeKey = "today" | "7d" | "30d" | "90d" | "month" | "year" | "custom"
@@ -75,9 +76,12 @@ export function OryCMSAnalyticsDashboard() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select value={range} onChange={(event) => setRange(event.target.value as RangeKey)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            {ranges.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-          </select>
+          <OryCMSSelect
+            value={range}
+            onChange={(val) => setRange(val as RangeKey)}
+            options={ranges.map((r) => ({ label: r.label, value: r.value }))}
+            className="w-auto"
+          />
           {range === "custom" ? (
             <>
               <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none" />

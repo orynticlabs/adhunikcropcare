@@ -66,12 +66,12 @@ export default async function ThankYouPage({
       <HeaderServer />
       <CartDrawer />
 
-      <main className="pt-28 sm:pt-36 lg:pt-40">
-        <section className="relative overflow-hidden bg-[#17382d] text-white">
+      <main>
+        <section className="relative overflow-hidden bg-[#17382d] text-white pt-28 sm:pt-36 lg:pt-40 pb-12 sm:pb-16 lg:pb-20">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(3,57,39,0.96),rgba(23,56,45,0.86)_45%,rgba(104,156,48,0.7))]" />
           <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_20%_20%,#e9c46a_0,transparent_24%),radial-gradient(circle_at_78%_18%,#bdd879_0,transparent_20%)]" />
 
-          <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:py-20 lg:grid-cols-[1.05fr_.95fr] lg:items-center lg:py-24">
+          <div className="relative mx-auto grid max-w-7xl gap-10 px-4 lg:grid-cols-[1.05fr_.95fr] lg:items-center">
             <div>
               <nav className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-white/55">
                 <Link href="/">Home</Link>

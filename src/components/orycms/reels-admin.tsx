@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Loader2, Plus, Save, Trash2, Upload, Video, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import type { OryCMSReelVideoDTO } from "@/lib/orycms/reel-videos"
 
 type Message = { text: string; type: "error" | "success" }
@@ -143,7 +144,7 @@ export function OryCMSReelsAdmin() {
             <div className="flex items-center justify-between border-b border-border px-5 py-4"><div><h2 className="text-base font-semibold">Upload reel video</h2><p className="mt-0.5 text-xs text-muted-foreground">Published videos appear in the storefront reels area.</p></div><button type="button" onClick={() => setFormOpen(false)} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-accent"><X className="h-4 w-4" /></button></div>
             <div className="grid gap-5 p-5 sm:grid-cols-2">
               <Field label="Title"><input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className={INPUT} placeholder="Field Story 01" /></Field>
-              <Field label="Status"><select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className={INPUT}><option value="published">Published</option><option value="draft">Draft</option></select></Field>
+              <div className="space-y-1.5"><span className="text-[12.5px] font-medium">Status</span><OryCMSSelect value={form.status} onChange={(val) => setForm({ ...form, status: val })} options={[{ label: "Published", value: "published" }, { label: "Draft", value: "draft" }]} /></div>
               <Field label="Display order"><input type="number" min="0" value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })} className={INPUT} /></Field>
               <div className="sm:col-span-2"><div className="mb-1.5 text-[12.5px] font-medium">Reel video</div><div className="flex flex-col gap-3 rounded-xl border border-dashed border-border bg-surface-muted p-4 sm:flex-row sm:items-center"><div className="grid h-28 w-20 shrink-0 place-items-center overflow-hidden rounded-lg bg-surface"><Video className="h-7 w-7 text-muted-foreground" /></div><div><input ref={fileRef} type="file" accept="video/mp4,video/quicktime,video/webm,video/x-m4v" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /><button type="button" disabled={saving} onClick={() => fileRef.current?.click()} className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium disabled:opacity-60">{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}{file ? "Change video" : "Select video"}</button><p className="mt-2 text-[11px] text-muted-foreground">MP4, MOV, WebM, or M4V. Maximum 50 MB.</p>{file ? <p className="mt-1 text-[11px] text-muted-foreground">{file.name}</p> : null}</div></div></div>
             </div>

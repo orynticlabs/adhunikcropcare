@@ -4,8 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CheckCircle2, ChevronLeft, ChevronRight, Eye, GripVertical, ImageIcon, Loader2, Plus, Save, Search, Star, Trash2, Upload, X } from "lucide-react"
+import { Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, GripVertical, ImageIcon, Loader2, Plus, Save, Search, Star, Trash2, Upload, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { RichTextEditor } from "@/components/orycms/rich-text-editor"
 import { cn } from "@/lib/utils"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
@@ -62,6 +63,62 @@ type Toast = {
   type: "success" | "error"
 }
 
+const DEFAULT_UNITS = [
+  "Kg",
+  "L",
+  "ml",
+  "g",
+  "Bottle",
+  "Box",
+];
+
+function getPackSizeUnitOptions(productUnit: string): string[] {
+  const norm = (productUnit || "").trim().toLowerCase()
+  if (norm === "kg") {
+    return ["Kg"]
+  }
+  if (norm === "g" || norm === "gram" || norm === "gm" || norm === "grams") {
+    return ["g", "Kg"]
+  }
+  if (norm === "ml") {
+    return ["ml", "L"]
+  }
+  if (norm === "l" || norm === "litre" || norm === "liter" || norm === "litres") {
+    return ["L"]
+  }
+  if (norm === "box" || norm === "boxes") {
+    return ["Box"]
+  }
+  if (norm === "bottle" || norm === "bottles") {
+    return ["Bottle"]
+  }
+  return productUnit ? [productUnit] : ["Kg", "g", "L", "ml", "Bottle", "Box"]
+}
+
+function parsePackSize(sizeStr: string, allowedUnits: string[]): { qty: string; unit: string } {
+  const trimmed = (sizeStr || "").trim()
+  const defaultUnit = allowedUnits[0] || "Kg"
+  if (!trimmed) {
+    return { qty: "", unit: defaultUnit }
+  }
+
+  const match = trimmed.match(/^([\d.]+)\s*(.*)$/)
+  if (match) {
+    const qty = match[1]
+    const rawUnit = match[2].trim()
+    const found = allowedUnits.find((u) => u.toLowerCase() === rawUnit.toLowerCase())
+    return { qty, unit: found || (rawUnit && allowedUnits.includes(rawUnit) ? rawUnit : defaultUnit) }
+  }
+
+  return { qty: trimmed.replace(/[^\d.]/g, ""), unit: defaultUnit }
+}
+
+function formatPackSize(qty: string | number, unit: string): string {
+  const cleanQty = String(qty ?? "").trim()
+  if (!cleanQty) return ""
+  return unit ? `${cleanQty} ${unit}` : cleanQty
+}
+
 const emptyProduct: Product = {
   brand: "",
   category: "",
@@ -82,7 +139,7 @@ const emptyProduct: Product = {
   sku: "",
   slug: "",
   specifications: "",
-  status: "draft",
+  status: "published",
   stockQuantity: 0,
   tags: [],
   unit: "Kg",
@@ -216,47 +273,44 @@ export function OryCMSProductsList() {
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-[13px] outline-none focus:border-border-strong"
             />
           </div>
-          <select
+          <OryCMSSelect
             value={categoryFilter}
-            onChange={(event) => setCategoryFilter(event.target.value)}
-            className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none"
-          >
-            <option value="all">All categories</option>
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
-          <select
+            onChange={(val) => setCategoryFilter(val)}
+            options={[{ label: "All categories", value: "all" }, ...categories.map((c) => ({ label: c, value: c }))]}
+            className="w-auto"
+          />
+          <OryCMSSelect
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
-            className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none"
-          >
-            <option value="all">All status</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-          </select>
-          <select
+            onChange={(val) => setStatusFilter(val as typeof statusFilter)}
+            options={[
+              { label: "All status", value: "all" },
+              { label: "Published", value: "published" },
+              { label: "Draft", value: "draft" },
+            ]}
+            className="w-auto"
+          />
+          <OryCMSSelect
             value={featuredFilter}
-            onChange={(event) => setFeaturedFilter(event.target.value as typeof featuredFilter)}
-            className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none"
-          >
-            <option value="all">All featured</option>
-            <option value="featured">Featured</option>
-            <option value="standard">Not featured</option>
-          </select>
-          <select
+            onChange={(val) => setFeaturedFilter(val as typeof featuredFilter)}
+            options={[
+              { label: "All featured", value: "all" },
+              { label: "Featured", value: "featured" },
+              { label: "Not featured", value: "standard" },
+            ]}
+            className="w-auto"
+          />
+          <OryCMSSelect
             value={sortBy}
-            onChange={(event) => setSortBy(event.target.value as typeof sortBy)}
-            className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none"
-          >
-            <option value="created-desc">Newest first</option>
-            <option value="created-asc">Oldest first</option>
-            <option value="name-asc">Name A–Z</option>
-            <option value="price-asc">Price low</option>
-            <option value="stock-asc">Stock low</option>
-          </select>
+            onChange={(val) => setSortBy(val as typeof sortBy)}
+            options={[
+              { label: "Newest first", value: "created-desc" },
+              { label: "Oldest first", value: "created-asc" },
+              { label: "Name A–Z", value: "name-asc" },
+              { label: "Price low", value: "price-asc" },
+              { label: "Stock low", value: "stock-asc" },
+            ]}
+            className="w-auto"
+          />
           {selected.length > 0 ? (
             <button
               type="button"
@@ -303,7 +357,7 @@ export function OryCMSProductsList() {
                     <th className="px-4 py-3">Image</th>
                     <th className="px-4 py-3">Product Name</th>
                     <th className="px-4 py-3">Category</th>
-                    <th className="px-4 py-3 text-center">Price</th>
+                    <th className="px-4 py-3 text-center">MRP</th>
                     <th className="px-4 py-3 text-center">Stock</th>
                     <th className="px-4 py-3 text-center">Status</th>
                     <th className="px-4 py-3 text-center">Featured</th>
@@ -690,54 +744,160 @@ export function OryCMSProductForm({ id }: { id?: string }) {
           <Card title="Pricing, stock, variants">
             <div className="grid gap-3 md:grid-cols-3">
               <Field label="SKU*" value={product.sku} onChange={(sku) => patch({ sku })} />
-              <NumberField label="Price*" value={product.price} onChange={(price) => patch({ price })} />
+              <NumberField label="MRP*" value={product.price} onChange={(price) => patch({ price })} />
               <NumberField label="Sale Price" value={product.salePrice ?? 0} onChange={(salePrice) => patch({ salePrice: salePrice || null })} />
               <NumberField label="Stock Quantity*" value={product.stockQuantity} onChange={(stockQuantity) => patch({ stockQuantity })} />
-              <Field label="Unit*" value={product.unit} onChange={(unit) => patch({ unit })} />
+              <OryCMSSelect
+                label="Unit*"
+                value={product.unit}
+                onChange={(newUnit) => {
+                  const newAllowed = getPackSizeUnitOptions(newUnit)
+                  const defaultUnit = newAllowed[0] || "Kg"
+                  const updatedPackSizes = product.packSizes.map((pack) => {
+                    const parsed = parsePackSize(pack.size, newAllowed)
+                    const validUnit = newAllowed.includes(parsed.unit) ? parsed.unit : defaultUnit
+                    return {
+                      ...pack,
+                      size: formatPackSize(parsed.qty, validUnit),
+                    }
+                  })
+                  patch({ unit: newUnit, packSizes: updatedPackSizes })
+                }}
+                options={DEFAULT_UNITS.map((u) => ({ label: u, value: u }))}
+                placeholder="Select unit"
+                searchable
+                className="w-full"
+              />
             </div>
 
             <div className="space-y-2">
-              <div className="text-[12px] font-medium">Pack Sizes</div>
-              {product.packSizes.map((pack, index) => (
-                <div key={index} className="grid gap-2 md:grid-cols-[1fr_160px_40px]">
-                  <input
-                    value={pack.size}
-                    onChange={(event) =>
-                      patch({
-                        packSizes: product.packSizes.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, size: event.target.value } : item,
-                        ),
-                      })
-                    }
-                    placeholder="5 kg"
-                    className="h-9 rounded-lg border border-border bg-surface px-3 text-[13px] outline-none"
-                  />
-                  <input
-                    type="number"
-                    value={pack.price || ""}
-                    onChange={(event) =>
-                      patch({
-                        packSizes: product.packSizes.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, price: Number(event.target.value) } : item,
-                        ),
-                      })
-                    }
-                    placeholder="Price"
-                    className="h-9 rounded-lg border border-border bg-surface px-3 text-[13px] outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => patch({ packSizes: product.packSizes.filter((_, i) => i !== index) })}
-                    className="grid h-9 place-items-center rounded-lg border border-border text-destructive hover:bg-destructive/10"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
+              <div className="flex items-center justify-between">
+                <div className="text-[12px] font-medium">Pack Sizes*</div>
+                <span className="text-[11px] text-muted-foreground">
+                  Allowed units for {product.unit || "unit"}: {getPackSizeUnitOptions(product.unit).join(", ")}
+                </span>
+              </div>
+
+              {(() => {
+                const effectiveTargetPrice = product.salePrice && product.salePrice > 0 ? product.salePrice : product.price
+                const targetPriceLabel = product.salePrice && product.salePrice > 0 ? "Sale Price" : "MRP"
+                const hasMatchingPackPrice = product.packSizes.some(
+                  (p) => p.size.trim() && Number.isFinite(p.price) && Math.abs(p.price - effectiveTargetPrice) < 0.01
+                )
+
+                if (effectiveTargetPrice <= 0) return null
+
+                return hasMatchingPackPrice ? (
+                  <div className="rounded-lg border border-[#689c30]/40 bg-[#eff4e9] px-3 py-2 text-[12px] font-medium text-[#033927] flex items-center gap-2">
+                    <Check className="h-4 w-4 text-[#689c30] shrink-0" />
+                    <span>
+                      A pack size matching the product {targetPriceLabel} (<strong>₹{effectiveTargetPrice}</strong>) is set as default for storefront customers.
+                    </span>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-300 flex items-center justify-between gap-2 flex-wrap">
+                    <span>
+                      ⚠️ <strong>Price Match Required:</strong> At least one pack size price must equal ₹{effectiveTargetPrice} (matching product {targetPriceLabel}).
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const allowed = getPackSizeUnitOptions(product.unit)
+                        const defUnit = allowed[0] || "Kg"
+                        if (product.packSizes.length > 0 && product.packSizes[0].size.trim()) {
+                          patch({
+                            packSizes: product.packSizes.map((p, i) => (i === 0 ? { ...p, price: effectiveTargetPrice } : p)),
+                          })
+                        } else {
+                          patch({
+                            packSizes: [...product.packSizes.filter((p) => p.size.trim()), { price: effectiveTargetPrice, size: formatPackSize("1", defUnit) }],
+                          })
+                        }
+                      }}
+                      className="rounded-md bg-amber-600 px-2.5 py-1 text-[11.5px] font-semibold text-white hover:bg-amber-700 transition-colors cursor-pointer"
+                    >
+                      Set Pack Price to ₹{effectiveTargetPrice}
+                    </button>
+                  </div>
+                )
+              })()}
+
+              {product.packSizes.map((pack, index) => {
+                const allowedUnits = getPackSizeUnitOptions(product.unit)
+                const parsed = parsePackSize(pack.size, allowedUnits)
+
+                return (
+                  <div key={index} className="grid gap-2 md:grid-cols-[1fr_110px_140px_38px] items-center">
+                    {/* Numeric Pack Quantity */}
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={parsed.qty}
+                      onChange={(event) => {
+                        const val = event.target.value
+                        const newSize = formatPackSize(val, parsed.unit)
+                        patch({
+                          packSizes: product.packSizes.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, size: newSize } : item,
+                          ),
+                        })
+                      }}
+                      placeholder="Qty (e.g. 5)"
+                      className="h-9 rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
+                    />
+
+                    {/* Unit Select Dropdown */}
+                    <OryCMSSelect
+                      value={parsed.unit}
+                      onChange={(newUnit) => {
+                        const newSize = formatPackSize(parsed.qty, newUnit)
+                        patch({
+                          packSizes: product.packSizes.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, size: newSize } : item,
+                          ),
+                        })
+                      }}
+                      options={allowedUnits.map((u) => ({ label: u, value: u }))}
+                      placeholder="Unit"
+                      className="w-full"
+                    />
+
+                    {/* Pack Price */}
+                    <input
+                      type="number"
+                      value={pack.price || ""}
+                      onChange={(event) =>
+                        patch({
+                          packSizes: product.packSizes.map((item, itemIndex) =>
+                            itemIndex === index ? { ...item, price: Number(event.target.value) } : item,
+                          ),
+                        })
+                      }
+                      placeholder="Price (₹)"
+                      className="h-9 rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
+                    />
+
+                    {/* Delete Pack Size Button */}
+                    <button
+                      type="button"
+                      onClick={() => patch({ packSizes: product.packSizes.filter((_, i) => i !== index) })}
+                      className="grid h-9 w-9 place-items-center rounded-lg border border-border text-destructive hover:bg-destructive/10 transition-colors"
+                      title="Remove pack size"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )
+              })}
               <button
                 type="button"
-                onClick={() => patch({ packSizes: [...product.packSizes, { price: 0, size: "" }] })}
-                className="h-8 rounded-lg border border-border px-3 text-[12px] hover:bg-accent"
+                onClick={() => {
+                  const allowed = getPackSizeUnitOptions(product.unit)
+                  const defUnit = allowed[0] || "Kg"
+                  patch({ packSizes: [...product.packSizes, { price: 0, size: formatPackSize("", defUnit) }] })
+                }}
+                className="h-8 rounded-lg border border-border px-3 text-[12px] hover:bg-accent transition-colors"
               >
                 Add pack size
               </button>
@@ -747,26 +907,22 @@ export function OryCMSProductForm({ id }: { id?: string }) {
           <Card title="SEO and taxonomy">
             <div className="grid gap-3 md:grid-cols-2">
               <Field label="Brand" value={product.brand} onChange={(brand) => patch({ brand })} />
-              <label className="block space-y-1.5">
-                <span className="text-[12px] font-medium">Category*</span>
-                <select
+              <div>
+                <OryCMSSelect
+                  label="Category*"
                   value={product.category}
-                  onChange={(event) => patch({ category: event.target.value })}
-                  className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none"
-                >
-                  <option value="">Select category</option>
-                  {meta.categories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(category) => patch({ category })}
+                  options={meta.categories.map((c) => ({ label: c, value: c }))}
+                  placeholder="Select category"
+                  searchable
+                  className="w-full"
+                />
                 {meta.categories.length === 0 ? (
-                  <span className="text-[11.5px] text-muted-foreground">
+                  <span className="mt-1 block text-[11.5px] text-muted-foreground">
                     Add an active category from OryCMS Categories first.
                   </span>
                 ) : null}
-              </label>
+              </div>
             </div>
             <Field label="Tags" value={product.tags.join(", ")} onChange={(value) => patch({ tags: value.split(",") })} />
             <Field label="Meta Title" value={product.metaTitle} onChange={(metaTitle) => patch({ metaTitle })} />
@@ -776,17 +932,16 @@ export function OryCMSProductForm({ id }: { id?: string }) {
 
         <div className="space-y-5">
           <Card title="Publishing">
-            <label className="block space-y-1.5">
-              <span className="text-[12px] font-medium">Product Status</span>
-              <select
-                value={product.status}
-                onChange={(event) => patch({ status: event.target.value as Product["status"] })}
-                className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px]"
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-              </select>
-            </label>
+            <OryCMSSelect
+              label="Product Status"
+              value={product.status}
+              onChange={(status) => patch({ status: status as Product["status"] })}
+              options={[
+                { label: "Published", value: "published" },
+                { label: "Draft", value: "draft" },
+              ]}
+              className="w-full"
+            />
             <label className="flex items-center gap-2 text-[13px]">
               <input
                 type="checkbox"
@@ -797,7 +952,7 @@ export function OryCMSProductForm({ id }: { id?: string }) {
             </label>
           </Card>
 
-          <Card title="Product images">
+          <Card title="Product images*">
             <input
               ref={fileInputRef}
               type="file"
@@ -923,8 +1078,24 @@ function validateProduct(product: Product): string | null {
   if (!product.category.trim()) return "Category is required."
   if (!product.sku.trim()) return "SKU is required."
   if (!product.unit.trim()) return "Unit is required."
-  if (!Number.isFinite(product.price) || product.price <= 0) return "Price is required."
-  if (!Number.isFinite(product.stockQuantity) || product.stockQuantity < 0) return "Stock Quantity is required."
+  if (!Number.isFinite(product.price) || product.price <= 0) return "MRP is required."
+  if (!Number.isFinite(product.stockQuantity) || product.stockQuantity <= 0) return "Stock Quantity is required."
+  if (!product.images || product.images.length === 0) return "At least one product image is required."
+  if (
+    !product.packSizes ||
+    product.packSizes.length === 0 ||
+    !product.packSizes.some((p) => p.size.trim() && Number.isFinite(p.price) && p.price > 0)
+  ) {
+    return "At least one valid pack size (with size and price > 0) is required."
+  }
+  const targetPrice = product.salePrice && product.salePrice > 0 ? product.salePrice : product.price
+  const priceTypeLabel = product.salePrice && product.salePrice > 0 ? "Sale Price" : "MRP"
+  const hasMatchingPack = product.packSizes.some(
+    (p) => p.size.trim() && Number.isFinite(p.price) && Math.abs(p.price - targetPrice) < 0.01
+  )
+  if (!hasMatchingPack) {
+    return `At least one pack size price must equal ₹${targetPrice} (matching product ${priceTypeLabel}).`
+  }
   return null
 }
 
@@ -1046,6 +1217,115 @@ function ProductThumb({ product }: { product: Product }) {
           className="relative h-full w-full object-contain p-0.5"
         />
       ) : null}
+    </div>
+  )
+}
+
+function CustomSelect({
+  value,
+  onChange,
+  options,
+  placeholder = "Select option",
+  searchable = false,
+}: {
+  value: string
+  onChange: (value: string) => void
+  options: { label: string; value: string }[]
+  placeholder?: string
+  searchable?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState("")
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const allOptions = useMemo(() => {
+    if (value && !options.some((opt) => opt.value === value)) {
+      return [{ label: value, value }, ...options]
+    }
+    return options
+  }, [options, value])
+
+  const selectedOption = allOptions.find((opt) => opt.value === value)
+
+  const filteredOptions = useMemo(() => {
+    if (!searchable || !search.trim()) return allOptions
+    const q = search.toLowerCase().trim()
+    return allOptions.filter((opt) => opt.label.toLowerCase().includes(q))
+  }, [allOptions, search, searchable])
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <button
+        type="button"
+        onClick={() => {
+          setOpen((prev) => !prev)
+          setSearch("")
+        }}
+        className={cn(
+          "flex h-9 w-full items-center justify-between rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition-colors hover:bg-accent/40 focus:border-border-strong",
+          !value && "text-muted-foreground"
+        )}
+      >
+        <span className="truncate">{selectedOption ? selectedOption.label : value || placeholder}</span>
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 top-[calc(100%+4px)] z-50 min-w-full rounded-xl border border-border bg-popover text-popover-foreground p-1.5 shadow-xl opacity-100 animate-in fade-in-0 zoom-in-95">
+          {searchable ? (
+            <div className="relative mb-1.5">
+              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="h-8 w-full rounded-md border border-border bg-muted/50 pl-8 pr-2 text-[12px] text-foreground outline-none focus:border-border-strong"
+                autoFocus
+              />
+            </div>
+          ) : null}
+
+          <div className="max-h-52 overflow-y-auto space-y-0.5 scrollbar-thin">
+            {filteredOptions.length === 0 ? (
+              <div className="px-3 py-2 text-[12px] text-muted-foreground text-center">No options found</div>
+            ) : (
+              filteredOptions.map((opt) => {
+                const isSelected = opt.value === value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(opt.value)
+                      setOpen(false)
+                    }}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-[12.5px] transition-colors text-left",
+                      isSelected
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "hover:bg-muted text-foreground"
+                    )}
+                  >
+                    <span>{opt.label}</span>
+                    {isSelected ? <Check className="h-3.5 w-3.5 shrink-0 text-primary" /> : null}
+                  </button>
+                )
+              })
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

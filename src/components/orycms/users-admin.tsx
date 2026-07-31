@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ArrowLeft, CheckCircle2, Edit3, Eye, KeyRound, Search, Trash2, UserRound, Users } from "lucide-react"
 import { useOryCMSSession } from "../../../orycms/hooks"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { cn } from "@/lib/utils"
 
 const PAGE_SIZE = 10
@@ -163,22 +164,33 @@ export function OryCMSUsersList() {
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, email, or mobile…" className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-[13px] outline-none focus:border-border-strong" />
           </div>
-          <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            <option value="all">All roles</option>
-            <option value="Owner">Owner</option>
-            {ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
-          </select>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            <option value="all">All status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortBy)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            <option value="created-desc">Newest first</option>
-            <option value="created-asc">Oldest first</option>
-            <option value="name-asc">Name A–Z</option>
-            <option value="last-login-desc">Last login</option>
-          </select>
+          <OryCMSSelect
+            value={roleFilter}
+            onChange={(val) => setRoleFilter(val)}
+            options={[{ label: "All roles", value: "all" }, { label: "Owner", value: "Owner" }, ...ROLES.map((r) => ({ label: r, value: r }))]}
+            className="w-auto"
+          />
+          <OryCMSSelect
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { label: "All status", value: "all" },
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
+            ]}
+            className="w-auto"
+          />
+          <OryCMSSelect
+            value={sortBy}
+            onChange={(val) => setSortBy(val as SortBy)}
+            options={[
+              { label: "Newest first", value: "created-desc" },
+              { label: "Oldest first", value: "created-asc" },
+              { label: "Name A–Z", value: "name-asc" },
+              { label: "Last login", value: "last-login-desc" },
+            ]}
+            className="w-auto"
+          />
         </div>
 
         {selected.length > 0 && isSuper ? (
@@ -496,7 +508,15 @@ function Field({ label, onChange, required, type = "text", value }: { label: str
 }
 
 function Select({ children, label, onChange, value }: { children: React.ReactNode; label: string; onChange: (value: string) => void; value: string }) {
-  return <label className="block text-[12.5px] font-medium">{label}<select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none">{children}</select></label>
+  const options = (Array.isArray(children) ? children : [children]).flatMap((child) => {
+    if (child && typeof child === "object" && "props" in child) {
+      const val = child.props.value !== undefined ? child.props.value : String(child.props.children || "")
+      const labelStr = String(child.props.children || val)
+      return [{ label: labelStr, value: String(val) }]
+    }
+    return []
+  })
+  return <OryCMSSelect label={label} value={value} onChange={onChange} options={options} />
 }
 
 function Panel({ children, title }: { children: React.ReactNode; title?: string }) {

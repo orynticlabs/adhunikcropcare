@@ -15,6 +15,8 @@ import CartDrawer from "@/features/cart/components/cart-drawer"
 import SiteFooter from "@/components/layout/site-footer"
 import { formatCurrency, useCart } from "@/features/cart/cart-context"
 import { useAuth } from "@/features/auth/auth-context"
+import { cn } from "@/lib/utils"
+import type { AvailableCouponDTO } from "@/lib/orycms/discounts"
 
 /* ── Constants ──────────────────────────────────────────────── */
 const MAX_SAVED_ADDRESSES = 4
@@ -27,6 +29,7 @@ type AppliedCoupon = {
   type: string
   name: string
   shortText: string | null
+  isAutoApplied?: boolean
 }
 
 type SavedAddress = {
@@ -148,8 +151,12 @@ export default function CheckoutPage() {
   const [payment,   setPayment]     = useState<PaymentMethod>("cash_on_delivery")
   const [coupon,    setCoupon]      = useState("")
   const [applied,   setApplied]     = useState<AppliedCoupon | null>(null)
+  const [autoAppliedDone, setAutoAppliedDone] = useState(false)
   const [couponErr, setCouponErr]   = useState("")
   const [couponLoading, setCouponLoading] = useState(false)
+  const [availableCoupons, setAvailableCoupons] = useState<AvailableCouponDTO[]>([])
+  const [isCouponsModalOpen, setIsCouponsModalOpen] = useState(false)
+  const [loadingCoupons, setLoadingCoupons] = useState(false)
   const [errors,    setErrors]      = useState<Record<string, string>>({})
   const [placing, setPlacing] = useState(false)
   const [paymentErr, setPaymentErr] = useState("")
@@ -167,6 +174,111 @@ export default function CheckoutPage() {
       openAuthModal("signin", { redirectTo: "/checkout" })
     }
   }, [loadingUser, openAuthModal, user])
+
+  /* Auto-apply discount: runs ONLY ONCE when user initially enters checkout */
+  useEffect(() => {
+    if (!user || items.length === 0 || autoAppliedDone) return
+
+    let active = true
+    setAutoAppliedDone(true)
+
+    const productSlugs = items.map((item) => (item as { productSlug?: string }).productSlug ?? "").filter(Boolean)
+
+    void fetch("/api/auth/checkout/auto-apply-discount", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        subtotal,
+        shippingTotal: shippingCost,
+        items: productSlugs.map((s) => ({ productSlug: s })),
+      }),
+    })
+      .then((res) => res.json())
+      .then((json: { data?: (AppliedCoupon & { isAutoApplied?: boolean }) | null; success?: boolean }) => {
+        if (!active) return
+        if (json.success && json.data) {
+          setApplied(json.data)
+          setCoupon("")
+          setCouponErr("")
+        }
+      })
+      .catch(() => undefined)
+
+    return () => {
+      active = false
+    }
+  }, [items.length, user, autoAppliedDone])
+
+  /* Continuous condition re-validation for currently applied coupon when subtotal or items change */
+  useEffect(() => {
+    if (!user || items.length === 0 || !applied) return
+
+    let active = true
+    const productSlugs = items.map((item) => (item as { productSlug?: string }).productSlug ?? "").filter(Boolean)
+
+    void getCsrfToken().then((csrfToken) => {
+      if (!active) return
+      return fetch("/api/auth/checkout/validate-coupon", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
+        body: JSON.stringify({
+          code: applied.code,
+          subtotal,
+          shippingTotal: shippingCost,
+          items: productSlugs.map((s) => ({ productSlug: s })),
+        }),
+      })
+        .then((res) => res.json())
+        .then((json: { data?: AppliedCoupon; error?: { message?: string }; success?: boolean }) => {
+          if (!active) return
+          if (json.success && json.data) {
+            const data = json.data as AppliedCoupon
+            setApplied((prev) => (prev ? { ...data, isAutoApplied: prev.isAutoApplied } : null))
+          } else {
+            setApplied(null)
+            setCouponErr(json.error?.message ?? "Coupon condition no longer met.")
+          }
+        })
+        .catch(() => undefined)
+    })
+
+    return () => {
+      active = false
+    }
+  }, [items, subtotal, user, applied?.code])
+
+  /* Fetch all available coupons for the user */
+  useEffect(() => {
+    if (!user || items.length === 0) return
+    let active = true
+    setLoadingCoupons(true)
+    const productSlugs = items.map((item) => (item as { productSlug?: string }).productSlug ?? "").filter(Boolean)
+
+    fetch("/api/auth/checkout/available-coupons", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        subtotal,
+        shippingTotal: shippingCost,
+        items: productSlugs.map((s) => ({ productSlug: s })),
+      }),
+    })
+      .then((res) => res.json())
+      .then((json: { data?: AvailableCouponDTO[]; success?: boolean }) => {
+        if (!active) return
+        if (json.success && Array.isArray(json.data)) {
+          setAvailableCoupons(json.data)
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setLoadingCoupons(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [items, subtotal, user])
 
   useEffect(() => {
     if (!user) return
@@ -296,8 +408,10 @@ export default function CheckoutPage() {
         setApplied(null)
         setCouponErr(json.error?.message ?? "Invalid coupon code.")
       } else {
-        setApplied(json.data as AppliedCoupon)
+        setApplied({ ...(json.data as AppliedCoupon), isAutoApplied: false })
+        setCoupon("")
         setCouponErr("")
+        setAutoAppliedDone(true)
       }
     } catch {
       setCouponErr("Could not validate coupon. Please try again.")
@@ -838,14 +952,14 @@ export default function CheckoutPage() {
                   })}
                 </div>
 
-                {/* Coupon */}
-                <div className="border-t border-border/40 p-4">
+                {/* Coupon Input & Available Coupons Showcase */}
+                <div className="border-t border-border/40 p-4 space-y-3">
                   <div className="flex gap-2">
                     <div className="relative flex-1">
                       <Tag className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-black" aria-hidden />
                       <input
                         value={coupon}
-                        onChange={e => { setCoupon(e.target.value.toUpperCase()); setApplied(null); setCouponErr("") }}
+                        onChange={e => { setCoupon(e.target.value.toUpperCase()); setCouponErr("") }}
                         onKeyDown={(e) => { if (e.key === "Enter") applyCoupon() }}
                         className="h-10 w-full rounded-xl border border-border/60 bg-background pl-9 pr-3 text-sm font-mono uppercase tracking-wider outline-none transition focus:border-[#689c30] focus:ring-2 focus:ring-[#689c30]/15"
                         placeholder="COUPON CODE"
@@ -860,18 +974,171 @@ export default function CheckoutPage() {
                       {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
                     </button>
                   </div>
+
                   {applied && (
-                    <p className="mt-2 flex items-center gap-1.5 text-xs text-[#033927]">
-                      <ShieldCheck className="h-3.5 w-3.5 text-black" aria-hidden />
-                      <strong>{applied.code}</strong> applied — {applied.name}!
+                    <div className="flex items-center justify-between gap-2 text-xs rounded-xl border border-[#689c30]/30 bg-[#eff4e9] p-2.5">
+                      <p className="flex items-center gap-1.5 text-[#033927]">
+                        <ShieldCheck className="h-4 w-4 text-[#689c30] shrink-0" aria-hidden />
+                        <span><strong>{applied.code}</strong> {applied.isAutoApplied ? "(Auto-Applied)" : "applied"} — {applied.name}</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setApplied(null)
+                          setCoupon("")
+                          setCouponErr("")
+                          setAutoAppliedDone(true)
+                        }}
+                        className="font-semibold text-destructive hover:underline cursor-pointer text-[11.5px]"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+
+                  {couponErr && (
+                    <p className="flex items-center gap-1.5 text-xs text-red-500">
+                      <X className="h-3.5 w-3.5 shrink-0" aria-hidden /> {couponErr}
                     </p>
                   )}
-                  {couponErr && (
-                    <p className="mt-2 flex items-center gap-1.5 text-xs text-red-500">
-                      <X className="h-3 w-3" aria-hidden /> {couponErr}
-                    </p>
+
+                  {/* Available Coupons Button */}
+                  {availableCoupons.length > 0 && (
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsCouponsModalOpen(true)}
+                        className="inline-flex w-full items-center justify-between rounded-xl border border-dashed border-[#689c30]/50 bg-[#eff4e9]/60 px-3.5 py-2.5 text-xs font-semibold text-[#033927] hover:bg-[#eff4e9] hover:border-[#689c30] transition-all cursor-pointer shadow-2xs"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <Tag className="h-3.5 w-3.5 text-[#689c30]" />
+                          Available Coupons ({availableCoupons.filter((c) => c.eligible).length} Valid)
+                        </span>
+                        <span className="font-bold text-[#689c30] text-[11.5px] underline">
+                          View Offers →
+                        </span>
+                      </button>
+                    </div>
                   )}
                 </div>
+
+                {/* Available Coupons Pop-up Modal */}
+                {isCouponsModalOpen && (
+                  <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in-0">
+                    <div className="w-full max-w-lg rounded-3xl border border-border/80 bg-background p-5 shadow-2xl space-y-4 animate-in zoom-in-95">
+                      {/* Modal Header */}
+                      <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                        <div>
+                          <h3 className="font-display text-xl text-foreground flex items-center gap-2">
+                            <Tag className="h-5 w-5 text-[#689c30]" />
+                            Available Offers & Coupons
+                          </h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Select an eligible coupon to apply to your order.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsCouponsModalOpen(false)}
+                          className="grid h-8 w-8 place-items-center rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          aria-label="Close coupons modal"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      {/* Coupons List */}
+                      <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 scrollbar-thin">
+                        {availableCoupons.map((c) => {
+                          const isCurrentlyApplied = applied?.discountId === c.id || (applied?.code && applied.code.toUpperCase() === c.code.toUpperCase())
+
+                          return (
+                            <div
+                              key={c.id}
+                              className={cn(
+                                "rounded-2xl border p-4 transition-all text-xs flex flex-col justify-between gap-3",
+                                isCurrentlyApplied
+                                  ? "border-[#689c30] bg-[#eff4e9]/90 shadow-xs"
+                                  : c.eligible
+                                  ? "border-border/80 bg-card hover:border-[#689c30]/60 shadow-2xs"
+                                  : "border-border/40 bg-muted/40 opacity-75"
+                              )}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="space-y-1.5 flex-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="font-mono font-bold uppercase tracking-wider text-[#033927] bg-white border border-dashed border-[#689c30]/60 px-2.5 py-1 rounded-lg text-xs shadow-2xs">
+                                      {c.code}
+                                    </span>
+                                    {c.badgeText ? (
+                                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10.5px] font-bold text-primary">
+                                        {c.badgeText}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                  <p className="font-semibold text-foreground text-sm mt-1">{c.name}</p>
+                                  {c.shortText ? <p className="text-muted-foreground text-xs">{c.shortText}</p> : null}
+                                </div>
+
+                                <div>
+                                  {isCurrentlyApplied ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-[#033927] px-3 py-1 text-xs font-bold text-white shadow-2xs">
+                                      Applied ✓
+                                    </span>
+                                  ) : c.eligible ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setIsCouponsModalOpen(false)
+                                        void getCsrfToken().then(async (csrfToken) => {
+                                          setCouponLoading(true)
+                                          setCouponErr("")
+                                          const productSlugs = items.map((item) => (item as { productSlug?: string }).productSlug ?? "")
+                                          const r = await fetch("/api/auth/checkout/validate-coupon", {
+                                            method: "POST",
+                                            headers: { "content-type": "application/json", "x-csrf-token": csrfToken },
+                                            body: JSON.stringify({ code: c.code, subtotal, shippingTotal: shippingCost, items: productSlugs.map((s) => ({ productSlug: s })) }),
+                                          })
+                                          const json = await r.json()
+                                          setCouponLoading(false)
+                                          if (json.success && json.data) {
+                                            setApplied({ ...json.data, isAutoApplied: false })
+                                            setCoupon("")
+                                            setCouponErr("")
+                                            setAutoAppliedDone(true)
+                                          } else {
+                                            setCouponErr(json.error?.message ?? "Failed to apply coupon.")
+                                          }
+                                        })
+                                      }}
+                                      className="h-8 rounded-xl bg-[#033927] px-4 font-semibold text-white hover:bg-[#689c30] hover:!text-black transition-colors cursor-pointer text-xs shadow-xs"
+                                    >
+                                      Apply
+                                    </button>
+                                  ) : (
+                                    <span className="rounded-lg bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                                      Not Eligible
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {!c.eligible && c.ineligibilityReason ? (
+                                <p className="text-xs text-amber-800 font-medium bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-xl">
+                                  {c.ineligibilityReason}
+                                </p>
+                              ) : c.eligible && c.discountAmount > 0 ? (
+                                <p className="text-xs font-bold text-[#033927] flex items-center gap-1">
+                                  <ShieldCheck className="h-3.5 w-3.5 text-[#689c30]" /> Save {formatCurrency(c.discountAmount)} on this order
+                                </p>
+                              ) : null}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Totals */}
                 <div className="border-t border-border/40 space-y-2.5 p-4 text-sm">

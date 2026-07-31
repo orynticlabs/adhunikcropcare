@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { Award, Eye, ImagePlus, Loader2, Pencil, Plus, Save, Trash2, Upload, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import type { OryCMSCertificateDTO, OryCMSCertificateInput } from "@/lib/orycms/certificates"
 
 const EMPTY: OryCMSCertificateInput = {
@@ -15,7 +16,7 @@ const EMPTY: OryCMSCertificateInput = {
   image: null,
   issuedOn: "",
   issuingAuthority: "",
-  status: "draft",
+  status: "published",
   title: "",
 }
 
@@ -184,7 +185,7 @@ export function OryCMSCertificatesAdmin() {
               <Field label="Document URL"><input type="url" value={form.documentUrl} onChange={(e) => setForm({ ...form, documentUrl: e.target.value })} className={INPUT} placeholder="https://...pdf" /></Field>
               <Field label="Issue date"><input type="date" value={form.issuedOn} onChange={(e) => setForm({ ...form, issuedOn: e.target.value })} className={INPUT} /></Field>
               <Field label="Expiry date"><input type="date" value={form.expiresOn} onChange={(e) => setForm({ ...form, expiresOn: e.target.value })} className={INPUT} /></Field>
-              <Field label="Status"><select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as "draft" | "published" })} className={INPUT}><option value="draft">Draft</option><option value="published">Published</option></select></Field>
+              <div className="space-y-1.5"><span className="text-[12.5px] font-medium">Status</span><OryCMSSelect value={form.status} onChange={(val) => setForm({ ...form, status: val as "draft" | "published" })} options={[{ label: "Draft", value: "draft" }, { label: "Published", value: "published" }]} /></div>
               <Field label="Display order"><input type="number" min="0" value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })} className={INPUT} /></Field>
               <Field label="Description" className="sm:col-span-2"><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={`${INPUT} min-h-24 py-2`} /></Field>
               <div className="sm:col-span-2"><div className="mb-1.5 text-[12.5px] font-medium">Certificate image</div><div className="flex flex-col gap-3 rounded-xl border border-dashed border-border bg-surface-muted p-4 sm:flex-row sm:items-center">{form.image?.url ? <Image src={form.image.url} alt="Certificate preview" width={144} height={112} className="h-28 w-36 rounded-lg bg-white object-contain p-2" /> : <div className="grid h-28 w-36 place-items-center rounded-lg bg-surface"><ImagePlus className="h-7 w-7 text-muted-foreground" /></div>}<div><input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void upload(e.target.files?.[0])} /><button type="button" disabled={uploading} onClick={() => fileRef.current?.click()} className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium disabled:opacity-60">{uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}{uploading ? "Uploading..." : "Upload image"}</button><p className="mt-2 text-[11px] text-muted-foreground">JPG, PNG, WebP, GIF, or SVG. Maximum 10 MB.</p></div></div></div>

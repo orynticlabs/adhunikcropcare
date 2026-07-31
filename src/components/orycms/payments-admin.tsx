@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
 import { cn, formatCurrency } from "@/lib/utils"
 
@@ -373,11 +374,11 @@ function ExportMenu({ onExport }: { onExport: (format: string) => void }) {
 }
 
 function Select({ value, onChange, label, options }: { value: string; onChange: (v: string) => void; label: string; options: string[] }) {
-  return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className="h-9 rounded-lg border border-border bg-surface px-2.5 text-[12.5px] outline-none" aria-label={label}>
-      {options.map((option) => <option key={option} value={option}>{option === "all" ? `All ${label.toLowerCase()}` : option.charAt(0).toUpperCase() + option.slice(1)}</option>)}
-    </select>
-  )
+  const formattedOptions = options.map((option) => ({
+    label: option === "all" ? `All ${label.toLowerCase()}` : option.charAt(0).toUpperCase() + option.slice(1),
+    value: option,
+  }))
+  return <OryCMSSelect value={value} onChange={onChange} options={formattedOptions} ariaLabel={label} className="w-auto" />
 }
 
 function Metric({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string }) {

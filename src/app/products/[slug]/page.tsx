@@ -49,6 +49,10 @@ function mapOryCMSProductToDetail(
     product.packSizes.length > 0
       ? product.packSizes
       : [{ price: product.salePrice ?? product.price, size: `1 ${product.unit}` }]
+  const targetPrice = product.salePrice && product.salePrice > 0 ? product.salePrice : product.price
+  const defaultPackIndex = packs.findIndex((p) => Math.abs(Number(p.price) - Number(targetPrice)) < 0.01)
+  const defaultOptionIndex = defaultPackIndex >= 0 ? defaultPackIndex : 0
+
   const options = packs.map((pack) => {
     const original = product.salePrice && product.price > product.salePrice ? product.price : pack.price
 
@@ -61,6 +65,7 @@ function mapOryCMSProductToDetail(
   })
 
   return {
+    defaultOptionIndex,
     benefits:
       product.tags.length > 0
         ? product.tags.map((tag) => `${tag} support for healthier crop performance.`)

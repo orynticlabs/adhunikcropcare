@@ -279,6 +279,7 @@ export type CouponValidationResult = {
   name: string
   shortText: string | null
   code: string
+  isAutoApplied?: boolean
 }
 
 export type CouponValidationError = {
@@ -286,80 +287,104 @@ export type CouponValidationError = {
   message: string
 }
 
-export async function validateCouponCode(
-  code: string,
+async function getCartProductMetadata(productSlugs: string[]) {
+  if (productSlugs.length === 0) return { productSlugs: [], categoryNames: [], brandNames: [] }
+  const rows = await orycmsPrisma.$queryRaw<{ id: string; slug: string; category: string; brand: string | null }[]>`
+    SELECT id, slug, category, brand FROM orycms_products
+    WHERE (slug = ANY(${productSlugs}) OR id::text = ANY(${productSlugs})) AND deleted_at IS NULL
+  `
+  const slugs = new Set<string>()
+  const categories = new Set<string>()
+  const brands = new Set<string>()
+  for (const r of rows) {
+    if (r.slug) slugs.add(r.slug)
+    if (r.id) slugs.add(r.id)
+    if (r.category) categories.add(r.category)
+    if (r.brand) brands.add(r.brand)
+  }
+  return {
+    productSlugs: Array.from(slugs),
+    categoryNames: Array.from(categories),
+    brandNames: Array.from(brands),
+  }
+}
+
+export async function checkDiscountConditions(
+  discount: DiscountDTO,
   context: {
     userId: string
     subtotal: number
     shippingTotal?: number
     productSlugs?: string[]
-    categorySlug?: string
     orderCount?: number
   },
-): Promise<CouponValidationResult | CouponValidationError> {
-  const upperCode = code.trim().toUpperCase()
-  if (!upperCode) return { valid: false, message: "Please enter a coupon code." }
-
-  const [row] = await orycmsPrisma.$queryRaw<DiscountRow[]>`
-    SELECT * FROM orycms_discounts
-    WHERE code = ${upperCode} AND deleted_at IS NULL LIMIT 1
-  `
-  if (!row) return { valid: false, message: "Invalid coupon code." }
-
-  const discount = toDTO(row)
-
-  if (!discount.active) return { valid: false, message: "This coupon is no longer active." }
+): Promise<{ eligible: true; discountAmount: number } | { eligible: false; message: string }> {
+  if (!discount.active) {
+    return { eligible: false, message: "This discount is no longer active." }
+  }
 
   const now = new Date()
   if (discount.startsAt && new Date(discount.startsAt) > now) {
-    return { valid: false, message: "This coupon is not yet active." }
+    return { eligible: false, message: "This discount is not yet active." }
   }
   if (discount.endsAt && new Date(discount.endsAt) < now) {
-    return { valid: false, message: "This coupon has expired." }
+    return { eligible: false, message: "This discount has expired." }
   }
 
   if (discount.usageLimit != null && discount.usageCount >= discount.usageLimit) {
-    return { valid: false, message: "This coupon's usage limit has been reached." }
+    return { eligible: false, message: "This discount usage limit has been reached." }
   }
 
-  if (discount.perUserLimit != null) {
+  if (discount.perUserLimit != null && context.userId) {
     const [usage] = await orycmsPrisma.$queryRaw<{ cnt: bigint }[]>`
       SELECT COUNT(*) AS cnt FROM orycms_discount_usages
       WHERE discount_id = ${discount.id}::uuid AND user_id = ${context.userId}::uuid
     `
     if (Number(usage?.cnt ?? 0) >= discount.perUserLimit) {
-      return { valid: false, message: "You have already used this coupon the maximum number of times." }
+      return { eligible: false, message: "You have already used this discount the maximum allowed times." }
     }
   }
 
   if (discount.minOrderAmount != null && context.subtotal < discount.minOrderAmount) {
     return {
-      valid: false,
-      message: `Minimum order amount of ₹${discount.minOrderAmount.toFixed(0)} required for this coupon.`,
+      eligible: false,
+      message: `Minimum order amount of ₹${discount.minOrderAmount.toFixed(0)} required for this discount.`,
     }
   }
 
-  if (discount.firstOrderOnly && (context.orderCount ?? 0) !== 0) {
-    return { valid: false, message: "This coupon is valid for first orders only." }
+  const orderCount = context.orderCount ?? 0
+  if (discount.firstOrderOnly && orderCount !== 0) {
+    return { eligible: false, message: "This discount is valid for first orders only." }
   }
-  if (discount.newCustomersOnly && (context.orderCount ?? 0) > 0) {
-    return { valid: false, message: "This coupon is for new customers only." }
+  if (discount.newCustomersOnly && orderCount > 0) {
+    return { eligible: false, message: "This discount is for new customers only." }
   }
-  if (discount.existingCustomersOnly && (context.orderCount ?? 0) === 0) {
-    return { valid: false, message: "This coupon is for existing customers only." }
+  if (discount.existingCustomersOnly && orderCount === 0) {
+    return { eligible: false, message: "This discount is for existing customers only." }
+  }
+  if (discount.loggedInOnly && !context.userId) {
+    return { eligible: false, message: "You must be logged in to use this discount." }
   }
 
   if (discount.appliesTo !== "entire_store" && discount.targetIds.length > 0) {
     const targets = discount.targetIds
+    const productSlugs = context.productSlugs ?? []
+    const meta = await getCartProductMetadata(productSlugs)
+
     if (discount.appliesTo === "products") {
-      const slugs = context.productSlugs ?? []
-      if (!slugs.some((s) => targets.includes(s))) {
-        return { valid: false, message: "This coupon is not applicable to the items in your cart." }
+      const matches = productSlugs.some((s) => targets.includes(s)) || meta.productSlugs.some((s) => targets.includes(s))
+      if (!matches) {
+        return { eligible: false, message: "This discount is not applicable to the items in your cart." }
       }
     } else if (discount.appliesTo === "categories") {
-      const cat = context.categorySlug ?? ""
-      if (!targets.includes(cat)) {
-        return { valid: false, message: "This coupon is not applicable to the items in your cart." }
+      const matches = meta.categoryNames.some((c) => targets.includes(c))
+      if (!matches) {
+        return { eligible: false, message: "This discount is not applicable to the items in your cart." }
+      }
+    } else if (discount.appliesTo === "brands") {
+      const matches = meta.brandNames.some((b) => targets.includes(b))
+      if (!matches) {
+        return { eligible: false, message: "This discount is not applicable to the items in your cart." }
       }
     }
   }
@@ -377,10 +402,89 @@ export async function validateCouponCode(
 
   discountAmount = Math.max(0, Math.round(discountAmount))
 
+  if (discountAmount <= 0 && discount.type !== "free_shipping") {
+    return { eligible: false, message: "Discount amount evaluates to ₹0 for your current cart." }
+  }
+
+  return { eligible: true, discountAmount }
+}
+
+export async function evaluateAutoApplyDiscount(context: {
+  userId: string
+  subtotal: number
+  shippingTotal?: number
+  productSlugs?: string[]
+  orderCount?: number
+}): Promise<CouponValidationResult | null> {
+  const rows = await orycmsPrisma.$queryRaw<DiscountRow[]>`
+    SELECT * FROM orycms_discounts
+    WHERE auto_apply = true AND active = true AND deleted_at IS NULL
+    ORDER BY priority DESC, created_at DESC
+  `
+  if (rows.length === 0) return null
+
+  const candidates: { discount: DiscountDTO; amount: number }[] = []
+
+  for (const row of rows) {
+    const discount = toDTO(row)
+    const check = await checkDiscountConditions(discount, context)
+    if (check.eligible) {
+      candidates.push({ discount, amount: check.discountAmount })
+    }
+  }
+
+  if (candidates.length === 0) return null
+
+  candidates.sort((a, b) => {
+    if (b.amount !== a.amount) return b.amount - a.amount
+    return b.discount.priority - a.discount.priority
+  })
+
+  const best = candidates[0]
+
+  return {
+    valid: true,
+    discountId: best.discount.id,
+    discountAmount: best.amount,
+    type: best.discount.type,
+    name: best.discount.name,
+    shortText: best.discount.shortText,
+    code: best.discount.code ?? "AUTO_APPLIED",
+    isAutoApplied: true,
+  }
+}
+
+export async function validateCouponCode(
+  code: string,
+  context: {
+    userId: string
+    subtotal: number
+    shippingTotal?: number
+    productSlugs?: string[]
+    categorySlug?: string
+    orderCount?: number
+  },
+): Promise<CouponValidationResult | CouponValidationError> {
+  const upperCode = code.trim().toUpperCase()
+  if (!upperCode) return { valid: false, message: "Please enter a coupon code." }
+
+  const rows = await orycmsPrisma.$queryRaw<DiscountRow[]>`
+    SELECT * FROM orycms_discounts
+    WHERE (code = ${upperCode} OR id::text = ${code}) AND deleted_at IS NULL LIMIT 1
+  `
+  if (rows.length === 0) return { valid: false, message: "Invalid coupon code." }
+
+  const discount = toDTO(rows[0])
+  const check = await checkDiscountConditions(discount, context)
+
+  if (!check.eligible) {
+    return { valid: false, message: check.message }
+  }
+
   return {
     valid: true,
     discountId: discount.id,
-    discountAmount,
+    discountAmount: check.discountAmount,
     type: discount.type,
     name: discount.name,
     shortText: discount.shortText,
@@ -423,4 +527,69 @@ export async function getActiveOffersForProduct(productSlug: string, categorySlu
     if (d.appliesTo === "categories" && categorySlug && d.targetIds.includes(categorySlug)) return true
     return false
   })
+}
+
+export type AvailableCouponDTO = {
+  id: string
+  name: string
+  code: string
+  shortText: string | null
+  description: string | null
+  type: DiscountType
+  value: number
+  minOrderAmount: number | null
+  maxDiscountAmount: number | null
+  badgeText: string | null
+  autoApply: boolean
+  eligible: boolean
+  discountAmount: number
+  ineligibilityReason: string | null
+}
+
+export async function listAvailableCoupons(context: {
+  userId: string
+  subtotal: number
+  shippingTotal?: number
+  productSlugs?: string[]
+  orderCount?: number
+}): Promise<AvailableCouponDTO[]> {
+  const rows = await orycmsPrisma.$queryRaw<DiscountRow[]>`
+    SELECT * FROM orycms_discounts
+    WHERE active = true AND deleted_at IS NULL
+    ORDER BY priority DESC, created_at DESC
+  `
+
+  const results: AvailableCouponDTO[] = []
+
+  for (const row of rows) {
+    const discount = toDTO(row)
+    const code = discount.code || (discount.autoApply ? "AUTO_APPLIED" : null)
+    if (!code) continue
+
+    const check = await checkDiscountConditions(discount, context)
+
+    results.push({
+      id: discount.id,
+      name: discount.name,
+      code,
+      shortText: discount.shortText,
+      description: discount.description,
+      type: discount.type,
+      value: discount.value,
+      minOrderAmount: discount.minOrderAmount,
+      maxDiscountAmount: discount.maxDiscountAmount,
+      badgeText: discount.badgeText,
+      autoApply: discount.autoApply,
+      eligible: check.eligible,
+      discountAmount: check.eligible ? check.discountAmount : 0,
+      ineligibilityReason: check.eligible ? null : check.message,
+    })
+  }
+
+  results.sort((a, b) => {
+    if (a.eligible !== b.eligible) return a.eligible ? -1 : 1
+    return b.discountAmount - a.discountAmount
+  })
+
+  return results
 }

@@ -272,7 +272,7 @@ export default function SearchBox() {
           {open ? (
             <div
               data-testid="search-suggestions"
-              className="fixed left-1/2 top-[6.25rem] z-50 w-[min(92vw,23rem)] -translate-x-1/2 overflow-hidden rounded-[1.35rem] border border-border/60 bg-background/96 shadow-[0_18px_46px_rgba(3,57,39,0.14)] backdrop-blur-md sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+0.55rem)] sm:translate-x-0"
+              className="absolute left-1/2 top-[calc(100%+0.5rem)] -translate-x-1/2 z-50 w-[min(calc(100vw-1.5rem),23rem)] overflow-hidden rounded-[1.35rem] border border-border/60 bg-background/96 shadow-[0_18px_46px_rgba(3,57,39,0.14)] backdrop-blur-md sm:left-auto sm:right-0 sm:top-[calc(100%+0.55rem)] sm:translate-x-0 sm:w-[min(92vw,23rem)]"
             >
               <div className="border-b border-border/50 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                 {trimmedQuery ? "Search results" : "Popular searches"}

@@ -14,6 +14,8 @@ import {
   Layers,
   Save,
 } from "lucide-react"
+import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import type { OryCMSFaqDTO } from "@/lib/orycms/faqs"
 
 export function OryCMSFaqsAdmin() {
@@ -404,17 +406,15 @@ export function OryCMSFaqsAdmin() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">
-                    Status
-                  </label>
-                  <select
+                  <OryCMSSelect
+                    label="Status"
                     value={formStatus}
-                    onChange={(e) => setFormStatus(e.target.value as "published" | "draft")}
-                    className="h-11 w-full rounded-xl border border-border bg-background px-3.5 text-xs text-foreground outline-none focus:border-foreground sm:text-sm"
-                  >
-                    <option value="published">Published</option>
-                    <option value="draft">Draft</option>
-                  </select>
+                    onChange={(val) => setFormStatus(val as "published" | "draft")}
+                    options={[
+                      { label: "Published", value: "published" },
+                      { label: "Draft", value: "draft" },
+                    ]}
+                  />
                 </div>
               </div>
 

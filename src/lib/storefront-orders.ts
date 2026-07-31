@@ -778,12 +778,12 @@ type InvoiceLineItem = CheckoutItem & {
 }
 
 const COMPANY = {
-  name: "Adhunik CropCare Private Limited",
+  name: "Adhunik Crop Care Private Limited",
   mobile: "+91 9205762766",
   email: "support@adhunikcropcare.com",
   gstin: "06AAHCA5011F1Z8",
-  registeredAddress: ["SCO 323, 2nd Floor", "Sector 40-D", "Chandigarh - 160036"],
-  warehouseAddress: ["KHEWAT NO. 349", "KHATONI NO. 440", "VILLAGE BHADOG, TEHSIL NARAINGARH"],
+  registeredAddress: ["SCO 323, 2nd Floor, Sector 40-D", "Chandigarh - 160036"],
+  warehouseAddress: ["Khewat No. 349, Khatoni No. 440,", "Village Bhadog, Tehsil Naraingarh"],
 }
 
 type PdfImage = { dataHex: string; height: number; name: string; width: number }
@@ -828,18 +828,22 @@ function drawInvoicePage(pdf: PdfBuilder, order: StorefrontOrderRow, logo: PdfIm
   const computed = taxable + shipping + cgst + sgst + igst
   const roundOff = round2(grandTotal - computed)
 
+  // 1. Top Banner & Header
   drawHeader(pdf, logo)
+
+  // 2. Meta Info Table (Y = 645 to 705)
   drawInfoTable(pdf, [
     ["Invoice Number", invoiceNo],
-    ["Order Number", order.number],
     ["Invoice Date", dateIn(order.packed_at ?? new Date())],
+    ["Order Number", order.number],
     ["Order Date", dateIn(order.created_at)],
     ["Payment Method", titleCase(order.payment_method.replace(/_/g, " "))],
     ["Payment Status", titleCase(order.payment_status)],
     ["Order Status", titleCase(order.status)],
-    ["Shipping Method", titleCase(order.delivery_method ?? "Standard")],
-  ], 38, 650, 520, 70)
+    ["Dispatch Method", titleCase(order.delivery_method ?? "Standard Delivery")],
+  ], 36, 645, 523, 60)
 
+  // 3. Bill To & Sold By Boxes (Y = 515 to 635)
   const buyerLines = [
     fullName(contact),
     contact.phone ? `Mobile: ${contact.phone}` : null,
@@ -848,29 +852,33 @@ function drawInvoicePage(pdf: PdfBuilder, order: StorefrontOrderRow, logo: PdfIm
     address.address2,
     [address.city, address.state, address.pincode].filter(Boolean).join(", "),
     address.country ?? "India",
-    address.gstNumber || contact.gstNumber ? `GST Number: ${address.gstNumber ?? contact.gstNumber}` : null,
+    address.gstNumber || contact.gstNumber ? `GSTIN: ${address.gstNumber ?? contact.gstNumber}` : null,
   ].filter(Boolean) as string[]
+
   const sellerLines = [
     COMPANY.name,
     `GSTIN: ${COMPANY.gstin}`,
-    `Registered: ${COMPANY.registeredAddress.join(", ")}`,
-    `Warehouse: ${COMPANY.warehouseAddress.join(", ")}`,
-    `Support: ${COMPANY.email}`,
-    `Phone: ${COMPANY.mobile}`,
+    `Reg. Office: ${COMPANY.registeredAddress.join(", ")}`,
+    `Warehouse: ${COMPANY.warehouseAddress[0]}`,
+    `${COMPANY.warehouseAddress[1]}`,
+    `Support Email: ${COMPANY.email}`,
+    `Contact Phone: ${COMPANY.mobile}`,
   ]
-  drawBoxedText(pdf, "Bill To", buyerLines, 38, 565, 250, 112)
-  drawBoxedText(pdf, "Sold By", sellerLines, 308, 565, 250, 112)
+  drawBoxedText(pdf, "BILL TO / SHIPPING ADDRESS", buyerLines, 36, 515, 256, 120)
+  drawBoxedText(pdf, "SOLD BY / SUPPLIER DETAILS", sellerLines, 303, 515, 256, 120)
 
-  const tableBottom = drawProductTable(pdf, items, 38, 430)
-  let summaryTop = Math.min(tableBottom - 18, 250)
-  if (tableBottom < 300) {
+  // 4. Product Table (Header at Y = 483 to 505)
+  const tableBottom = drawProductTable(pdf, items, 36, 505)
+
+  // 5. Totals & Notes Section (Y = 110 to 230)
+  let summaryTop = 230
+  if (tableBottom < 240) {
     drawFooter(pdf)
     pdf.addPage()
-    pdf.text("TAX INVOICE", 38, 800, 14, "bold")
-    pdf.text(`${invoiceNo} / ${order.number}`, 330, 802, 8, "normal", 210, [90, 90, 90], "right")
-    pdf.line(38, 784, 558, 784)
-    summaryTop = 742
+    drawHeader(pdf, logo)
+    summaryTop = 700
   }
+
   drawTotals(pdf, {
     subtotal,
     discount,
@@ -881,73 +889,93 @@ function drawInvoicePage(pdf: PdfBuilder, order: StorefrontOrderRow, logo: PdfIm
     igst,
     roundOff,
     grandTotal,
-  }, 333, summaryTop)
+  }, 303, summaryTop)
 
-  pdf.text("Amount in Words", 38, summaryTop - 8, 8, "bold")
-  pdf.text(`${amountWords(Math.round(grandTotal))} only`, 38, summaryTop - 21, 8, "normal", 270)
-
-  drawNotes(pdf, 38, 118)
-  drawSignature(pdf, 355, 115)
+  drawNotesAndWords(pdf, Math.round(grandTotal), 36, summaryTop)
+  drawSignature(pdf, 355, 45)
   drawFooter(pdf)
 }
 
 function drawHeader(pdf: PdfBuilder, logo: PdfImage | null) {
-  pdf.rect(38, 735, 520, 72)
-  pdf.fillRect(50, 756, 42, 34, [235, 244, 230])
+  // Title Banner
+  pdf.fillRect(36, 792, 523, 22, [3, 57, 39])
+  pdf.text("TAX INVOICE", 46, 798, 12, "bold", 180, "white")
+  pdf.text("ORIGINAL FOR RECIPIENT", 36, 800, 8, "bold", 513, "white", "right")
+
+  // Company Box
+  pdf.rect(36, 715, 523, 69, [208, 218, 204])
+  pdf.fillRect(36, 781, 523, 3, [104, 156, 48]) // Green accent strip
+
+  pdf.fillRect(44, 723, 48, 51, [239, 244, 236])
   if (logo) {
-    pdf.image(logo, 54, 758, 34, 30)
+    pdf.image(logo, 48, 725, 40, 47)
   } else {
-    pdf.circle(71, 773, 13, [104, 156, 48])
-    pdf.text("ACC", 61, 769, 9, "bold", 42, "white")
+    pdf.circle(68, 749, 15, [104, 156, 48])
+    pdf.text("ACC", 58, 744, 9, "bold", 42, "white")
   }
-  pdf.text("TAX INVOICE", 38, 817, 15, "bold")
-  pdf.text(COMPANY.name, 108, 786, 14, "bold")
-  pdf.text(`Mobile: ${COMPANY.mobile}`, 108, 770, 8)
-  pdf.text(`Email: ${COMPANY.email}`, 108, 758, 8)
-  pdf.text(`GSTIN: ${COMPANY.gstin}`, 108, 746, 8, "bold")
-  pdf.text(COMPANY.registeredAddress.join(", "), 330, 786, 8, "normal", 210, "black", "right")
-  pdf.text(`Warehouse: ${COMPANY.warehouseAddress.join(", ")}`, 330, 758, 8, "normal", 210, "black", "right")
+
+  // Left Column: Company Name & Contact Info (x = 98 to 295)
+  pdf.text(COMPANY.name, 98, 764, 11, "bold", 195, [3, 57, 39])
+  pdf.text(`GSTIN: ${COMPANY.gstin}`, 98, 750, 8, "bold", 195, [104, 156, 48])
+  pdf.text(`Phone: ${COMPANY.mobile}`, 98, 737, 7.2, "normal", 195, [70, 70, 70])
+  pdf.text(`Email: ${COMPANY.email}`, 98, 725, 7.2, "normal", 195, [70, 70, 70])
+
+  // Vertical Separator
+  pdf.line(298, 720, 298, 778, [220, 228, 216])
+
+  // Right Column: Reg. Office & Warehouse Address (x = 306 to 550)
+  pdf.text("Reg. Office:", 306, 764, 7.2, "bold", 240, [3, 57, 39])
+  pdf.text(COMPANY.registeredAddress.join(", "), 354, 764, 7, "normal", 198, [60, 60, 60])
+
+  pdf.text("Dispatch:", 306, 742, 7.2, "bold", 240, [3, 57, 39])
+  pdf.text(`${COMPANY.warehouseAddress[0]}`, 354, 742, 7, "normal", 198, [60, 60, 60])
+  pdf.text(`${COMPANY.warehouseAddress[1]}`, 354, 731, 7, "normal", 198, [60, 60, 60])
 }
 
 function drawInfoTable(pdf: PdfBuilder, rows: Array<[string, string]>, x: number, y: number, w: number, h: number) {
-  pdf.rect(x, y, w, h)
+  pdf.rect(x, y, w, h, [208, 218, 204])
   const colW = w / 4
   const rowH = h / 2
   rows.forEach(([label, value], index) => {
     const cx = x + (index % 4) * colW
     const cy = y + (index < 4 ? rowH : 0)
-    if (index % 4 > 0) pdf.line(cx, y, cx, y + h)
-    if (index === 4) pdf.line(x, y + rowH, x + w, y + rowH)
-    pdf.text(label, cx + 6, cy + rowH - 15, 6.8, "bold", colW - 12, [90, 90, 90])
-    pdf.text(value, cx + 6, cy + rowH - 30, 8, "normal", colW - 12)
+    if (index % 4 > 0) pdf.line(cx, cy, cx, cy + rowH, [218, 225, 215])
+    if (index === 4) pdf.line(x, y + rowH, x + w, y + rowH, [208, 218, 204])
+    pdf.fillRect(cx, cy + rowH - 14, colW, 14, [246, 248, 245])
+    pdf.text(label, cx + 5, cy + rowH - 10, 6.8, "bold", colW - 10, [80, 80, 80])
+    pdf.text(value, cx + 5, cy + 4, 8, "bold", colW - 10, [3, 57, 39])
   })
 }
 
 function drawBoxedText(pdf: PdfBuilder, title: string, lines: string[], x: number, y: number, w: number, h: number) {
-  pdf.rect(x, y, w, h)
-  pdf.fillRect(x, y + h - 22, w, 22, [245, 247, 245])
-  pdf.text(title, x + 9, y + h - 15, 9, "bold")
-  let cy = y + h - 36
+  pdf.rect(x, y, w, h, [208, 218, 204])
+  pdf.fillRect(x, y + h - 21, w, 21, [239, 244, 236])
+  pdf.line(x, y + h - 21, x + w, y + h - 21, [208, 218, 204])
+  pdf.text(title, x + 8, y + h - 14, 8.5, "bold", w - 16, [3, 57, 39])
+  let cy = y + h - 34
   for (const line of lines) {
-    const used = pdf.text(line, x + 9, cy, 7.6, "normal", w - 18)
-    cy -= used + 3
-    if (cy < y + 8) break
+    const used = pdf.text(line, x + 8, cy, 7.5, "normal", w - 16, [40, 40, 40])
+    cy -= used + 2
+    if (cy < y + 6) break
   }
 }
 
 function drawProductTable(pdf: PdfBuilder, items: InvoiceLineItem[], x: number, topY: number) {
-  const widths = [25, 116, 55, 43, 28, 55, 46, 34, 52, 66]
-  const headers = ["S.No.", "Product Name", "SKU", "HSN/SAC", "Qty", "Unit Price", "Discount", "Tax %", "GST Amount", "Total"]
+  // Balanced Column Widths (total = 523pt):
+  // 1: S.No (22), 2: Item Description (145), 3: HSN/SAC (42), 4: Qty (28), 5: Unit Price (62), 6: Discount (48), 7: Tax % (34), 8: GST Amt (56), 9: Total (86)
+  const widths = [22, 145, 42, 28, 62, 48, 34, 56, 86]
+  const headers = ["S.No.", "Item Description", "HSN/SAC", "Qty", "Unit Price", "Discount", "Tax %", "GST Amt", "Total (INR)"]
   let y = topY
-  pdf.fillRect(x, y, 520, 22, [239, 243, 238])
-  pdf.rect(x, y, 520, 22)
+  pdf.fillRect(x, y - 22, 523, 22, [235, 242, 232])
+  pdf.rect(x, y - 22, 523, 22, [208, 218, 204])
   let cx = x
   headers.forEach((header, index) => {
-    pdf.text(header, cx + 3, y + 8, 6.5, "bold", widths[index] - 6, [40, 40, 40], index >= 4 ? "right" : "left")
-    if (index > 0) pdf.line(cx, y, cx, y + 22)
+    const padRight = index >= 4 ? 6 : 0
+    pdf.text(header, cx + 3, y - 14, 6.8, "bold", widths[index] - 6 - padRight, [3, 57, 39], index >= 3 ? "right" : "left")
+    if (index > 0) pdf.line(cx, y - 22, cx, y, [208, 218, 204])
     cx += widths[index]
   })
-  y -= 1
+  y -= 22
 
   const rows = items.length ? items : [{ name: "Order Item", price: Number(orderTotalFallback(items)), quantity: 1 }]
   rows.forEach((item, index) => {
@@ -958,13 +986,12 @@ function drawProductTable(pdf: PdfBuilder, items: InvoiceLineItem[], x: number, 
     const lineTaxable = Math.max(0, unit * qty - discount)
     const gst = round2(lineTaxable * taxRate / 100)
     const total = lineTaxable + gst
-    const rowY = y - 34
-    pdf.rect(x, rowY, 520, 34)
+    const rowY = y - 28
+    pdf.rect(x, rowY, 523, 28, [218, 225, 215])
     cx = x
     const cells = [
       String(index + 1),
       String(item.name ?? "Product"),
-      String(item.sku ?? item.productSlug ?? item.id ?? "-"),
       String(item.hsnSac ?? item.hsnCode ?? item.hsn ?? "-"),
       String(qty),
       inr(unit),
@@ -974,9 +1001,12 @@ function drawProductTable(pdf: PdfBuilder, items: InvoiceLineItem[], x: number, 
       inr(total || unit * qty),
     ]
     cells.forEach((cell, cellIndex) => {
-      pdf.text(cell, cx + 3, rowY + 20, 6.7, "normal", widths[cellIndex] - 6, "black", cellIndex >= 4 ? "right" : "left")
-      if (cellIndex > 0) pdf.line(cx, rowY, cx, rowY + 34)
-      cx += widths[cellIndex]
+      // For numeric right-aligned columns (index >= 4), provide 6pt safety margin inside column box
+      const colW = widths[cellIndex]
+      const maxW = cellIndex >= 4 ? colW - 8 : colW - 6
+      pdf.text(cell, cx + 3, rowY + 11, 7.2, "normal", maxW, [30, 30, 30], cellIndex >= 3 ? "right" : "left")
+      if (cellIndex > 0) pdf.line(cx, rowY, cx, rowY + 28, [218, 225, 215])
+      cx += colW
     })
     y = rowY
   })
@@ -988,7 +1018,7 @@ function drawTotals(pdf: PdfBuilder, totals: Record<string, number>, x: number, 
     ["Subtotal", totals.subtotal],
     ["Discount", -totals.discount],
     ["Shipping Charge", totals.shipping],
-    ["Taxable Amount", totals.taxable],
+    ["Taxable Value", totals.taxable],
     ["CGST", totals.cgst],
     ["SGST", totals.sgst],
     ["IGST", totals.igst],
@@ -996,37 +1026,57 @@ function drawTotals(pdf: PdfBuilder, totals: Record<string, number>, x: number, 
     ["Grand Total", totals.grandTotal, true],
   ]
   const rows = allRows.filter(([label, value]) => label === "Grand Total" || value !== 0)
-  const rowH = 17
-  const h = rows.length * rowH
-  pdf.rect(x, y - h, 225, h)
+  const rowH = 15
+  const totalHeight = rows.length * rowH
+  pdf.rect(x, y - totalHeight, 256, totalHeight, [208, 218, 204])
   rows.forEach(([label, value, strong], index) => {
     const cy = y - (index + 1) * rowH
-    if (strong) pdf.fillRect(x, cy, 225, rowH, [235, 244, 230])
-    pdf.line(x, cy, x + 225, cy)
-    pdf.text(label, x + 8, cy + 5, strong ? 8.5 : 7.5, strong ? "bold" : "normal")
-    pdf.text(inr(value), x + 122, cy + 5, strong ? 8.5 : 7.5, strong ? "bold" : "normal", 92, "black", "right")
+    if (strong) {
+      pdf.fillRect(x, cy, 256, rowH, [3, 57, 39])
+      pdf.text(label, x + 8, cy + 4, 9, "bold", 120, "white")
+      pdf.text(inr(value), x + 130, cy + 4, 9.5, "bold", 118, "white", "right")
+    } else {
+      pdf.line(x, cy, x + 256, cy, [218, 225, 215])
+      pdf.text(label, x + 8, cy + 4, 7.8, "normal", 120, [60, 60, 60])
+      pdf.text(inr(value), x + 130, cy + 4, 7.8, "bold", 118, [30, 30, 30], "right")
+    }
   })
 }
 
-function drawNotes(pdf: PdfBuilder, x: number, y: number) {
-  pdf.text("Notes", x, y + 34, 8, "bold")
+function drawNotesAndWords(pdf: PdfBuilder, totalValue: number, x: number, y: number) {
+  // Amount in Words Box
+  pdf.rect(x, y - 55, 256, 55, [208, 218, 204])
+  pdf.fillRect(x, y - 20, 256, 20, [239, 244, 236])
+  pdf.line(x, y - 20, x + 256, y - 20, [208, 218, 204])
+  pdf.text("AMOUNT IN WORDS", x + 8, y - 14, 8, "bold", 240, [3, 57, 39])
+  pdf.text(`${amountWords(totalValue)} Only`, x + 8, y - 40, 8.5, "bold", 240, [30, 30, 30])
+
+  // Terms & Conditions Box
+  const notesY = y - 120
+  pdf.rect(x, notesY, 256, 58, [208, 218, 204])
+  pdf.fillRect(x, notesY + 38, 256, 20, [239, 244, 236])
+  pdf.line(x, notesY + 38, x + 256, notesY + 38, [208, 218, 204])
+  pdf.text("TERMS & CONDITIONS", x + 8, notesY + 44, 8, "bold", 240, [3, 57, 39])
   const notes = [
-    "Goods once sold are not returnable unless applicable.",
-    "Please retain this invoice for warranty purposes.",
-    "This is a computer-generated invoice.",
+    "1. Goods once sold are returnable per return policy.",
+    "2. Retain this tax invoice for warranty & product support.",
+    "3. Computer-generated tax invoice under GST Act.",
   ]
-  notes.forEach((note, index) => pdf.text(`${index + 1}. ${note}`, x, y + 19 - index * 12, 7))
+  notes.forEach((note, index) => {
+    pdf.text(note, x + 8, notesY + 26 - index * 11, 7.2, "normal", 240, [70, 70, 70])
+  })
 }
 
 function drawSignature(pdf: PdfBuilder, x: number, y: number) {
-  pdf.line(x, y + 34, x + 165, y + 34)
-  pdf.text("Authorized Signature", x + 48, y + 20, 8, "bold")
-  pdf.text(COMPANY.name, x + 12, y + 8, 7, "normal", 150, [90, 90, 90], "center")
+  pdf.line(x, y + 28, x + 200, y + 28, [180, 180, 180])
+  pdf.text("For ADHUNIK CROP CARE", x, y + 36, 8, "bold", 200, [3, 57, 39], "center")
+  pdf.text("Authorized Signatory", x, y + 14, 7.5, "normal", 200, [100, 100, 100], "center")
 }
 
 function drawFooter(pdf: PdfBuilder) {
-  pdf.text("Auto Generated Invoice by OryCMS", 160, 35, 7, "normal", 275, [120, 120, 120], "center")
-  pdf.text("Powered by OrynticLabs Private Limited", 160, 24, 7, "normal", 275, [120, 120, 120], "center")
+  pdf.line(36, 34, 559, 34, [220, 220, 220])
+  pdf.text("This is a computer-generated tax invoice. Registered under GST Act.", 36, 24, 7, "normal", 523, [120, 120, 120], "center")
+  pdf.text("Powered by OryCMS  |  Adhunik Crop Care Pvt. Ltd.", 36, 14, 7, "normal", 523, [140, 140, 140], "center")
 }
 
 class PdfBuilder {
@@ -1179,7 +1229,9 @@ function wrap(value: string, maxWidth: number, size: number) {
 }
 
 function textWidth(value: string, size: number) {
-  return value.length * size * 0.47
+  const upperCount = (value.match(/[A-Z0-9@]/g) || []).length
+  const lowerCount = value.length - upperCount
+  return (upperCount * 0.58 + lowerCount * 0.46) * size
 }
 
 function fill(color: PdfColor | "black" | "white") {

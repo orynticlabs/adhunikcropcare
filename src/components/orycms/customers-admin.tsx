@@ -5,6 +5,7 @@ import type React from "react"
 import Link from "next/link"
 import { ArrowLeft, Ban, CheckCircle2, Edit3, Eye, Search, Trash2, Users } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { cn, formatCurrency } from "@/lib/utils"
 
 const PAGE_SIZE = 10
@@ -139,30 +140,50 @@ export function OryCMSCustomersList() {
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name, email, or mobile…" className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-[13px] outline-none focus:border-border-strong" />
           </div>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            <option value="all">All status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="blocked">Blocked</option>
-          </select>
-          <select value={verifiedFilter} onChange={(event) => setVerifiedFilter(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            <option value="all">All email</option>
-            <option value="verified">Verified</option>
-            <option value="unverified">Unverified</option>
-          </select>
-          <select value={registrationFilter} onChange={(event) => setRegistrationFilter(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            <option value="all">All dates</option>
-            <option value="today">Registered today</option>
-            <option value="week">Last 7 days</option>
-            <option value="month">Last 30 days</option>
-          </select>
-          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortBy)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            <option value="created-desc">Newest first</option>
-            <option value="created-asc">Oldest first</option>
-            <option value="spent-desc">Total spent high</option>
-            <option value="orders-desc">Orders high</option>
-            <option value="name-asc">Name A–Z</option>
-          </select>
+          <OryCMSSelect
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { label: "All status", value: "all" },
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
+              { label: "Blocked", value: "blocked" },
+            ]}
+            className="w-auto"
+          />
+          <OryCMSSelect
+            value={verifiedFilter}
+            onChange={(val) => setVerifiedFilter(val)}
+            options={[
+              { label: "All email", value: "all" },
+              { label: "Verified", value: "verified" },
+              { label: "Unverified", value: "unverified" },
+            ]}
+            className="w-auto"
+          />
+          <OryCMSSelect
+            value={registrationFilter}
+            onChange={(val) => setRegistrationFilter(val)}
+            options={[
+              { label: "All dates", value: "all" },
+              { label: "Registered today", value: "today" },
+              { label: "Last 7 days", value: "week" },
+              { label: "Last 30 days", value: "month" },
+            ]}
+            className="w-auto"
+          />
+          <OryCMSSelect
+            value={sortBy}
+            onChange={(val) => setSortBy(val as SortBy)}
+            options={[
+              { label: "Newest first", value: "created-desc" },
+              { label: "Oldest first", value: "created-asc" },
+              { label: "Total spent high", value: "spent-desc" },
+              { label: "Orders high", value: "orders-desc" },
+              { label: "Name A–Z", value: "name-asc" },
+            ]}
+            className="w-auto"
+          />
         </div>
 
         {selected.length > 0 ? (
@@ -388,14 +409,16 @@ function EditCustomerModal({ customer, onClose, onSaved }: { customer: Customer;
           <Field label="Last Name" value={lastName} onChange={setLastName} />
         </div>
         <Field label="Mobile Number" value={phone} onChange={setPhone} />
-        <label className="block text-[12.5px] font-medium">
-          Account Status
-          <select value={status} onChange={(event) => setStatus(event.target.value as CustomerStatus)} className="mt-1 h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none">
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="blocked">Blocked</option>
-          </select>
-        </label>
+        <OryCMSSelect
+          label="Account Status"
+          value={status}
+          onChange={(val) => setStatus(val as CustomerStatus)}
+          options={[
+            { label: "Active", value: "active" },
+            { label: "Inactive", value: "inactive" },
+            { label: "Blocked", value: "blocked" },
+          ]}
+        />
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={onClose} className="h-9 rounded-lg border border-border px-4 text-[12.5px] font-medium">Cancel</button>
           <button type="submit" disabled={saving} className="h-9 rounded-lg bg-foreground px-4 text-[12.5px] font-medium text-background disabled:opacity-60">{saving ? "Saving…" : "Save Customer"}</button>

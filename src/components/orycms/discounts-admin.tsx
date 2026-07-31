@@ -6,6 +6,7 @@ import {
   Megaphone, Plus, RefreshCw, Search, Tag, Trash2, X, Zap,
 } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { RichTextEditor } from "@/components/orycms/rich-text-editor"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
 
@@ -261,14 +262,19 @@ function DiscountForm({ initial, onSave, onCancel, saving }: {
           <Field label="Short Offer Text">
             <input type="text" value={d.shortText ?? ""} onChange={(e) => p({ shortText: e.target.value || null })} placeholder="e.g. Get 20% off your order" className={INPUT} />
           </Field>
-          <Field label="Discount Type">
-            <select value={d.type} onChange={(e) => p({ type: e.target.value as DiscountType })} className={INPUT}>
-              <option value="percentage">Percentage Discount</option>
-              <option value="fixed">Fixed Amount Discount</option>
-              <option value="free_shipping">Free Shipping</option>
-              <option value="bxgy">Buy X Get Y (Future)</option>
-            </select>
-          </Field>
+          <div className="space-y-1.5">
+            <span className="text-[12px] font-medium">Discount Type</span>
+            <OryCMSSelect
+              value={d.type ?? "percentage"}
+              onChange={(val) => p({ type: val as DiscountType })}
+              options={[
+                { label: "Percentage Discount", value: "percentage" },
+                { label: "Fixed Amount Discount", value: "fixed" },
+                { label: "Free Shipping", value: "free_shipping" },
+                { label: "Buy X Get Y (Future)", value: "bxgy" },
+              ]}
+            />
+          </div>
         </div>
 
         {/* Value */}
@@ -356,14 +362,19 @@ function DiscountForm({ initial, onSave, onCancel, saving }: {
         {/* Applicability */}
         <div className="space-y-3">
           <SectionLabel>Applicability</SectionLabel>
-          <Field label="Applies To">
-            <select value={d.appliesTo} onChange={(e) => p({ appliesTo: e.target.value as AppliesTo, targetIds: [] })} className={INPUT}>
-              <option value="entire_store">Entire Store</option>
-              <option value="categories">Selected Categories</option>
-              <option value="products">Selected Products</option>
-              <option value="brands">Selected Brands</option>
-            </select>
-          </Field>
+          <div className="space-y-1.5">
+            <span className="text-[12px] font-medium">Applies To</span>
+            <OryCMSSelect
+              value={d.appliesTo ?? "entire_store"}
+              onChange={(val) => p({ appliesTo: val as AppliesTo, targetIds: [] })}
+              options={[
+                { label: "Entire Store", value: "entire_store" },
+                { label: "Selected Categories", value: "categories" },
+                { label: "Selected Products", value: "products" },
+                { label: "Selected Brands", value: "brands" },
+              ]}
+            />
+          </div>
           <TargetSelector appliesTo={d.appliesTo ?? "entire_store"} targetIds={d.targetIds ?? []} onChange={(ids) => p({ targetIds: ids })} />
           <div className="space-y-3 rounded-lg border border-border bg-surface p-4">
             <SectionLabel>Customer Restrictions</SectionLabel>

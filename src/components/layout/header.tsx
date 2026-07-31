@@ -66,7 +66,7 @@ export default function Header({ initialCategories }: { initialCategories?: Stor
   function closeMenu() { setMobileOpen(false) }
 
   const categoryLinks = categories.map((category) => ({
-    href: `/products?q=${encodeURIComponent(category.name)}`,
+    href: `/products?category=${encodeURIComponent(category.name)}`,
     label: category.name,
   }))
   const allNavbarLinks = [...FIXED_NAV_LINKS, ...categoryLinks]
@@ -80,7 +80,7 @@ export default function Header({ initialCategories }: { initialCategories?: Stor
       {/* ── Sticky top bar ─────────────────────────────────── */}
       <header className="fixed inset-x-0 top-9 z-50">
         <div className="mx-auto max-w-7xl px-3 py-2 sm:px-4">
-          <div className="navbar-glass flex items-center justify-between rounded-full border px-3 py-2 shadow-soft transition-colors duration-300 sm:px-5 sm:py-2.5">
+          <div className="navbar-glass relative flex items-center justify-between rounded-full border px-3 py-2 shadow-soft transition-colors duration-300 sm:px-5 sm:py-2.5">
 
             {/* Logo */}
             <Link href="/" className="flex items-center pl-1 sm:pl-2 shrink-0">
@@ -97,13 +97,13 @@ export default function Header({ initialCategories }: { initialCategories?: Stor
             {/* Desktop nav */}
             <nav className="hidden lg:flex items-center gap-1">
               {navbarLinks.map((l) => (
-                <a
+                <Link
                   key={l.href}
                   href={l.href}
                   className="rounded-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground/80 transition hover:text-[#689c30]"
                 >
                   {l.label}
-                </a>
+                </Link>
               ))}
 
               {/* More dropdown */}
@@ -113,13 +113,13 @@ export default function Header({ initialCategories }: { initialCategories?: Stor
                 </button>
                 <div className="invisible absolute right-0 top-full mt-3 w-56 rounded-2xl border border-border/60 bg-popover p-2 opacity-0 shadow-luxe transition-all group-hover:visible group-hover:opacity-100 z-10">
                   {overflowCategoryLinks.map((l) => (
-                    <a
+                    <Link
                       key={l.href}
                       href={l.href}
                       className="block rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-wide text-foreground/80 hover:text-[#689c30] transition"
                     >
                       {l.label}
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </div> : null}
@@ -264,14 +264,14 @@ export default function Header({ initialCategories }: { initialCategories?: Stor
             {/* Primary links */}
             <div className="space-y-0.5">
               {navbarLinks.map((l) => (
-                <a
+                <Link
                   key={l.href}
                   href={l.href}
                   onClick={closeMenu}
                   className="flex items-center rounded-xl px-4 py-3 text-[13px] font-semibold uppercase tracking-wide text-foreground/80 transition hover:bg-[#689c30]/10 hover:text-[#689c30]"
                 >
                   {l.label}
-                </a>
+                </Link>
               ))}
             </div>
 
@@ -283,14 +283,14 @@ export default function Header({ initialCategories }: { initialCategories?: Stor
               </div>
               <div className="space-y-0.5">
               {overflowCategoryLinks.map((l) => (
-                <a
+                <Link
                   key={l.href}
                   href={l.href}
                   onClick={closeMenu}
                   className="flex items-center rounded-xl px-4 py-2.5 text-xs font-semibold uppercase tracking-wide text-foreground/70 transition hover:bg-[#689c30]/10 hover:text-[#689c30]"
                 >
                   {l.label}
-                </a>
+                </Link>
               ))}
               </div>
             </> : null}

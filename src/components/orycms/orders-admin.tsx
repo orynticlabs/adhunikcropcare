@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Ban, CheckCircle2, Eye, FileText, Loader2, Package, Printer, Search, Truck } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
 import { cn, formatCurrency } from "@/lib/utils"
 
@@ -213,21 +214,30 @@ export function OryCMSOrdersList() {
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-[13px] outline-none focus:border-border-strong"
             />
           </div>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            <option value="all">All order status</option>
-            {statuses.map((status) => <option key={status} value={status}>{label(status)}</option>)}
-          </select>
-          <select value={paymentFilter} onChange={(event) => setPaymentFilter(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            <option value="all">All payment status</option>
-            {paymentStatuses.map((status) => <option key={status} value={status}>{label(status)}</option>)}
-          </select>
-          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortBy)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none">
-            <option value="created-desc">Newest first</option>
-            <option value="created-asc">Oldest first</option>
-            <option value="total-desc">Total high</option>
-            <option value="total-asc">Total low</option>
-            <option value="number-asc">Order number A–Z</option>
-          </select>
+          <OryCMSSelect
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+            options={[{ label: "All order status", value: "all" }, ...statuses.map((s) => ({ label: label(s), value: s }))]}
+            className="w-auto"
+          />
+          <OryCMSSelect
+            value={paymentFilter}
+            onChange={(val) => setPaymentFilter(val)}
+            options={[{ label: "All payment status", value: "all" }, ...paymentStatuses.map((s) => ({ label: label(s), value: s }))]}
+            className="w-auto"
+          />
+          <OryCMSSelect
+            value={sortBy}
+            onChange={(val) => setSortBy(val as SortBy)}
+            options={[
+              { label: "Newest first", value: "created-desc" },
+              { label: "Oldest first", value: "created-asc" },
+              { label: "Total high", value: "total-desc" },
+              { label: "Total low", value: "total-asc" },
+              { label: "Order number A–Z", value: "number-asc" },
+            ]}
+            className="w-auto"
+          />
         </div>
 
         {selected.size > 0 ? (

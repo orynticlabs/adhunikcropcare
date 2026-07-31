@@ -77,7 +77,8 @@ export const revalidate = 180 // 3-minute ISR
 
 async function getHomeProducts() {
   try {
-    return (await listOryCMSProducts({ publishedOnly: true })).slice(0, 8)
+    const publishedProducts = await listOryCMSProducts({ publishedOnly: true })
+    return publishedProducts.filter((product) => product.featured)
   } catch {
     return [] as OryCMSProductDTO[]
   }

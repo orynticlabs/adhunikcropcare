@@ -310,10 +310,26 @@ function validateProductInput(input: OryCMSProductInput) {
     throw new Error("Short Description must be 85 characters or fewer.")
   }
 
-  if (!Number.isFinite(normalized.price) || normalized.price <= 0) throw new Error("Price is required.")
-  if (!Number.isFinite(normalized.stockQuantity) || normalized.stockQuantity < 0) {
-    throw new Error("Stock quantity is required.")
+  if (!Number.isFinite(normalized.price) || normalized.price <= 0) throw new Error("MRP is required.")
+  if (!Number.isFinite(normalized.stockQuantity) || normalized.stockQuantity <= 0) {
+    throw new Error("Stock Quantity is required.")
   }
+  if (!normalized.images || normalized.images.length === 0) {
+    throw new Error("At least one product image is required.")
+  }
+  if (!normalized.packSizes || normalized.packSizes.length === 0) {
+    throw new Error("At least one valid pack size is required.")
+  }
+
+  const targetPrice = normalized.salePrice && normalized.salePrice > 0 ? normalized.salePrice : normalized.price
+  const priceTypeLabel = normalized.salePrice && normalized.salePrice > 0 ? "Sale Price" : "MRP"
+  const hasMatchingPack = normalized.packSizes.some(
+    (p) => p.size.trim() && Number.isFinite(p.price) && Math.abs(p.price - targetPrice) < 0.01
+  )
+  if (!hasMatchingPack) {
+    throw new Error(`At least one pack size price must match the product ${priceTypeLabel} (INR ${targetPrice}).`)
+  }
+
   if (!PRODUCT_STATUSES.includes(normalized.status)) throw new Error("Invalid product status.")
 
   return normalized

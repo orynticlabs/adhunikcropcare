@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { CheckCircle2, ChevronLeft, ChevronRight, ImageIcon, Loader2, Plus, Save, Search, Trash2, Upload, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { cn } from "@/lib/utils"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
 
@@ -158,15 +159,16 @@ export function OryCMSCategoriesList() {
               className="h-9 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-[13px] outline-none focus:border-border-strong"
             />
           </div>
-          <select
+          <OryCMSSelect
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
-            className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none"
-          >
-            <option value="all">All status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+            onChange={(val) => setStatusFilter(val as typeof statusFilter)}
+            options={[
+              { label: "All status", value: "all" },
+              { label: "Active", value: "active" },
+              { label: "Inactive", value: "inactive" },
+            ]}
+            className="w-full sm:w-36"
+          />
           {selected.length > 0 ? (
             <button
               type="button"
@@ -506,36 +508,34 @@ export function OryCMSCategoryForm({ id }: { id?: string }) {
               <Field label="Category Name*" value={category.name} onChange={changeName} />
               <Field label="Slug*" value={category.slug} onChange={changeSlug} />
               <div className="grid gap-3 md:grid-cols-2">
-                <label className="block space-y-1.5">
-                  <span className="text-[12px] font-medium">Parent</span>
-                  <select
-                    value={category.parentId ?? ""}
-                    onChange={(event) => patch({ parentId: event.target.value || null })}
-                    className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none"
-                  >
-                    <option value="">No parent</option>
-                    {categories
+                <OryCMSSelect
+                  label="Parent"
+                  value={category.parentId ?? ""}
+                  onChange={(val) => patch({ parentId: val || null })}
+                  options={[
+                    { label: "No parent", value: "" },
+                    ...categories
                       .filter((item) => item.id !== category.id)
-                      .map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.parentName ? `${item.parentName} / ${item.name}` : item.name}
-                        </option>
-                      ))}
-                  </select>
-                </label>
+                      .map((item) => ({
+                        label: item.parentName ? `${item.parentName} / ${item.name}` : item.name,
+                        value: item.id,
+                      })),
+                  ]}
+                  searchable
+                  className="w-full"
+                />
                 <NumberField label="Display Order" value={category.displayOrder} onChange={(displayOrder) => patch({ displayOrder })} />
               </div>
-              <label className="block space-y-1.5">
-                <span className="text-[12px] font-medium">Status</span>
-                <select
-                  value={category.status}
-                  onChange={(event) => patch({ status: event.target.value as CategoryStatus })}
-                  className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none"
-                >
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </label>
+              <OryCMSSelect
+                label="Status"
+                value={category.status}
+                onChange={(val) => patch({ status: val as CategoryStatus })}
+                options={[
+                  { label: "Active", value: "active" },
+                  { label: "Inactive", value: "inactive" },
+                ]}
+                className="w-full"
+              />
             </Card>
 
             <Card title="SEO">
