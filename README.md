@@ -19,7 +19,7 @@ The application is built on a full-stack Next.js architecture featuring a custom
 - **Interactive Homepage & Hero Section**: Feature product highlights, top announcement bar, dynamic hero slider, and category navigation.
 - **Real-Time Search Modal**: Instant auto-suggest modal searching products and categories (`/api/products`).
 - **URL-Synced Category Navigation**: Seamless category filtering (`/products?category=...`) with instant client-side updates and zero full-page reloads.
-- **Dynamic Pack Sizes & Unit Enforcement**: Constrained pack unit options (Kg, g, ml, L, Box, Bottle) based on product category, with automatic default pack size selection matching Sale Price or MRP.
+- **Dynamic Pack Sizes & Pack-Specific Images**: Constrained pack unit options (Kg, g, ml, L, Box, Bottle) with support for pack-size-specific images. On the storefront, switching pack sizes dynamically updates the primary display image and filters gallery thumbnails with zero flicker.
 - **Rich Product Detail Pages**: High-resolution image zoom gallery, live stock availability status, dynamic specifications / usage accordions, verified customer reviews, and coupon badges.
 - **Cart & Checkout Drawer**: Slide-out cart drawer with real-time quantity updates, address selection, pincode serviceability estimation, and instant checkout.
 - **Interactive Discount & Coupon Engine**: 1-click coupon modal selector, single-run auto-apply rule evaluation engine, and manual promo code entry validation.
@@ -33,6 +33,7 @@ The application is built on a full-stack Next.js architecture featuring a custom
 ### 🛠️ OryCMS Administrator Portal (`/admin`)
 - **Strict Boundary Security**: Isolated administrator authentication and session handling (`/api/orycms/*`).
 - **Product & Inventory Management**: Rich text product editor, Cloudinary image gallery with auto-cropping, unit restriction dropdowns, and positive stock quantity enforcement (`> 0`).
+- **Pack-Size-Specific Images & Custom OryCMSMultiSelect**: Admin toggle for pack-size-specific images with `OryCMSMultiSelect` popover dropdowns allowing multiple image attachments per pack size row.
 - **Price Match Safeguards**: Built-in validation requiring at least one pack size price to equal the product Sale Price or MRP before saving.
 - **Orders, Coupons & Announcements**: Admin controls for managing customer orders, creating conditional discount coupons, editing announcement bars, and managing user enquiries.
 

@@ -43,6 +43,8 @@ function mapOryCMSProductToDetail(
 ): ProductDetail {
   const images = ensureProductImages(product).map((image) => ({
     alt: image.name || product.name,
+    id: image.id,
+    packSizes: image.packSizes,
     src: image.url,
   }))
   const packs =
@@ -58,6 +60,10 @@ function mapOryCMSProductToDetail(
 
     return {
       discount: discountLabel(pack.price, original),
+      imageId: pack.imageId,
+      imageIds: pack.imageIds,
+      imageUrl: pack.imageUrl,
+      imageUrls: pack.imageUrls,
       label: pack.size,
       originalPrice: comparePrice(original, original === pack.price ? 1.2 : 1),
       price: formatINR(pack.price),
@@ -82,6 +88,7 @@ function mapOryCMSProductToDetail(
       "Quality agricultural input for field use",
     ],
     options,
+    packSizeImagesEnabled: product.packSizeImagesEnabled,
     rating: 4.8,
     recommended: recommended.slice(0, 4).map((item) => ({
       badge: item.featured ? "Featured" : item.category,

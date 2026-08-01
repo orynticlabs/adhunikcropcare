@@ -205,7 +205,11 @@ function primaryImage(images: unknown) {
 }
 
 function asArray(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : []
+  if (Array.isArray(value)) return value
+  if (typeof value === "object" && value !== null && "items" in value && Array.isArray((value as any).items)) {
+    return (value as any).items
+  }
+  return []
 }
 
 function text(value: unknown) {

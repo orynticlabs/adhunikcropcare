@@ -6,7 +6,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, GripVertical, ImageIcon, Loader2, Plus, Save, Search, Star, Trash2, Upload, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
-import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { OryCMSMultiSelect, OryCMSSelect } from "@/components/orycms/custom-select"
 import { RichTextEditor } from "@/components/orycms/rich-text-editor"
 import { cn } from "@/lib/utils"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
@@ -21,8 +21,8 @@ const ALLOWED_TYPES = new Set([
   "image/webp",
 ])
 
-type ProductImage = { id?: string; name?: string; url: string }
-type PackSize = { price: number; size: string }
+type ProductImage = { id?: string; name?: string; url: string; packSizes?: string[] }
+type PackSize = { price: number; size: string; imageId?: string; imageUrl?: string; imageIds?: string[]; imageUrls?: string[] }
 type ProductStatus = "draft" | "published"
 
 type Product = {
@@ -38,6 +38,7 @@ type Product = {
   metaTitle: string
   name: string
   packSizes: PackSize[]
+  packSizeImagesEnabled?: boolean
   price: number
   salePrice: number | null
   shippingReturns: string
@@ -132,6 +133,7 @@ const emptyProduct: Product = {
   metaTitle: "",
   name: "",
   packSizes: [{ price: 0, size: "" }],
+  packSizeImagesEnabled: false,
   price: 0,
   salePrice: null,
   shippingReturns: "",
@@ -770,7 +772,27 @@ export function OryCMSProductForm({ id }: { id?: string }) {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface-muted/60 p-3">
+                <div className="space-y-0.5">
+                  <div className="text-[13px] font-semibold text-foreground">
+                    Enable pack-size-specific images (optional)
+                  </div>
+                  <div className="text-[11.5px] text-muted-foreground">
+                    Allows associating specific images with individual pack sizes. If unassigned or disabled, default product images are shown.
+                  </div>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(product.packSizeImagesEnabled)}
+                    onChange={(event) => patch({ packSizeImagesEnabled: event.target.checked })}
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-border after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-[#689c30] peer-checked:after:translate-x-full peer-focus:outline-none" />
+                </label>
+              </div>
+
               <div className="flex items-center justify-between">
                 <div className="text-[12px] font-medium">Pack Sizes*</div>
                 <span className="text-[11px] text-muted-foreground">
@@ -822,74 +844,166 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                 )
               })()}
 
-              {product.packSizes.map((pack, index) => {
-                const allowedUnits = getPackSizeUnitOptions(product.unit)
-                const parsed = parsePackSize(pack.size, allowedUnits)
+              <div className="space-y-3">
+                {product.packSizes.map((pack, index) => {
+                  const allowedUnits = getPackSizeUnitOptions(product.unit)
+                  const parsed = parsePackSize(pack.size, allowedUnits)
 
-                return (
-                  <div key={index} className="grid gap-2 md:grid-cols-[1fr_110px_140px_38px] items-center">
-                    {/* Numeric Pack Quantity */}
-                    <input
-                      type="number"
-                      step="any"
-                      min="0"
-                      value={parsed.qty}
-                      onChange={(event) => {
-                        const val = event.target.value
-                        const newSize = formatPackSize(val, parsed.unit)
-                        patch({
-                          packSizes: product.packSizes.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, size: newSize } : item,
-                          ),
-                        })
-                      }}
-                      placeholder="Qty (e.g. 5)"
-                      className="h-9 rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
-                    />
+                  return (
+                    <div key={index} className="space-y-2 rounded-lg border border-border/80 bg-surface/50 p-3">
+                      <div className="grid gap-2 md:grid-cols-[1fr_110px_140px_38px] items-center">
+                        {/* Numeric Pack Quantity */}
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          value={parsed.qty}
+                          onChange={(event) => {
+                            const val = event.target.value
+                            const newSize = formatPackSize(val, parsed.unit)
+                            patch({
+                              packSizes: product.packSizes.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, size: newSize } : item,
+                              ),
+                            })
+                          }}
+                          placeholder="Qty (e.g. 5)"
+                          className="h-9 rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
+                        />
 
-                    {/* Unit Select Dropdown */}
-                    <OryCMSSelect
-                      value={parsed.unit}
-                      onChange={(newUnit) => {
-                        const newSize = formatPackSize(parsed.qty, newUnit)
-                        patch({
-                          packSizes: product.packSizes.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, size: newSize } : item,
-                          ),
-                        })
-                      }}
-                      options={allowedUnits.map((u) => ({ label: u, value: u }))}
-                      placeholder="Unit"
-                      className="w-full"
-                    />
+                        {/* Unit Select Dropdown */}
+                        <OryCMSSelect
+                          value={parsed.unit}
+                          onChange={(newUnit) => {
+                            const newSize = formatPackSize(parsed.qty, newUnit)
+                            patch({
+                              packSizes: product.packSizes.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, size: newSize } : item,
+                              ),
+                            })
+                          }}
+                          options={allowedUnits.map((u) => ({ label: u, value: u }))}
+                          placeholder="Unit"
+                          className="w-full"
+                        />
 
-                    {/* Pack Price */}
-                    <input
-                      type="number"
-                      value={pack.price || ""}
-                      onChange={(event) =>
-                        patch({
-                          packSizes: product.packSizes.map((item, itemIndex) =>
-                            itemIndex === index ? { ...item, price: Number(event.target.value) } : item,
-                          ),
-                        })
-                      }
-                      placeholder="Price (₹)"
-                      className="h-9 rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
-                    />
+                        {/* Pack Price */}
+                        <input
+                          type="number"
+                          value={pack.price || ""}
+                          onChange={(event) =>
+                            patch({
+                              packSizes: product.packSizes.map((item, itemIndex) =>
+                                itemIndex === index ? { ...item, price: Number(event.target.value) } : item,
+                              ),
+                            })
+                          }
+                          placeholder="Price (₹)"
+                          className="h-9 rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
+                        />
 
-                    {/* Delete Pack Size Button */}
-                    <button
-                      type="button"
-                      onClick={() => patch({ packSizes: product.packSizes.filter((_, i) => i !== index) })}
-                      className="grid h-9 w-9 place-items-center rounded-lg border border-border text-destructive hover:bg-destructive/10 transition-colors"
-                      title="Remove pack size"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )
-              })}
+                        {/* Delete Pack Size Button */}
+                        <button
+                          type="button"
+                          onClick={() => patch({ packSizes: product.packSizes.filter((_, i) => i !== index) })}
+                          className="grid h-9 w-9 place-items-center rounded-lg border border-border text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                          title="Remove pack size"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      {product.packSizeImagesEnabled && (
+                        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50 text-[12px]">
+                          <span className="font-medium text-muted-foreground shrink-0 flex items-center gap-1">
+                            <ImageIcon className="h-3.5 w-3.5 text-[#689c30]" />
+                            Pack-specific Images:
+                          </span>
+                          <div className="flex-1 min-w-[220px]">
+                            <OryCMSMultiSelect
+                              values={(() => {
+                                if (Array.isArray(pack.imageIds) && pack.imageIds.length > 0) return pack.imageIds
+                                if (Array.isArray(pack.imageUrls) && pack.imageUrls.length > 0) return pack.imageUrls
+                                if (pack.imageId) return [pack.imageId]
+                                if (pack.imageUrl) return [pack.imageUrl]
+                                return []
+                              })()}
+                              onChange={(selectedVals) => {
+                                const selectedImgs = product.images.filter((img) => (img.id && selectedVals.includes(img.id)) || selectedVals.includes(img.url))
+                                const selIds = selectedImgs.map((img) => img.id).filter((id): id is string => Boolean(id))
+                                const selUrls = selectedImgs.map((img) => img.url).filter((url): url is string => Boolean(url))
+
+                                const packLabel = pack.size.trim()
+
+                                const newPackSizes = product.packSizes.map((item, i) => {
+                                  if (i !== index) return item
+                                  return {
+                                    ...item,
+                                    imageId: selIds[0] || (selUrls[0] ? selUrls[0] : undefined),
+                                    imageIds: selIds.length > 0 ? selIds : undefined,
+                                    imageUrl: selUrls[0] || (selUrls[0] ? selUrls[0] : undefined),
+                                    imageUrls: selUrls.length > 0 ? selUrls : undefined,
+                                  }
+                                })
+
+                                const newImages = product.images.map((img) => {
+                                  const imgVal = img.id || img.url
+                                  const isSelectedForThisPack = selectedVals.includes(imgVal)
+                                  const currentPacks = img.packSizes || []
+
+                                  if (isSelectedForThisPack) {
+                                    if (packLabel && !currentPacks.includes(packLabel)) {
+                                      return { ...img, packSizes: [...currentPacks, packLabel] }
+                                    }
+                                  } else if (packLabel) {
+                                    const usedByOtherPack = newPackSizes.some((p, pIdx) => {
+                                      if (pIdx === index || p.size.trim() !== packLabel) return false
+                                      const pVals = p.imageIds || p.imageUrls || (p.imageId ? [p.imageId] : p.imageUrl ? [p.imageUrl] : [])
+                                      return pVals.includes(imgVal)
+                                    })
+                                    if (!usedByOtherPack && currentPacks.includes(packLabel)) {
+                                      return { ...img, packSizes: currentPacks.filter((s) => s !== packLabel) }
+                                    }
+                                  }
+                                  return img
+                                })
+
+                                patch({ packSizes: newPackSizes, images: newImages })
+                              }}
+                              options={product.images.map((img, imgIdx) => ({
+                                image: img.url,
+                                label: img.name ? `${img.name}${imgIdx === 0 ? " (Primary)" : ""}` : `Image #${imgIdx + 1}${imgIdx === 0 ? " (Primary)" : ""}`,
+                                value: img.id || img.url,
+                              }))}
+                              placeholder="Default (Product Primary / Untagged)"
+                              searchable
+                              className="w-full"
+                            />
+                          </div>
+                          {(() => {
+                            const curUrls = Array.isArray(pack.imageUrls) && pack.imageUrls.length > 0 ? pack.imageUrls : pack.imageUrl ? [pack.imageUrl] : []
+                            if (curUrls.length === 0) return null
+                            return (
+                              <div className="flex items-center gap-1 overflow-x-auto py-0.5">
+                                {curUrls.map((url, uIdx) => (
+                                  /* eslint-disable-next-line @next/next/no-img-element */
+                                  <img
+                                    key={`${url}-${uIdx}`}
+                                    src={url}
+                                    alt={pack.size}
+                                    className="h-7 w-7 rounded border border-border object-contain bg-white p-0.5 shrink-0"
+                                  />
+                                ))}
+                              </div>
+                            )
+                          })()}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
               <button
                 type="button"
                 onClick={() => {
@@ -897,7 +1011,7 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                   const defUnit = allowed[0] || "Kg"
                   patch({ packSizes: [...product.packSizes, { price: 0, size: formatPackSize("", defUnit) }] })
                 }}
-                className="h-8 rounded-lg border border-border px-3 text-[12px] hover:bg-accent transition-colors"
+                className="h-8 rounded-lg border border-border px-3 text-[12px] hover:bg-accent transition-colors cursor-pointer"
               >
                 Add pack size
               </button>
@@ -1095,6 +1209,14 @@ function validateProduct(product: Product): string | null {
   )
   if (!hasMatchingPack) {
     return `At least one pack size price must equal ₹${targetPrice} (matching product ${priceTypeLabel}).`
+  }
+  if (product.packSizeImagesEnabled) {
+    const hasBasePricePack = product.packSizes.some(
+      (p) => p.size.trim() && Number.isFinite(p.price) && (Math.abs(p.price - product.price) < 0.01 || Math.abs(p.price - targetPrice) < 0.01)
+    )
+    if (!hasBasePricePack) {
+      return "When pack-size-specific images are enabled, at least one pack size must match the product base price."
+    }
   }
   return null
 }

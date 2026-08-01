@@ -275,13 +275,43 @@ function validateProductInput(input: OryCMSProductInput) {
     category: input.category.trim(),
     fullDescription: sanitizeRichText(input.fullDescription),
     howToUse: sanitizeRichText(input.howToUse),
-    images: input.images.filter((image) => image.url.trim()),
+    images: (input.images || [])
+      .map((image) => ({
+        id: image.id,
+        name: image.name?.trim(),
+        packSizes: Array.isArray(image.packSizes)
+          ? Array.from(new Set(image.packSizes.map((s) => s.trim()).filter(Boolean)))
+          : undefined,
+        url: image.url.trim(),
+      }))
+      .filter((image) => image.url),
     metaDescription: input.metaDescription?.trim(),
     metaTitle: input.metaTitle?.trim(),
     name: input.name.trim(),
-    packSizes: input.packSizes
-      .map((pack) => ({ price: Number(pack.price), size: pack.size.trim() }))
+    packSizes: (input.packSizes || [])
+      .map((pack) => {
+        const imageIds = Array.isArray(pack.imageIds)
+          ? Array.from(new Set(pack.imageIds.map((id) => String(id).trim()).filter(Boolean)))
+          : pack.imageId?.trim()
+            ? [pack.imageId.trim()]
+            : []
+        const imageUrls = Array.isArray(pack.imageUrls)
+          ? Array.from(new Set(pack.imageUrls.map((url) => String(url).trim()).filter(Boolean)))
+          : pack.imageUrl?.trim()
+            ? [pack.imageUrl.trim()]
+            : []
+
+        return {
+          imageId: imageIds[0] || pack.imageId?.trim() || undefined,
+          imageIds: imageIds.length > 0 ? imageIds : undefined,
+          imageUrl: imageUrls[0] || pack.imageUrl?.trim() || undefined,
+          imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+          price: Number(pack.price),
+          size: pack.size.trim(),
+        }
+      })
       .filter((pack) => pack.size && Number.isFinite(pack.price)),
+    packSizeImagesEnabled: Boolean(input.packSizeImagesEnabled),
     price: Number(input.price),
     salePrice: input.salePrice ? Number(input.salePrice) : null,
     shippingReturns: sanitizeRichText(input.shippingReturns),
@@ -330,6 +360,15 @@ function validateProductInput(input: OryCMSProductInput) {
     throw new Error(`At least one pack size price must match the product ${priceTypeLabel} (INR ${targetPrice}).`)
   }
 
+  if (normalized.packSizeImagesEnabled) {
+    const hasBasePricePack = normalized.packSizes.some(
+      (p) => Math.abs(p.price - normalized.price) < 0.01 || Math.abs(p.price - targetPrice) < 0.01
+    )
+    if (!hasBasePricePack) {
+      throw new Error("When pack-size-specific images are enabled, at least one pack size must match the product base price.")
+    }
+  }
+
   if (!PRODUCT_STATUSES.includes(normalized.status)) throw new Error("Invalid product status.")
 
   return normalized
@@ -355,6 +394,11 @@ async function nextAlphanumericSlug() {
 }
 
 function toPrismaProductData(input: OryCMSProductInput & { slug: string }) {
+  const packSizesData = {
+    enabled: Boolean(input.packSizeImagesEnabled),
+    items: input.packSizes,
+  }
+
   return {
     brand: input.brand || null,
     category: input.category,
@@ -365,7 +409,7 @@ function toPrismaProductData(input: OryCMSProductInput & { slug: string }) {
     metaDescription: input.metaDescription || null,
     metaTitle: input.metaTitle || null,
     name: input.name,
-    packSizes: input.packSizes as unknown as Prisma.InputJsonValue,
+    packSizes: packSizesData as unknown as Prisma.InputJsonValue,
     price: input.price,
     salePrice: input.salePrice || null,
     shippingReturns: input.shippingReturns || null,
@@ -381,6 +425,8 @@ function toPrismaProductData(input: OryCMSProductInput & { slug: string }) {
 }
 
 function toProductDTO(product: OryCMSProductRow): OryCMSProductDTO {
+  const { enabled, packSizes } = normalizePackSizes(product.pack_sizes)
+
   return {
     brand: product.brand ?? "",
     category: product.category,
@@ -393,7 +439,8 @@ function toProductDTO(product: OryCMSProductRow): OryCMSProductDTO {
     metaDescription: product.meta_description ?? "",
     metaTitle: product.meta_title ?? "",
     name: product.name,
-    packSizes: normalizePackSizes(product.pack_sizes),
+    packSizes,
+    packSizeImagesEnabled: enabled,
     price: Number(product.price),
     salePrice: product.sale_price ? Number(product.sale_price) : null,
     shippingReturns: product.shipping_returns ?? "",
@@ -412,23 +459,67 @@ function toProductDTO(product: OryCMSProductRow): OryCMSProductDTO {
 function normalizeImages(value: Prisma.JsonValue): ProductImageInput[] {
   return Array.isArray(value)
     ? value
-        .map((item) => item as ProductImageInput & { secure_url?: string; original_filename?: string })
+        .map(
+          (item) =>
+            item as ProductImageInput & {
+              secure_url?: string
+              original_filename?: string
+              pack_sizes?: string[]
+              packSizes?: string[]
+            },
+        )
         .map((item) => ({
           id: item.id,
           name: item.name ?? item.original_filename,
+          packSizes: Array.isArray(item.packSizes)
+            ? item.packSizes.filter((s): s is string => typeof s === "string")
+            : Array.isArray(item.pack_sizes)
+              ? item.pack_sizes.filter((s): s is string => typeof s === "string")
+              : undefined,
           url: item.url ?? item.secure_url ?? "",
         }))
         .filter((item) => item.url)
     : []
 }
 
-function normalizePackSizes(value: Prisma.JsonValue): PackSizeInput[] {
-  return Array.isArray(value)
-    ? value
-        .map((item) => item as PackSizeInput)
-        .filter((item) => typeof item?.size === "string" && Number.isFinite(Number(item.price)))
-        .map((item) => ({ price: Number(item.price), size: item.size }))
-    : []
+function normalizePackSizes(value: Prisma.JsonValue): { packSizes: PackSizeInput[]; enabled: boolean } {
+  let enabled = false
+  let rawItems: any[] = []
+
+  if (Array.isArray(value)) {
+    rawItems = value
+    enabled = (value as any).packSizeImagesEnabled ?? rawItems.some((i) => Boolean(i?.imageId || i?.imageUrl || (Array.isArray(i?.imageIds) && i.imageIds.length) || (Array.isArray(i?.imageUrls) && i.imageUrls.length)))
+  } else if (typeof value === "object" && value !== null) {
+    const obj = value as Record<string, any>
+    enabled = Boolean(obj.enabled ?? obj.packSizeImagesEnabled)
+    rawItems = Array.isArray(obj.items) ? obj.items : Array.isArray(obj.packSizes) ? obj.packSizes : []
+  }
+
+  const packSizes = rawItems
+    .filter((item) => typeof item?.size === "string" && Number.isFinite(Number(item.price)))
+    .map((item) => {
+      const imageIds = Array.isArray(item.imageIds)
+        ? item.imageIds.filter((id: unknown): id is string => typeof id === "string" && Boolean(id.trim()))
+        : typeof item.imageId === "string" && item.imageId.trim()
+          ? [item.imageId.trim()]
+          : []
+      const imageUrls = Array.isArray(item.imageUrls)
+        ? item.imageUrls.filter((url: unknown): url is string => typeof url === "string" && Boolean(url.trim()))
+        : typeof item.imageUrl === "string" && item.imageUrl.trim()
+          ? [item.imageUrl.trim()]
+          : []
+
+      return {
+        imageId: imageIds[0] || (typeof item.imageId === "string" ? item.imageId : undefined),
+        imageIds: imageIds.length > 0 ? imageIds : undefined,
+        imageUrl: imageUrls[0] || (typeof item.imageUrl === "string" ? item.imageUrl : undefined),
+        imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
+        price: Number(item.price),
+        size: item.size,
+      }
+    })
+
+  return { enabled, packSizes }
 }
 
 function normalizeTags(value: Prisma.JsonValue): string[] {
