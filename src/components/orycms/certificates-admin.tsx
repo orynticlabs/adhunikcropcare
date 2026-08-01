@@ -83,6 +83,9 @@ export function OryCMSCertificatesAdmin() {
 
   async function save(event: React.FormEvent) {
     event.preventDefault()
+    if (!form.image?.url) {
+      return show("Certificate image is required. Please upload an image.", "error")
+    }
     setSaving(true)
     const response = await fetch(editingId ? `/api/orycms/certificates/${editingId}` : "/api/orycms/certificates", {
       body: JSON.stringify(form),
@@ -155,7 +158,7 @@ export function OryCMSCertificatesAdmin() {
             <article key={certificate.id} className="overflow-hidden rounded-xl border border-border bg-surface shadow-xs">
               <div className="relative aspect-[4/3] bg-surface-muted">
                 {certificate.image?.url ? <Image src={certificate.image.url} alt={certificate.title} fill sizes="(max-width: 1280px) 50vw, 33vw" className="object-contain p-3" /> : <ImagePlus className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />}
-                <span className={`absolute right-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-semibold capitalize ${certificate.status === "published" ? "bg-success text-white" : "bg-background text-muted-foreground"}`}>{certificate.status}</span>
+                <span className={`absolute right-3 top-3 rounded-full px-2.5 py-1 text-[10.5px] font-bold capitalize shadow-sm border ${certificate.status === "published" ? "bg-[#689c30] text-white border-[#689c30]" : "bg-black/75 text-white border-black/80"}`}>{certificate.status}</span>
               </div>
               <div className="p-4">
                 <div className="text-sm font-semibold">{certificate.title}</div>
@@ -175,7 +178,7 @@ export function OryCMSCertificatesAdmin() {
       )}
 
       {formOpen ? (
-        <div className="fixed inset-0 z-[70] overflow-y-auto bg-background/85 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[70] overflow-y-auto bg-background/95 p-4 backdrop-blur-md">
           <form onSubmit={save} className="mx-auto my-6 w-full max-w-3xl overflow-hidden rounded-xl border border-border bg-surface shadow-pop">
             <div className="flex items-center justify-between border-b border-border px-5 py-4"><div><h2 className="text-base font-semibold">{editingId ? "Edit certificate" : "Add certificate"}</h2><p className="mt-0.5 text-xs text-muted-foreground">Published entries appear on the storefront Certifications page.</p></div><button type="button" onClick={() => setFormOpen(false)} className="grid h-8 w-8 place-items-center rounded-lg hover:bg-accent"><X className="h-4 w-4" /></button></div>
             <div className="grid gap-5 p-5 sm:grid-cols-2">
@@ -183,12 +186,26 @@ export function OryCMSCertificatesAdmin() {
               <Field label="Issuing authority"><input required value={form.issuingAuthority} onChange={(e) => setForm({ ...form, issuingAuthority: e.target.value })} className={INPUT} placeholder="Certification body" /></Field>
               <Field label="Certificate number"><input value={form.certificateNumber} onChange={(e) => setForm({ ...form, certificateNumber: e.target.value })} className={INPUT} /></Field>
               <Field label="Document URL"><input type="url" value={form.documentUrl} onChange={(e) => setForm({ ...form, documentUrl: e.target.value })} className={INPUT} placeholder="https://...pdf" /></Field>
-              <Field label="Issue date"><input type="date" value={form.issuedOn} onChange={(e) => setForm({ ...form, issuedOn: e.target.value })} className={INPUT} /></Field>
-              <Field label="Expiry date"><input type="date" value={form.expiresOn} onChange={(e) => setForm({ ...form, expiresOn: e.target.value })} className={INPUT} /></Field>
+              <Field label="Issue date"><input type="date" value={form.issuedOn} onChange={(e) => setForm({ ...form, issuedOn: e.target.value })} className={INPUT_DATE} /></Field>
+              <div className="space-y-1">
+                <Field label="Expiry date"><input type="date" value={form.expiresOn} onChange={(e) => setForm({ ...form, expiresOn: e.target.value })} className={INPUT_DATE} /></Field>
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
+                  <span>💡 Leave blank if this certificate does not expire (Lifetime / Permanent validity).</span>
+                  {form.expiresOn ? (
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, expiresOn: "" })}
+                      className="text-[#689c30] hover:underline font-medium cursor-pointer"
+                    >
+                      Clear / Lifetime
+                    </button>
+                  ) : null}
+                </div>
+              </div>
               <div className="space-y-1.5"><span className="text-[12.5px] font-medium">Status</span><OryCMSSelect value={form.status} onChange={(val) => setForm({ ...form, status: val as "draft" | "published" })} options={[{ label: "Draft", value: "draft" }, { label: "Published", value: "published" }]} /></div>
               <Field label="Display order"><input type="number" min="0" value={form.displayOrder} onChange={(e) => setForm({ ...form, displayOrder: Number(e.target.value) })} className={INPUT} /></Field>
               <Field label="Description" className="sm:col-span-2"><textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className={`${INPUT} min-h-24 py-2`} /></Field>
-              <div className="sm:col-span-2"><div className="mb-1.5 text-[12.5px] font-medium">Certificate image</div><div className="flex flex-col gap-3 rounded-xl border border-dashed border-border bg-surface-muted p-4 sm:flex-row sm:items-center">{form.image?.url ? <Image src={form.image.url} alt="Certificate preview" width={144} height={112} className="h-28 w-36 rounded-lg bg-white object-contain p-2" /> : <div className="grid h-28 w-36 place-items-center rounded-lg bg-surface"><ImagePlus className="h-7 w-7 text-muted-foreground" /></div>}<div><input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void upload(e.target.files?.[0])} /><button type="button" disabled={uploading} onClick={() => fileRef.current?.click()} className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium disabled:opacity-60">{uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}{uploading ? "Uploading..." : "Upload image"}</button><p className="mt-2 text-[11px] text-muted-foreground">JPG, PNG, WebP, GIF, or SVG. Maximum 10 MB.</p></div></div></div>
+              <div className="sm:col-span-2"><div className="mb-1.5 text-[12.5px] font-medium">Certificate image <span className="text-destructive font-bold">*</span></div><div className="flex flex-col gap-3 rounded-xl border border-dashed border-border bg-surface-muted p-4 sm:flex-row sm:items-center">{form.image?.url ? <Image src={form.image.url} alt="Certificate preview" width={144} height={112} className="h-28 w-36 rounded-lg bg-white object-contain p-2" /> : <div className="grid h-28 w-36 place-items-center rounded-lg bg-surface"><ImagePlus className="h-7 w-7 text-muted-foreground" /></div>}<div><input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void upload(e.target.files?.[0])} /><button type="button" disabled={uploading} onClick={() => fileRef.current?.click()} className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium disabled:opacity-60">{uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}{uploading ? "Uploading..." : "Upload image"}</button><p className="mt-2 text-[11px] text-muted-foreground">JPG, PNG, WebP, GIF, or SVG. Maximum 10 MB (Required).</p></div></div></div>
             </div>
             <div className="flex justify-end gap-2 border-t border-border bg-surface-muted px-5 py-4"><button type="button" onClick={() => setFormOpen(false)} className="h-9 rounded-lg border border-border bg-surface px-4 text-[12.5px]">Cancel</button><button type="submit" disabled={saving || uploading} className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-4 text-[12.5px] font-medium text-background disabled:opacity-60">{saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}Save certificate</button></div>
           </form>
@@ -198,5 +215,6 @@ export function OryCMSCertificatesAdmin() {
   )
 }
 
-const INPUT = "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
+const INPUT = "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong focus:ring-1 focus:ring-primary/20"
+const INPUT_DATE = "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition-colors focus:border-border-strong focus:ring-1 focus:ring-primary/20 cursor-pointer font-medium text-foreground scheme-light dark:scheme-dark"
 function Field({ children, className = "", label }: { children: React.ReactNode; className?: string; label: string }) { return <label className={className}><span className="mb-1.5 block text-[12.5px] font-medium">{label}</span>{children}</label> }

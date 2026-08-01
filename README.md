@@ -21,6 +21,7 @@ The application is built on a full-stack Next.js architecture featuring a custom
 - **URL-Synced Category Navigation**: Seamless category filtering (`/products?category=...`) with instant client-side updates and zero full-page reloads.
 - **Dynamic Pack Sizes & Pack-Specific Images**: Constrained pack unit options (Kg, g, ml, L, Box, Bottle) with support for pack-size-specific images. On the storefront, switching pack sizes dynamically updates the primary display image and filters gallery thumbnails with zero flicker.
 - **Rich Product Detail Pages**: High-resolution image zoom gallery, live stock availability status, dynamic specifications / usage accordions, verified customer reviews, and coupon badges.
+- **Storefront Certificates & Interactive Document Viewer**: Brand-aligned certificate gallery (`/certifications`) with real-time authority filters, glassmorphic cards, "Lifetime Validity" badges for non-expiring credentials, and a full-screen modal inline PDF/Image viewer with direct download support.
 - **Cart & Checkout Drawer**: Slide-out cart drawer with real-time quantity updates, address selection, pincode serviceability estimation, and instant checkout.
 - **Interactive Discount & Coupon Engine**: 1-click coupon modal selector, single-run auto-apply rule evaluation engine, and manual promo code entry validation.
 - **High-Conversion OTP Auth Workflow**: 6-digit email OTP verification for fast, secure customer authentication and account management.
@@ -34,6 +35,7 @@ The application is built on a full-stack Next.js architecture featuring a custom
 - **Strict Boundary Security**: Isolated administrator authentication and session handling (`/api/orycms/*`).
 - **Product & Inventory Management**: Rich text product editor, Cloudinary image gallery with auto-cropping, unit restriction dropdowns, and positive stock quantity enforcement (`> 0`).
 - **Pack-Size-Specific Images & Custom OryCMSMultiSelect**: Admin toggle for pack-size-specific images with `OryCMSMultiSelect` popover dropdowns allowing multiple image attachments per pack size row.
+- **Certificates Management & Lifetime Expiry Prompt**: Admin certificate manager with explicit prompt guiding admins to leave expiry date blank for permanent/non-expiring credentials.
 - **Price Match Safeguards**: Built-in validation requiring at least one pack size price to equal the product Sale Price or MRP before saving.
 - **Orders, Coupons & Announcements**: Admin controls for managing customer orders, creating conditional discount coupons, editing announcement bars, and managing user enquiries.
 
@@ -58,7 +60,7 @@ The codebase strictly enforces application boundaries:
 - **Framework**: Next.js 15 (App Router, Server Components & Client Hooks)
 - **Language**: TypeScript (Strict Mode)
 - **Database & ORM**: PostgreSQL & Prisma ORM
-- **Styling**: Vanilla CSS & Tailwind CSS with custom Design Tokens
+- **Styling**: Vanilla CSS & Tailwind CSS with custom Design Tokens & Storefront Button Standards (see `AGENTS.md`)
 - **Icons**: Lucide React
 - **Media Hosting**: Cloudinary API & Asset Management
 - **Payment Processing**: Razorpay API & Webhooks

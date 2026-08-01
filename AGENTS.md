@@ -17,3 +17,34 @@
 - Baseline Production Release: **`v1.0.0`**
 - Current Active Development Version: **`1.1.0`** (Milestone: `v1.1.0`)
 - Version bumps in `package.json` and code configuration files are maintained and updated as explicitly instructed by Puneet.
+
+# Storefront Design System & Button Color Standards
+
+To maintain visual consistency, high contrast, and brand alignment across the entire storefront website, all buttons and interactive elements must strictly adhere to the following color token specifications:
+
+## Brand Color Tokens
+
+- **Deep Forest Green (Primary Brand Dark)**: `#033927`
+- **Vibrant Leaf Green (Primary Accent / Highlight)**: `#689c30`
+- **Golden Harvest Yellow (Secondary Accent)**: `#e9c46a`
+- **Soft Mint / Light Sage (Background Tint)**: `#edf3e9` / `#eff4e9`
+- **Neutral Light Border**: `#d7e0da` / `border-border/70`
+- **Pure White**: `#ffffff`
+- **Pure Black**: `#000000`
+
+## Button Styling Variants
+
+| Variant Name | Purpose & Scenario | Base Background | Base Text Color | Base Border | Hover Background | Hover Text Color | Hover Icon Behavior | Tailwind Utility Classes |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Primary Solid Button** | Main Call To Action (CTAs), Submit, Checkout, Add to Cart, Primary Download | `#033927` | `text-white` (`#ffffff`) | None | `#689c30` | `text-black` (`#000000`) | Icon inherits `text-black` on hover | `bg-[#033927] text-white hover:bg-[#689c30] hover:text-black font-semibold transition-colors shadow-xs` |
+| **Secondary Accent Button** | Highlighted CTAs, Special Offers, Promos, Dynamic Badges | `#689c30` | `text-white` (`#ffffff`) | None | `#033927` | `text-white` (`#ffffff`) | Icon stays `text-white` on hover | `bg-[#689c30] text-white hover:bg-[#033927] hover:text-white font-semibold transition-colors shadow-xs` |
+| **Outlined Neutral Button** | Secondary actions, Cancel, Filters, Copy Link, Preview, View Details | `bg-white` (`#ffffff`) | `#033927` | `border border-[#d7e0da]` | `#033927` | `text-white` (`#ffffff`) | Icon turns `text-white` on hover | `bg-white text-[#033927] border border-[#d7e0da] hover:bg-[#033927] hover:text-white font-semibold transition-colors shadow-xs` |
+| **Soft Mint Neutral Button** | Pill filters, Light card CTAs, Subdued quick actions | `#edf3e9` | `#033927` | `border border-[#689c30]/20` | `#033927` | `text-white` (`#ffffff`) | Icon turns `text-white` on hover | `bg-[#edf3e9] text-[#033927] border border-[#689c30]/20 hover:bg-[#033927] hover:text-white font-semibold transition-colors shadow-xs` |
+| **Icon Circle Button** | Close (X) buttons, Quick preview hover overlay, Modal actions | `bg-white` (`#ffffff`) | `#033927` | `border border-[#d7e0da]` | `#033927` | `text-white` (`#ffffff`) | Icon turns `text-white` on hover | `bg-white text-[#033927] border border-[#d7e0da] hover:bg-[#033927] hover:text-white transition-colors shadow-xs rounded-full` |
+
+## Key Rules for Button Styling
+
+1. **High Contrast Guarantee**: When a dark green button (`bg-[#033927]`) is hovered, the background changes to vibrant green (`#689c30`) and text/icons MUST switch to `text-black` to guarantee crisp readability.
+2. **Smooth Transitions**: Always include `transition-colors duration-200` (or `transition-all`) on interactive buttons.
+3. **Cursor Pointer**: Always include `cursor-pointer select-none` on clickable buttons and interactive pills.
+
