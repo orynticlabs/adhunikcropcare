@@ -10,6 +10,8 @@ export type EmailTemplateName =
   | "saleAnnouncement"
   | "adminOrderNotification"
   | "adminLowStockNotification"
+  | "contactUserConfirmation"
+  | "contactAdminNotification"
   | "shipmentCreated"
   | "shipmentShipped"
   | "shipmentOutForDelivery"
@@ -18,13 +20,18 @@ export type EmailTemplateName =
 
 type TemplateInput = {
   actionUrl?: string
+  adminContactUrl?: string
   adminOrderUrl?: string
   adminProductUrl?: string
   awbCode?: string
   courierName?: string
   customerEmail?: string
   customerName?: string
+  email?: string
   estimatedDelivery?: string
+  fullName?: string
+  location?: string
+  message?: string
   mobileNumber?: string
   orderDate?: string
   orderStatus?: string
@@ -36,6 +43,9 @@ type TemplateInput = {
   productName?: string
   stockQuantity?: number
   refundStatus?: string
+  ticketId?: string
+  topic?: string
+  topicLabel?: string
   total?: number
   trackingUrl?: string
   unsubscribeUrl: string
@@ -50,21 +60,59 @@ function escapeHtml(value: unknown) {
 }
 
 function layout(title: string, content: string, unsubscribeUrl: string) {
-  return `<!doctype html><html><body style="margin:0;background:#f3f6f1;font-family:Arial,sans-serif;color:#173c31"><div style="max-width:620px;margin:0 auto;padding:28px 16px"><div style="background:#fff;border:1px solid #dce5d8;border-radius:16px;padding:30px"><h1 style="margin:0 0 20px;font-size:24px">${escapeHtml(title)}</h1>${content}<p style="margin-top:28px">Regards,<br><strong>${brand}</strong></p></div><p style="text-align:center;font-size:12px;color:#66756e;margin:18px 0">Email preferences: <a href="${escapeHtml(unsubscribeUrl)}">unsubscribe from optional emails</a>.</p></div></body></html>`
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <style>
+    body, table, td, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; max-width: 100% !important; height: auto !important; }
+    @media only screen and (max-width: 600px) {
+      .email-wrapper { padding: 12px 8px !important; }
+      .email-card { padding: 18px 14px !important; border-radius: 12px !important; }
+      .table-cell-label { width: 40% !important; font-size: 11.5px !important; }
+      .table-cell-value { width: 60% !important; font-size: 12px !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#f3f6f1;font-family:Arial,Helvetica,sans-serif;color:#173c31;-webkit-font-smoothing:antialiased;width:100% !important">
+  <div class="email-wrapper" style="max-width:600px;margin:0 auto;padding:24px 12px;box-sizing:border-box">
+    <div class="email-card" style="background:#ffffff;border:1px solid #dce5d8;border-radius:16px;padding:28px 24px;box-shadow:0 2px 8px rgba(0,0,0,0.03)">
+      <div style="border-bottom:2px solid #033927;padding-bottom:12px;margin-bottom:20px">
+        <h1 style="margin:0;font-size:22px;font-weight:700;color:#033927;letter-spacing:-0.3px">${escapeHtml(title)}</h1>
+      </div>
+      ${content}
+      <div style="margin-top:28px;padding-top:16px;border-top:1px solid #e3ece0;font-size:13px;color:#495850">
+        Regards,<br><strong style="color:#033927">${brand} Team</strong>
+      </div>
+    </div>
+    <p style="text-align:center;font-size:11.5px;color:#66756e;margin:16px 0 0;line-height:1.5">
+      Official notification sent by Adhunik Crop Care. <br>
+      <a href="${escapeHtml(unsubscribeUrl)}" style="color:#689c30;text-decoration:underline">Manage preferences / unsubscribe</a>.
+    </p>
+  </div>
+</body>
+</html>`
 }
 
 function button(label: string, url?: string) {
-  return url ? `<p style="margin:24px 0"><a href="${escapeHtml(url)}" style="background:#033927;color:#fff;text-decoration:none;padding:12px 20px;border-radius:999px;display:inline-block">${escapeHtml(label)}</a></p>` : ""
+  return url ? `<p style="margin:24px 0;text-align:center"><a href="${escapeHtml(url)}" style="background:#033927;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:999px;display:inline-block;font-weight:bold;font-size:13.5px;box-shadow:0 2px 4px rgba(0,0,0,0.1)">${escapeHtml(label)}</a></p>` : ""
 }
 
 function detailsTable(rows: [string, unknown][]) {
   const body = rows
     .map(
       ([label, value]) =>
-        `<tr><td style="padding:8px 12px;border-bottom:1px solid #e3ece0;color:#66756e;font-size:13px;white-space:nowrap">${escapeHtml(label)}</td><td style="padding:8px 12px;border-bottom:1px solid #e3ece0;font-size:13px;font-weight:600">${escapeHtml(value)}</td></tr>`,
+        `<tr>
+          <td class="table-cell-label" style="padding:10px 12px;border-bottom:1px solid #e3ece0;color:#5a6861;font-size:12.5px;font-weight:600;width:38%;vertical-align:top;word-break:break-word;overflow-wrap:anywhere">${escapeHtml(label)}</td>
+          <td class="table-cell-value" style="padding:10px 12px;border-bottom:1px solid #e3ece0;color:#173c31;font-size:13px;font-weight:700;width:62%;vertical-align:top;word-break:break-word;overflow-wrap:anywhere">${escapeHtml(value)}</td>
+        </tr>`,
     )
     .join("")
-  return `<table style="width:100%;border-collapse:collapse;margin:20px 0;border:1px solid #e3ece0;border-radius:12px;overflow:hidden">${body}</table>`
+  return `<table style="width:100%;max-width:100%;table-layout:fixed;border-collapse:collapse;margin:18px 0;border:1px solid #e3ece0;border-radius:10px;overflow:hidden;background:#fcfdfe">${body}</table>`
 }
 
 function formatInr(total: unknown) {
@@ -130,6 +178,73 @@ export const emailTemplates: Record<EmailTemplateName, (input: TemplateInput) =>
         ["Product", i.productName ?? "-"],
         ["Stock quantity", i.stockQuantity ?? "-"],
       ])}${button("View product", i.adminProductUrl)}`,
+      i.unsubscribeUrl,
+    ),
+  }),
+  contactUserConfirmation: (i) => ({
+    subject: `Enquiry Received - ${brand} [Ticket #${i.ticketId}]`,
+    text: [
+      `Hello ${i.fullName ?? "Valued Customer"},`,
+      `Thank you for filling the details. Our team will reach out to you in the next 24 hours during working days.`,
+      ``,
+      `Reference Ticket ID: ${i.ticketId ?? "-"}`,
+      `Topic: ${i.topicLabel ?? "-"}`,
+      `Full Name: ${i.fullName ?? "-"}`,
+      `Mobile Number: ${i.mobileNumber ?? "-"}`,
+      `Location: ${i.location ?? "-"}`,
+      `Submitted Message: ${i.message ?? "-"}`,
+    ].join("\n"),
+    html: layout(
+      "Enquiry Received",
+      `<p>Hello <strong>${escapeHtml(i.fullName)}</strong>,</p>
+      <p style="font-size:15px;line-height:1.6;color:#033927;background:#eff4e9;padding:14px 18px;border-radius:12px;border:1px solid #dce5d8;font-weight:600">
+        Thank you for filling the details. Our team will reach out to you in the next 24 hours during working days.
+      </p>
+      <p style="margin-top:20px;font-size:14px;color:#66756e">Here is a summary of your submitted enquiry:</p>
+      ${detailsTable([
+        ["Ticket Reference No.", `#${i.ticketId}`],
+        ["Full Name", i.fullName ?? "-"],
+        ["Topic", i.topicLabel ?? "-"],
+        ["Mobile Number", i.mobileNumber ?? "-"],
+        ["Email Address", i.email ?? "-"],
+        ["Location", i.location ?? "-"],
+        ["Submitted Message", i.message ?? "-"],
+      ])}`,
+      i.unsubscribeUrl,
+    ),
+  }),
+  contactAdminNotification: (i) => ({
+    subject: `New Contact Form Submission - #${i.ticketId} [${i.topicLabel ?? "General"}]`,
+    text: [
+      `Someone has filled the contact page form.`,
+      ``,
+      `Ticket ID: ${i.ticketId ?? "-"}`,
+      `Full Name: ${i.fullName ?? "-"}`,
+      `Mobile Number: ${i.mobileNumber ?? "-"}`,
+      `Email Address: ${i.email ?? "-"}`,
+      `Topic: ${i.topicLabel ?? "-"}`,
+      `Location: ${i.location ?? "-"}`,
+      `Message: ${i.message ?? "-"}`,
+      ``,
+      i.adminContactUrl ? `Log in to OryCMS Dashboard: ${i.adminContactUrl}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    html: layout(
+      "New Contact Form Submission",
+      `<p style="font-size:16px;font-weight:700;color:#033927;margin-bottom:16px">Someone has filled the contact page form.</p>
+      <p style="color:#66756e;font-size:14px">Form submission details are listed below:</p>
+      ${detailsTable([
+        ["Ticket Reference No.", `#${i.ticketId}`],
+        ["Full Name", i.fullName ?? "-"],
+        ["Mobile Number", i.mobileNumber ?? "-"],
+        ["Email Address", i.email ?? "-"],
+        ["Topic", i.topicLabel ?? "-"],
+        ["Location", i.location ?? "-"],
+        ["Submitted Message", i.message ?? "-"],
+      ])}
+      <p style="margin-top:24px;font-size:13.5px;color:#66756e">Please log in to OryCMS Admin Dashboard to manage and update enquiry status.</p>
+      ${button("Log in to OryCMS Dashboard", i.adminContactUrl)}`,
       i.unsubscribeUrl,
     ),
   }),

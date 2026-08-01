@@ -192,3 +192,61 @@ export async function sendLowStockAdminNotifications(recipients: string[], data:
     return { error: error instanceof Error ? error.message : String(error), recipients: unique, skipped: true }
   }
 }
+
+export type ContactFormNotificationData = {
+  adminContactUrl?: string
+  email: string
+  fullName: string
+  location?: string
+  message?: string
+  mobileNumber?: string
+  ticketId: string
+  topic: string
+  topicLabel?: string
+}
+
+export async function sendContactUserConfirmationEmail(data: ContactFormNotificationData) {
+  return sendEmail({
+    template: "contactUserConfirmation",
+    to: data.email,
+    ticketId: data.ticketId,
+    fullName: data.fullName,
+    email: data.email,
+    mobileNumber: data.mobileNumber,
+    topic: data.topic,
+    topicLabel: data.topicLabel,
+    location: data.location,
+    message: data.message,
+    unsubscribeUrl: `${emailBaseUrl()}/privacy-policy`,
+  })
+}
+
+export async function sendContactAdminNotifications(recipients: string[], data: ContactFormNotificationData) {
+  const unique = Array.from(new Set(recipients.map((email) => email.trim().toLowerCase()).filter(Boolean)))
+  if (unique.length === 0) return { skipped: true }
+  const smtp = getSmtpTransporter()
+  if (!smtp) {
+    console.warn("Contact admin notification skipped: SMTP is not configured.")
+    return { skipped: true }
+  }
+  const adminContactUrl = data.adminContactUrl ?? `${emailBaseUrl()}/admin/collections/contact`
+  const rendered = emailTemplates.contactAdminNotification({
+    ...data,
+    adminContactUrl,
+    unsubscribeUrl: `${emailBaseUrl()}/admin/settings`,
+  })
+  try {
+    const info = await smtp.transporter.sendMail({
+      from: smtp.from,
+      replyTo: smtp.replyTo,
+      to: unique.join(", "),
+      subject: rendered.subject,
+      text: rendered.text,
+      html: rendered.html,
+    })
+    return { messageId: info.messageId, recipients: unique, skipped: false }
+  } catch (error) {
+    console.error("[SMTP Error] Contact admin notification delivery failed:", error)
+    return { error: error instanceof Error ? error.message : String(error), recipients: unique, skipped: true }
+  }
+}

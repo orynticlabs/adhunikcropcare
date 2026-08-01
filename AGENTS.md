@@ -6,6 +6,7 @@
 - Storefront customers must verify their email via OTP before they can log in or access authenticated customer features.
 - A storefront customer's email address is immutable until a dedicated email-change and re-verification workflow is implemented.
 - Never read or edit `.env.local`. Document required environment variables in `.env.example` for the user to apply.
+- **Database Schema & Migrations Rule**: Whenever there is any change in the database schema, it MUST be updated in `prisma/schema.prisma` and a corresponding migration SQL file MUST be created under `prisma/migrations/`. Do NOT run `npm run build` immediately following schema updates. Ensure existing table data is preserved carefully during schema migrations.
 
 # Author Attribution & Contributor Memory
 
@@ -36,7 +37,7 @@ To maintain visual consistency, high contrast, and brand alignment across the en
 
 | Variant Name | Purpose & Scenario | Base Background | Base Text Color | Base Border | Hover Background | Hover Text Color | Hover Icon Behavior | Tailwind Utility Classes |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Primary Solid Button** | Main Call To Action (CTAs), Submit, Checkout, Add to Cart, Primary Download | `#033927` | `text-white` (`#ffffff`) | None | `#689c30` | `text-black` (`#000000`) | Icon inherits `text-black` on hover | `bg-[#033927] text-white hover:bg-[#689c30] hover:text-black font-semibold transition-colors shadow-xs` |
+| **Primary Solid Button** | Main Call To Action (CTAs), Submit, Checkout, Add to Cart, Primary Download | `#033927` | `text-white` (`#ffffff`) | None | `#689c30` | `text-black` (`#000000`) | Icon inherits `text-black` on hover | `bg-[#033927] text-white hover:bg-[#689c30] hover:!text-black font-semibold transition-colors shadow-xs` |
 | **Secondary Accent Button** | Highlighted CTAs, Special Offers, Promos, Dynamic Badges | `#689c30` | `text-white` (`#ffffff`) | None | `#033927` | `text-white` (`#ffffff`) | Icon stays `text-white` on hover | `bg-[#689c30] text-white hover:bg-[#033927] hover:text-white font-semibold transition-colors shadow-xs` |
 | **Outlined Neutral Button** | Secondary actions, Cancel, Filters, Copy Link, Preview, View Details | `bg-white` (`#ffffff`) | `#033927` | `border border-[#d7e0da]` | `#033927` | `text-white` (`#ffffff`) | Icon turns `text-white` on hover | `bg-white text-[#033927] border border-[#d7e0da] hover:bg-[#033927] hover:text-white font-semibold transition-colors shadow-xs` |
 | **Soft Mint Neutral Button** | Pill filters, Light card CTAs, Subdued quick actions | `#edf3e9` | `#033927` | `border border-[#689c30]/20` | `#033927` | `text-white` (`#ffffff`) | Icon turns `text-white` on hover | `bg-[#edf3e9] text-[#033927] border border-[#689c30]/20 hover:bg-[#033927] hover:text-white font-semibold transition-colors shadow-xs` |

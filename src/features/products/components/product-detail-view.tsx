@@ -1014,7 +1014,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               <button
                 type="button"
                 onClick={handleWriteReviewClick}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#033927] px-5 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#689c30] hover:text-black"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#033927] px-5 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#689c30] hover:!text-black"
               >
                 Write First Review
               </button>
@@ -1148,7 +1148,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
                     <button
                       type="submit"
                       disabled={submittingReview}
-                      className="rounded-lg bg-[#033927] px-6 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#689c30] hover:text-black disabled:opacity-50"
+                      className="rounded-lg bg-[#033927] px-6 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#689c30] hover:!text-black disabled:opacity-50"
                     >
                       {submittingReview ? "Submitting…" : "Submit Review"}
                     </button>
