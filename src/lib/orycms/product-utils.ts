@@ -6,11 +6,16 @@ export type ProductImageInput = {
   id?: string
   url: string
   name?: string
+  packSizes?: string[]
 }
 
 export type PackSizeInput = {
   size: string
   price: number
+  imageId?: string
+  imageUrl?: string
+  imageIds?: string[]
+  imageUrls?: string[]
 }
 
 export type OryCMSProductInput = {
@@ -24,6 +29,7 @@ export type OryCMSProductInput = {
   metaTitle?: string
   name: string
   packSizes: PackSizeInput[]
+  packSizeImagesEnabled?: boolean
   price: number
   salePrice?: number | null
   shippingReturns?: string

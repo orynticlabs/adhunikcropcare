@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import Image from "next/image"
 import {
   Award,
@@ -25,6 +25,8 @@ import { useAuth } from "@/features/auth/auth-context"
 type ProductImage = {
   src: string
   alt: string
+  id?: string
+  packSizes?: string[]
 }
 
 type ProductOption = {
@@ -32,6 +34,10 @@ type ProductOption = {
   price: string
   originalPrice: string
   discount: string
+  imageId?: string
+  imageUrl?: string
+  imageIds?: string[]
+  imageUrls?: string[]
 }
 
 type RecommendedProduct = {
@@ -54,6 +60,7 @@ export type ProductDetail = {
   images: ProductImage[]
   ingredients: string[]
   options: ProductOption[]
+  packSizeImagesEnabled?: boolean
   rating: number
   recommended: RecommendedProduct[]
   similarProducts?: RecommendedProduct[]
@@ -319,6 +326,62 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
   }
 
   const selected = product.options[activeOption]
+  const selectedPackLabel = selected?.label?.trim() || ""
+
+  const visibleImages = useMemo(() => {
+    if (!product.packSizeImagesEnabled) return product.images
+
+    const filtered = product.images.filter((img) => {
+      if (!img.packSizes || img.packSizes.length === 0) {
+        return true
+      }
+      if (selectedPackLabel && img.packSizes.includes(selectedPackLabel)) {
+        return true
+      }
+      if (selected?.imageIds && img.id && selected.imageIds.includes(img.id)) return true
+      if (selected?.imageUrls && selected.imageUrls.includes(img.src)) return true
+      if (selected?.imageId && img.id === selected.imageId) return true
+      if (selected?.imageUrl && img.src === selected.imageUrl) return true
+
+      return false
+    })
+
+    return filtered.length > 0 ? filtered : product.images
+  }, [product.images, product.packSizeImagesEnabled, selectedPackLabel, selected?.imageId, selected?.imageIds, selected?.imageUrl, selected?.imageUrls])
+
+  useEffect(() => {
+    if (!product.packSizeImagesEnabled) return
+
+    const option = product.options[activeOption]
+    if (!option) return
+
+    let targetIndex = -1
+    const optionUrls = option.imageUrls || (option.imageUrl ? [option.imageUrl] : [])
+    const optionIds = option.imageIds || (option.imageId ? [option.imageId] : [])
+
+    if (optionUrls.length > 0) {
+      targetIndex = visibleImages.findIndex((img) => optionUrls.includes(img.src))
+    }
+    if (targetIndex === -1 && optionIds.length > 0) {
+      targetIndex = visibleImages.findIndex((img) => img.id && optionIds.includes(img.id))
+    }
+    if (targetIndex === -1 && option.label) {
+      targetIndex = visibleImages.findIndex((img) => img.packSizes?.includes(option.label))
+    }
+
+    const targetSrc = targetIndex >= 0 ? visibleImages[targetIndex]?.src : visibleImages[0]?.src
+    if (targetSrc) {
+      const preloader = new window.Image()
+      preloader.src = targetSrc
+    }
+
+    if (targetIndex >= 0) {
+      setActiveImage(targetIndex)
+    } else {
+      setActiveImage(0)
+    }
+  }, [activeOption, product.options, product.packSizeImagesEnabled, visibleImages])
+
   const displayRating = liveTotalReviews > 0 ? liveAverageRating : (reviewsLoading ? product.rating : 0)
   const displayTotalReviews = liveTotalReviews > 0 ? liveTotalReviews : (reviewsLoading ? product.reviews : 0)
   const displayBreakdown = liveTotalReviews > 0 ? liveBreakdown : (reviewsLoading ? ratingBreakdown(product.reviews, product.rating) : [
@@ -343,19 +406,19 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
   }
 
   useEffect(() => {
-    if (paused || product.images.length <= 1) return
+    if (paused || visibleImages.length <= 1) return
     const timer = window.setInterval(() => {
       setImgVisible(false)
       setTimeout(() => {
         setActiveImage((i) => {
-          const next = (i + 1) % product.images.length
+          const next = (i + 1) % visibleImages.length
           return next
         })
         setImgVisible(true)
       }, 220)
     }, 4000)
     return () => window.clearInterval(timer)
-  }, [paused, product.images.length])
+  }, [paused, visibleImages.length])
 
   function addQuantityToCart() {
     if (product.stockQuantity === 0) return
@@ -569,47 +632,54 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               </span>
 
               {/* Main image with crossfade + hover zoom */}
-              <div className="relative aspect-square w-full overflow-hidden">
-                <Image
-                  src={product.images[activeImage].src}
-                  alt={product.images[activeImage].alt}
-                  fill
-                  priority
-                  sizes="(max-width: 1023px) calc(100vw - 2rem), calc(50vw - 3rem)"
-                  className="object-cover transition-all duration-300 group-hover:scale-110"
-                  style={{ opacity: imgVisible ? 1 : 0, transition: "opacity 220ms ease, transform 300ms ease" }}
-                />
-              </div>
+              {(() => {
+                const currentImg = visibleImages[activeImage] || visibleImages[0] || product.images[0]
+                return (
+                  <div className="relative aspect-square w-full overflow-hidden">
+                    {currentImg ? (
+                      <Image
+                        src={currentImg.src}
+                        alt={currentImg.alt || product.title}
+                        fill
+                        priority
+                        sizes="(max-width: 1023px) calc(100vw - 2rem), calc(50vw - 3rem)"
+                        className="object-cover transition-all duration-300 group-hover:scale-110"
+                        style={{ opacity: imgVisible ? 1 : 0, transition: "opacity 220ms ease, transform 300ms ease" }}
+                      />
+                    ) : null}
+                  </div>
+                )
+              })()}
 
               {/* Prev / Next arrows — only when multiple images */}
-              {product.images.length > 1 && (
+              {visibleImages.length > 1 && (
                 <>
                   <button
                     type="button"
-                    onClick={() => goToImage((activeImage - 1 + product.images.length) % product.images.length)}
+                    onClick={() => goToImage((activeImage - 1 + visibleImages.length) % visibleImages.length)}
                     aria-label="Previous image"
-                    className="absolute left-3 top-1/2 z-10 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-sm backdrop-blur-sm transition hover:bg-white hover:shadow-md"
+                    className="absolute left-3 top-1/2 z-10 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-sm backdrop-blur-sm transition hover:bg-white hover:shadow-md cursor-pointer"
                   >
                     <ChevronLeft className="h-4 w-4 text-[#033927]" />
                   </button>
                   <button
                     type="button"
-                    onClick={() => goToImage((activeImage + 1) % product.images.length)}
+                    onClick={() => goToImage((activeImage + 1) % visibleImages.length)}
                     aria-label="Next image"
-                    className="absolute right-3 top-1/2 z-10 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-sm backdrop-blur-sm transition hover:bg-white hover:shadow-md"
+                    className="absolute right-3 top-1/2 z-10 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/80 shadow-sm backdrop-blur-sm transition hover:bg-white hover:shadow-md cursor-pointer"
                   >
                     <ChevronRight className="h-4 w-4 text-[#033927]" />
                   </button>
 
                   {/* Dot indicators — clickable */}
                   <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
-                    {product.images.map((_, i) => (
+                    {visibleImages.map((_, i) => (
                       <button
                         key={i}
                         type="button"
                         onClick={() => goToImage(i)}
                         aria-label={`Show image ${i + 1}`}
-                        className={`rounded-full border border-[#b9cdb3] transition-all duration-300 ${
+                        className={`rounded-full border border-[#b9cdb3] transition-all duration-300 cursor-pointer ${
                           i === activeImage ? "w-4 h-1.5 bg-[#0d5a48]" : "h-1.5 w-1.5 bg-white/70 hover:bg-white"
                         }`}
                       />
@@ -620,19 +690,19 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
             </div>
 
             {/* Thumbnails */}
-            {product.images.length > 1 && (
+            {visibleImages.length > 1 && (
               <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
-                {product.images.map((image, i) => (
+                {visibleImages.map((image, i) => (
                   <button
-                    key={image.src}
+                    key={`${image.src}-${i}`}
                     type="button"
                     onClick={() => goToImage(i)}
                     aria-label={`Show product image ${i + 1}`}
-                    className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 bg-[#f8faf7] transition-all duration-200 ${
+                    className={`relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 bg-[#f8faf7] transition-all duration-200 cursor-pointer ${
                       i === activeImage ? "border-[#033927] scale-105 shadow-sm" : "border-transparent hover:border-[#689c30]/60"
                     }`}
                   >
-                    <Image src={image.src} alt="" fill sizes="64px" className="object-contain p-1.5" />
+                    <Image src={image.src} alt={image.alt || ""} fill sizes="64px" className="object-contain p-1.5" />
                   </button>
                 ))}
               </div>
