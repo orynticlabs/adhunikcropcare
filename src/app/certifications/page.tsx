@@ -19,6 +19,7 @@ import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 import CropSuccessStories from "@/components/home/crop-success-stories"
+import { CertificationsGallery } from "@/components/certifications/certifications-gallery"
 import { listOryCMSCertificates, type OryCMSCertificateDTO } from "@/lib/orycms/certificates"
 
 export const metadata: Metadata = {
@@ -99,10 +100,10 @@ export default async function CertificationsPage() {
                 Review our published company certificates and understand the practical quality system behind responsible products, reliable support, and continuous improvement.
               </p>
               <div className="mt-8 flex flex-col gap-3 min-[420px]:flex-row min-[420px]:flex-wrap">
-                <a href="#company-certificates" className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black">
+                <a href="#company-certificates" className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xs transition-colors duration-200 hover:bg-[#689c30] hover:!text-black cursor-pointer select-none">
                   View certificates <ArrowRight className="h-4 w-4" aria-hidden />
                 </a>
-                <Link href="/contact" className="inline-flex h-12 items-center justify-center rounded-full border border-[#d7e0da] bg-white px-7 text-sm font-semibold text-[#033927] transition-colors hover:bg-[#033927] hover:!text-white">
+                <Link href="/contact" className="inline-flex h-12 items-center justify-center rounded-full border border-[#d7e0da] bg-white px-7 text-sm font-bold text-[#033927] shadow-xs transition-colors duration-200 hover:bg-[#033927] hover:!text-white cursor-pointer select-none">
                   Request verification
                 </Link>
               </div>
@@ -143,37 +144,9 @@ export default async function CertificationsPage() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeading eyebrow="Company certificates" title="Our published credentials." copy="Certificate entries shown here are maintained by the authorised company team through OryCMS." />
 
-            {certificates.length ? (
-              <div className="mt-8 grid gap-5 sm:mt-10 sm:grid-cols-2 lg:grid-cols-3">
-                {certificates.map((certificate) => (
-                  <article key={certificate.id} className="group overflow-hidden rounded-3xl border border-border/40 bg-card shadow-soft transition-all duration-500 hover:-translate-y-1 hover:shadow-luxe">
-                    <div className="relative aspect-[4/3] overflow-hidden bg-[#f5f7f2]">
-                      {certificate.image?.url ? (
-                        <Image src={certificate.image.url} alt={`${certificate.title} certificate`} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-contain p-4 transition-transform duration-500 group-hover:scale-[1.03]" />
-                      ) : <FileCheck2 className="absolute left-1/2 top-1/2 h-12 w-12 -translate-x-1/2 -translate-y-1/2 text-[#689c30]/35" />}
-                      <div className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-[#033927] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-white shadow">
-                        <BadgeCheck className="h-3.5 w-3.5 text-[#bdd879]" /> Verified record
-                      </div>
-                    </div>
-                    <div className="p-5 sm:p-6">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#689c30]">{certificate.issuingAuthority}</p>
-                      <h2 className="mt-2 font-display text-2xl leading-tight">{certificate.title}</h2>
-                      {certificate.description ? <p className="mt-3 text-sm leading-6 text-muted-foreground">{certificate.description}</p> : null}
-                      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border/50 pt-4 text-xs text-muted-foreground">
-                        <span>{certificate.certificateNumber ? `No. ${certificate.certificateNumber}` : certificate.issuedOn ? `Issued ${formatDate(certificate.issuedOn)}` : "Company credential"}</span>
-                        {certificate.documentUrl ? <a href={certificate.documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 font-semibold text-[#033927] hover:text-[#689c30]">View document <Download className="h-3.5 w-3.5" /></a> : null}
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-8 overflow-hidden rounded-3xl border border-border/40 bg-gradient-to-br from-[#edf4e7] to-white p-7 text-center shadow-soft sm:mt-10 sm:p-12">
-                <Award className="mx-auto h-10 w-10 text-[#689c30]" />
-                <h2 className="mt-4 font-display text-3xl">Certificate gallery ready.</h2>
-                <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Published company certificates will appear here after they are added in OryCMS under Content → Certificates.</p>
-              </div>
-            )}
+            <div className="mt-8 sm:mt-10">
+              <CertificationsGallery certificates={certificates} />
+            </div>
           </div>
         </section>
 
@@ -224,7 +197,7 @@ export default async function CertificationsPage() {
         </section>
 
         <section className="pb-20 sm:pb-24">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6"><div className="relative overflow-hidden rounded-3xl bg-[#e9c46a] px-6 py-10 sm:px-10 lg:flex lg:items-center lg:justify-between lg:px-14"><Sparkles className="absolute -right-8 -top-12 h-52 w-52 text-white/25" strokeWidth={0.7} /><div className="relative max-w-2xl"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#665728]">Need formal documentation?</p><h2 className="mt-3 font-display text-3xl text-[#17382d] sm:text-5xl">Connect with our quality team.</h2></div><Link href="/contact" className="relative mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-medium text-white shadow-xl transition hover:bg-[#689c30] hover:!text-black lg:mt-0">Request details <ArrowRight className="h-4 w-4" /></Link></div></div>
+          <div className="mx-auto max-w-7xl px-4 sm:px-6"><div className="relative overflow-hidden rounded-3xl bg-[#e9c46a] px-6 py-10 sm:px-10 lg:flex lg:items-center lg:justify-between lg:px-14"><Sparkles className="absolute -right-8 -top-12 h-52 w-52 text-white/25" strokeWidth={0.7} /><div className="relative max-w-2xl"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#665728]">Need formal documentation?</p><h2 className="mt-3 font-display text-3xl text-[#17382d] sm:text-5xl">Connect with our quality team.</h2></div><Link href="/contact" className="relative mt-6 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white shadow-xl transition-colors duration-200 hover:bg-[#689c30] hover:!text-black cursor-pointer select-none lg:mt-0">Request details <ArrowRight className="h-4 w-4" /></Link></div></div>
         </section>
 
         <FarmersNotCustomersSection />

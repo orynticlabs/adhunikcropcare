@@ -49,7 +49,14 @@
    - Custom `OryCMSMultiSelect` popover UI allowing multiple images to be associated per pack size row with image previews and checkboxes.
    - Flexible image tagging rules: single pack size, multiple pack sizes, or blank/untagged for default images shown across all pack sizes.
    - Storefront product detail page (`/products/[slug]`) dynamically updates the main displayed image and filters thumbnail gallery options on pack size selection with built-in image preloading.
-5. **Clean Product Details & Coupons**:
+5. **Storefront Certificates Gallery, Modal Viewer & Lifetime Expiry Option**:
+   - Integrated client-side `CertificationsGallery` component on `/certifications`.
+   - Real-time search by certificate title, authority, number, or description + authority filter pills.
+   - Lifetime Validity badge (`#689c30`) displayed on cards and verification dossiers when expiry date is left blank.
+   - Interactive Modal Document Viewer supporting inline PDF viewer (iframe) and high-res image zoom with complete verification metadata side panel.
+   - Direct download support with proper Content-Disposition/filename formatting.
+   - OryCMS Admin Certificate form updated with explicit prompt: `"Leave blank if this certificate does not expire (Lifetime / Permanent validity)"` and a 1-click "Clear / Lifetime" quick action.
+6. **Clean Product Details & Coupons**:
    - Offers/Coupons section renders ONLY when valid coupons are available; omitted completely if empty.
    - Product accordions (Specifications, How to Use, Shipping & Returns) omit dummy content and render only when populated by admin.
 
@@ -60,9 +67,9 @@
 
 ---
 
-## 3. Tech Stack Reference
+## 3. Tech Stack & Design Standards Reference
 
 - **Core**: Next.js 15 (App Router), React 19, TypeScript
 - **Database & ORM**: PostgreSQL & Prisma ORM
-- **Styling**: Tailwind CSS & Lucide Icons
+- **Styling**: Tailwind CSS, Lucide Icons, and Storefront Button Color Standards (`AGENTS.md`)
 - **Integrations**: Cloudinary (Media), Razorpay (Payments), Shiprocket (Logistics), Resend (Email OTP)
