@@ -70,6 +70,6 @@
 ## 3. Tech Stack & Design Standards Reference
 
 - **Core**: Next.js 15 (App Router), React 19, TypeScript
-- **Database & ORM**: PostgreSQL & Prisma ORM
+- **Database & ORM**: PostgreSQL & Prisma ORM with strict migration tracking (`AGENTS.md`)
 - **Styling**: Tailwind CSS, Lucide Icons, and Storefront Button Color Standards (`AGENTS.md`)
 - **Integrations**: Cloudinary (Media), Razorpay (Payments), Shiprocket (Logistics), Resend (Email OTP)

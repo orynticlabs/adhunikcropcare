@@ -1,7 +1,16 @@
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 import { validateContactForm } from "@/lib/contact-form"
+import { sendContactAdminNotifications, sendContactUserConfirmationEmail } from "@/lib/email/mailer"
+
+const TOPIC_LABELS: Record<string, string> = {
+  general_enquiry: "General Enquiry",
+  product_guidance: "Product Guidance",
+  bulk_dealership: "Bulk & Dealership Inquiry",
+  technical_support: "Technical Agronomist Support",
+}
 import { generateContactTicketId } from "@/lib/orycms/contact-enquiries"
+import { getEnabledContactNotificationRecipients } from "@/lib/orycms/contact-notification-emails"
 import { createOryCMSNotification } from "@/lib/orycms/notifications"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { rateLimit, requestKey, requireCsrf } from "@/lib/storefront-auth"
@@ -45,10 +54,32 @@ export async function POST(request: NextRequest) {
       RETURNING id, ticket_id
     `
 
+    const topicLabel = TOPIC_LABELS[validation.values.topic] ?? validation.values.topic.replace(/_/g, " ")
+    const contactData = {
+      email: validation.values.email,
+      fullName: validation.values.fullName,
+      location: validation.values.location,
+      message: validation.values.message,
+      mobileNumber: validation.values.mobileNumber,
+      ticketId: enquiry.ticket_id,
+      topic: validation.values.topic,
+      topicLabel,
+    }
+
+    // 1. Send User Confirmation Email
+    void sendContactUserConfirmationEmail(contactData).catch((err) =>
+      console.error("[Email Error] Failed to send contact user confirmation:", err),
+    )
+
+    // 2. Send Admin Notification Email to configured recipients
+    void getEnabledContactNotificationRecipients()
+      .then((recipients) => sendContactAdminNotifications(recipients, contactData))
+      .catch((err) => console.error("[Email Error] Failed to send contact admin notifications:", err))
+
     await createOryCMSNotification({
       type: "customer",
       title: `New Contact Enquiry ${enquiry.ticket_id}`,
-      message: `${validation.values.fullName} submitted a ${validation.values.topic.replace(/_/g, " ")} enquiry.`,
+      message: `${validation.values.fullName} submitted a ${topicLabel} enquiry.`,
       entityId: enquiry.id,
       entityType: "contact",
       targetUrl: `/admin/collections/contact?highlight=${enquiry.id}`,

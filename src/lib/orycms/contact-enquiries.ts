@@ -44,16 +44,34 @@ export async function ensureContactEnquiriesTicketSchema() {
 
 export async function generateContactTicketId() {
   await ensureContactEnquiriesTicketSchema()
-  const prefix = `CNT-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const suffix = Math.floor(1000 + Math.random() * 9000)
-    const ticketId = `${prefix}-${suffix}`
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, "")
+  const prefix = `CNT-${today}`
+
+  // Try generating a random 4-digit unique suffix (0001-9999)
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const num = Math.floor(1 + Math.random() * 9999)
+    const suffix = String(num).padStart(4, "0")
+    const candidateId = `${prefix}-${suffix}`
     const [existing] = await orycmsPrisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM storefront_contact_enquiries WHERE ticket_id = ${ticketId} LIMIT 1
+      SELECT id FROM storefront_contact_enquiries WHERE ticket_id = ${candidateId} LIMIT 1
     `
-    if (!existing) return ticketId
+    if (!existing) return candidateId
   }
-  return `${prefix}-${Date.now().toString().slice(-6)}`
+
+  // Fallback: Find lowest unused 4-digit suffix for today (0001-9999)
+  const existingRows = await orycmsPrisma.$queryRaw<{ ticket_id: string }[]>`
+    SELECT ticket_id FROM storefront_contact_enquiries WHERE ticket_id LIKE ${`${prefix}-%`}
+  `
+  const usedSuffixes = new Set(existingRows.map((r) => r.ticket_id.split("-").pop() ?? ""))
+
+  for (let num = 1; num <= 9999; num += 1) {
+    const candidateSuffix = String(num).padStart(4, "0")
+    if (!usedSuffixes.has(candidateSuffix)) {
+      return `${prefix}-${candidateSuffix}`
+    }
+  }
+
+  return `${prefix}-${Date.now().toString().slice(-4)}`
 }
 
 export async function listOryCMSContactEnquiries(): Promise<OryCMSContactEnquiryDTO[]> {

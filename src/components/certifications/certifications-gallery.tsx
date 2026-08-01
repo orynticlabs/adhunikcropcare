@@ -293,7 +293,7 @@ export function CertificationsGallery({
               setQuery("")
               setSelectedAuthority("all")
             }}
-            className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#033927] px-6 text-xs font-semibold text-white transition-colors hover:bg-[#689c30] hover:text-black cursor-pointer"
+            className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#033927] px-6 text-xs font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black cursor-pointer"
           >
             Reset Filters
           </button>

@@ -33,7 +33,7 @@ This document serves as the single source of truth for button colors, background
   - **Icon Color**: `#000000` (Pure Black)
 - **Tailwind Classes**:
   ```tsx
-  className="bg-[#033927] text-white hover:bg-[#689c30] hover:text-black font-semibold transition-colors duration-200 cursor-pointer select-none shadow-xs"
+  className="bg-[#033927] text-white hover:bg-[#689c30] hover:!text-black font-semibold transition-colors duration-200 cursor-pointer select-none shadow-xs"
   ```
 
 ---
@@ -130,6 +130,6 @@ This document serves as the single source of truth for button colors, background
 
 ## 🔒 Mandatory Requirements for AI Agents & Developers
 
-1. **High-Contrast Text & Icon Guarantee**: When hovering over a dark green button (`bg-[#033927]`), the background changes to vibrant green (`#689c30`) and text/icons MUST turn black (`hover:text-black`) to ensure maximum readability.
+1. **High-Contrast Text & Icon Guarantee**: When hovering over a dark green button (`bg-[#033927]`), the background changes to vibrant green (`#689c30`) and text/icons MUST turn black (`hover:!text-black`) to ensure maximum readability.
 2. **Smooth Transitions**: Always include `transition-colors duration-200` on interactive elements.
 3. **Cursor Pointer & Text Selection**: Always include `cursor-pointer select-none` on clickable buttons and pills.

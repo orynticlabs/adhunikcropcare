@@ -59,7 +59,7 @@ The codebase strictly enforces application boundaries:
 
 - **Framework**: Next.js 15 (App Router, Server Components & Client Hooks)
 - **Language**: TypeScript (Strict Mode)
-- **Database & ORM**: PostgreSQL & Prisma ORM
+- **Database & ORM**: PostgreSQL & Prisma ORM with strict migration tracking (see `AGENTS.md`)
 - **Styling**: Vanilla CSS & Tailwind CSS with custom Design Tokens & Storefront Button Standards (see `AGENTS.md`)
 - **Icons**: Lucide React
 - **Media Hosting**: Cloudinary API & Asset Management
