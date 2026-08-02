@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, GripVertical, ImageIcon, Loader2, Plus, Save, Search, Star, Trash2, Upload, X } from "lucide-react"
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, GripVertical, ImageIcon, Loader2, Plus, RefreshCw, RotateCcw, Save, Search, Star, Trash2, Upload, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSMultiSelect, OryCMSSelect } from "@/components/orycms/custom-select"
 import { RichTextEditor } from "@/components/orycms/rich-text-editor"
@@ -31,6 +31,7 @@ type Product = {
   brand: string
   category: string
   createdAt: string
+  deletedAt?: string | null
   featured: boolean
   fullDescription: string
   howToUse: string
@@ -152,8 +153,11 @@ const emptyProduct: Product = {
 
 export function OryCMSProductsList() {
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
+  const [bulkPermanentConfirmOpen, setBulkPermanentConfirmOpen] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [deleteCandidate, setDeleteCandidate] = useState<Product | null>(null)
+  const [permanentDeleteCandidate, setPermanentDeleteCandidate] = useState<Product | null>(null)
+  const [restoreCandidate, setRestoreCandidate] = useState<Product | null>(null)
   const [featuredFilter, setFeaturedFilter] = useState<"all" | "featured" | "standard">("all")
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -161,20 +165,24 @@ export function OryCMSProductsList() {
   const [query, setQuery] = useState("")
   const [selected, setSelected] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<"created-desc" | "created-asc" | "name-asc" | "price-asc" | "stock-asc">("created-desc")
-  const [statusFilter, setStatusFilter] = useState<"all" | ProductStatus>("all")
+  const [statusFilter, setStatusFilter] = useState<"all" | ProductStatus | "trash">("all")
   const [toast, setToast] = useState<Toast | null>(null)
+
+  const isTrashView = statusFilter === "trash"
 
   async function loadProducts() {
     setLoading(true)
-    const json = await fetch("/api/orycms/products").then((response) => response.json())
+    const url = isTrashView ? "/api/orycms/products?trash=true" : "/api/orycms/products"
+    const json = await fetch(url).then((response) => response.json())
 
     setProducts(json.success ? json.data : [])
+    setSelected([])
     setLoading(false)
   }
 
   useEffect(() => {
     loadProducts()
-  }, [])
+  }, [statusFilter])
 
   async function deleteProduct(product: Product) {
     const json = await fetch(`/api/orycms/products/${product.id}`, { method: "DELETE" }).then((r) =>
@@ -185,7 +193,7 @@ export function OryCMSProductsList() {
       setProducts((current) => current.filter((item) => item.id !== product.id))
       setSelected((current) => current.filter((id) => id !== product.id))
       setDeleteCandidate(null)
-      showToast("Product deleted.", "success")
+      showToast("Product moved to Trash Can.", "success")
     } else {
       showToast(json.error?.message ?? "Delete failed.", "error")
     }
@@ -202,9 +210,74 @@ export function OryCMSProductsList() {
       setProducts((current) => current.filter((item) => !selected.includes(item.id)))
       setSelected([])
       setBulkConfirmOpen(false)
-      showToast("Selected products deleted.", "success")
+      showToast("Selected products moved to Trash Can.", "success")
     } else {
       showToast(json.error?.message ?? "Bulk delete failed.", "error")
+    }
+  }
+
+  async function restoreProduct(product: Product) {
+    const json = await fetch("/api/orycms/products/restore", {
+      body: JSON.stringify({ id: product.id }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    }).then((r) => r.json())
+
+    if (json.success) {
+      setProducts((current) => current.filter((item) => item.id !== product.id))
+      setSelected((current) => current.filter((id) => id !== product.id))
+      setRestoreCandidate(null)
+      showToast("Product restored successfully.", "success")
+    } else {
+      showToast(json.error?.message ?? "Restore failed.", "error")
+    }
+  }
+
+  async function bulkRestore() {
+    const json = await fetch("/api/orycms/products/restore", {
+      body: JSON.stringify({ ids: selected }),
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    }).then((r) => r.json())
+
+    if (json.success) {
+      setProducts((current) => current.filter((item) => !selected.includes(item.id)))
+      setSelected([])
+      showToast("Selected products restored successfully.", "success")
+    } else {
+      showToast(json.error?.message ?? "Bulk restore failed.", "error")
+    }
+  }
+
+  async function permanentDeleteProduct(product: Product) {
+    const json = await fetch(`/api/orycms/products/${product.id}?permanent=true`, {
+      method: "DELETE",
+    }).then((r) => r.json())
+
+    if (json.success) {
+      setProducts((current) => current.filter((item) => item.id !== product.id))
+      setSelected((current) => current.filter((id) => id !== product.id))
+      setPermanentDeleteCandidate(null)
+      showToast("Product permanently deleted.", "success")
+    } else {
+      showToast(json.error?.message ?? "Permanent delete failed.", "error")
+    }
+  }
+
+  async function bulkPermanentDelete() {
+    const json = await fetch("/api/orycms/products?permanent=true", {
+      body: JSON.stringify({ ids: selected, permanent: true }),
+      headers: { "content-type": "application/json" },
+      method: "DELETE",
+    }).then((r) => r.json())
+
+    if (json.success) {
+      setProducts((current) => current.filter((item) => !selected.includes(item.id)))
+      setSelected([])
+      setBulkPermanentConfirmOpen(false)
+      showToast("Selected products permanently deleted.", "success")
+    } else {
+      showToast(json.error?.message ?? "Bulk permanent delete failed.", "error")
     }
   }
 
@@ -223,7 +296,8 @@ export function OryCMSProductsList() {
     const next = products.filter((product) => {
       const matchesQuery = [product.name, product.sku].join(" ").toLowerCase().includes(query.toLowerCase())
       const matchesCategory = categoryFilter === "all" || product.category === categoryFilter
-      const matchesStatus = statusFilter === "all" || product.status === statusFilter
+      const matchesStatus =
+        statusFilter === "all" || statusFilter === "trash" || product.status === statusFilter
       const matchesFeatured =
         featuredFilter === "all" ||
         (featuredFilter === "featured" ? product.featured : !product.featured)
@@ -252,18 +326,24 @@ export function OryCMSProductsList() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <OryCMSBreadcrumbs items={[{ href: "/admin", label: "Overview" }, { href: "/admin/products", label: "Products" }]} />
-          <h1 className="mt-1 text-[26px] font-semibold leading-tight tracking-tight">Products</h1>
+          <h1 className="mt-1 text-[26px] font-semibold leading-tight tracking-tight">
+            {isTrashView ? "Trash Can" : "Products"}
+          </h1>
           <p className="mt-1 max-w-2xl text-[13.5px] leading-6 text-muted-foreground">
-            Manage published storefront products, variants, stock, SEO, and media galleries.
+            {isTrashView
+              ? "Products in Trash Can are retained for 60 days before being automatically purged along with their media."
+              : "Manage published storefront products, variants, stock, SEO, and media galleries."}
           </p>
         </div>
-        <Link
-          href="/admin/products/new"
-          className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3 text-[12.5px] font-medium text-background transition-opacity hover:opacity-90"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Add Product
-        </Link>
+        {!isTrashView ? (
+          <Link
+            href="/admin/products/new"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3 text-[12.5px] font-semibold text-background shadow-xs transition-colors hover:!bg-[#FF5A20] hover:!text-white cursor-pointer select-none"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Product
+          </Link>
+        ) : null}
       </div>
 
       <div className="rounded-xl border border-border bg-surface shadow-xs">
@@ -287,22 +367,25 @@ export function OryCMSProductsList() {
             value={statusFilter}
             onChange={(val) => setStatusFilter(val as typeof statusFilter)}
             options={[
-              { label: "All status", value: "all" },
+              { label: "All active status", value: "all" },
               { label: "Published", value: "published" },
               { label: "Draft", value: "draft" },
+              { label: "Trash Can 🗑️", value: "trash" },
             ]}
             className="w-auto"
           />
-          <OryCMSSelect
-            value={featuredFilter}
-            onChange={(val) => setFeaturedFilter(val as typeof featuredFilter)}
-            options={[
-              { label: "All featured", value: "all" },
-              { label: "Featured", value: "featured" },
-              { label: "Not featured", value: "standard" },
-            ]}
-            className="w-auto"
-          />
+          {!isTrashView ? (
+            <OryCMSSelect
+              value={featuredFilter}
+              onChange={(val) => setFeaturedFilter(val as typeof featuredFilter)}
+              options={[
+                { label: "All featured", value: "all" },
+                { label: "Featured", value: "featured" },
+                { label: "Not featured", value: "standard" },
+              ]}
+              className="w-auto"
+            />
+          ) : null}
           <OryCMSSelect
             value={sortBy}
             onChange={(val) => setSortBy(val as typeof sortBy)}
@@ -315,26 +398,64 @@ export function OryCMSProductsList() {
             ]}
             className="w-auto"
           />
+          <button
+            type="button"
+            onClick={() => void loadProducts()}
+            disabled={loading}
+            title="Refresh product list"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-white px-3 text-[12.5px] font-medium text-foreground transition-colors hover:!bg-foreground hover:!text-white shadow-xs cursor-pointer select-none disabled:opacity-50"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+            Refresh
+          </button>
           {selected.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => setBulkConfirmOpen(true)}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 text-[12.5px] font-medium text-destructive"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete {selected.length}
-            </button>
+            isTrashView ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => void bulkRestore()}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-white px-3 text-[12.5px] font-medium text-foreground border border-border hover:!bg-foreground hover:!text-white transition-colors shadow-xs cursor-pointer select-none"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Restore {selected.length}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBulkPermanentConfirmOpen(true)}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#FF5A20] px-3 text-[12.5px] font-semibold text-white hover:!bg-foreground hover:!text-white transition-colors shadow-xs cursor-pointer select-none"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Purge {selected.length}
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setBulkConfirmOpen(true)}
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-white text-foreground border border-border hover:!bg-[#FF5A20] hover:!text-white px-3 text-[12.5px] font-medium transition-colors shadow-xs cursor-pointer select-none"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete {selected.length}
+              </button>
+            )
           ) : null}
           <div className="rounded-full border border-border bg-surface px-3 py-1 text-[12px] text-muted-foreground">
-            {filtered.length} product{filtered.length === 1 ? "" : "s"}
+            {filtered.length} {isTrashView ? "item in trash" : "product"}{filtered.length === 1 ? "" : "s"}
           </div>
         </div>
+
+        {isTrashView ? (
+          <div className="flex items-center gap-2 bg-[#FF5A20]/10 px-4 py-2 text-[12.5px] font-medium text-[#FF5A20] border-b border-border">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>Items in Trash Can will be automatically purged permanently after 60 days of retention.</span>
+          </div>
+        ) : null}
 
         {loading ? (
           <TableSkeleton rows={6} cols={6} />
         ) : filtered.length === 0 ? (
           <div className="grid min-h-64 place-items-center text-center text-[13px] text-muted-foreground">
-            No products yet. Add your first product.
+            {isTrashView ? "Trash Can is empty." : "No products found."}
           </div>
         ) : (
           <>
@@ -361,8 +482,8 @@ export function OryCMSProductsList() {
                     <th className="px-4 py-3">Category</th>
                     <th className="px-4 py-3 text-center">MRP</th>
                     <th className="px-4 py-3 text-center">Stock</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                    <th className="px-4 py-3 text-center">Featured</th>
+                    <th className="px-4 py-3 text-center">{isTrashView ? "Deleted Date" : "Status"}</th>
+                    {!isTrashView ? <th className="px-4 py-3 text-center">Featured</th> : null}
                     <th className="px-4 py-3">Created</th>
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
@@ -398,52 +519,89 @@ export function OryCMSProductsList() {
                         {product.stockQuantity} {product.unit}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span
-                          className={cn(
-                            "rounded-full px-2.5 py-1 text-[11px] font-medium capitalize",
-                            product.status === "published"
-                              ? "bg-chart-3/15 text-chart-3"
-                              : "bg-muted text-muted-foreground",
-                          )}
-                        >
-                          {product.status}
-                        </span>
+                        {isTrashView ? (
+                          <div className="flex flex-col items-center">
+                            <span className="text-[11.5px] font-medium text-foreground">
+                              {formatDateTime(product.deletedAt ?? undefined)}
+                            </span>
+                            <span className="text-[10.5px] font-semibold text-[#FF5A20]">
+                              {getRemainingTrashDays(product.deletedAt)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span
+                            className={cn(
+                              "rounded-full px-2.5 py-1 text-[11px] font-medium capitalize",
+                              product.status === "published"
+                                ? "bg-chart-3/15 text-chart-3"
+                                : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {product.status}
+                          </span>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <span
-                          className={cn(
-                            "rounded-full px-2.5 py-1 text-[11px] font-medium",
-                            product.featured ? "bg-chart-3/15 text-chart-3" : "bg-muted text-muted-foreground",
-                          )}
-                        >
-                          {product.featured ? "Featured" : "No"}
-                        </span>
-                      </td>
+                      {!isTrashView ? (
+                        <td className="px-4 py-3 text-center">
+                          <span
+                            className={cn(
+                              "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                              product.featured ? "bg-chart-3/15 text-chart-3" : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            {product.featured ? "Featured" : "No"}
+                          </span>
+                        </td>
+                      ) : null}
                       <td className="px-4 py-3 text-muted-foreground">{formatDateTime(product.createdAt)}</td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                          <Link
-                            href={`/products/${product.slug}`}
-                            target="_blank"
-                            className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                            aria-label={`View ${product.name}`}
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Link>
-                          <Link
-                            href={`/admin/products/${product.id}`}
-                            className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-[12px] font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-                          >
-                            Edit
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteCandidate(product)}
-                            className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface text-destructive transition-colors hover:border-destructive/30 hover:bg-destructive/10"
-                            aria-label={`Delete ${product.name}`}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                          {isTrashView ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => void restoreProduct(product)}
+                                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-white px-3 text-[12px] font-medium text-foreground transition-colors hover:!bg-foreground hover:!text-white shadow-xs cursor-pointer select-none"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Restore
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPermanentDeleteCandidate(product)}
+                                className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#FF5A20] px-3 text-[12px] font-semibold text-white transition-colors hover:!bg-foreground hover:!text-white shadow-xs cursor-pointer select-none"
+                                aria-label={`Permanently delete ${product.name}`}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Purge
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <Link
+                                href={`/products/${product.slug}`}
+                                target="_blank"
+                                className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                                aria-label={`View ${product.name}`}
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Link>
+                              <Link
+                                href={`/admin/products/${product.id}`}
+                                className="inline-flex h-9 items-center rounded-lg border border-border bg-surface px-3 text-[12px] font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                              >
+                                Edit
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() => setDeleteCandidate(product)}
+                                className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface text-destructive transition-colors hover:border-destructive/30 hover:bg-destructive/10"
+                                aria-label={`Move ${product.name} to Trash Can`}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -488,6 +646,20 @@ export function OryCMSProductsList() {
         }}
         onConfirm={() => (deleteCandidate ? void deleteProduct(deleteCandidate) : void bulkDelete())}
         open={Boolean(deleteCandidate) || bulkConfirmOpen}
+      />
+      <ProductPermanentDeleteDialog
+        count={selected.length}
+        name={permanentDeleteCandidate?.name}
+        onCancel={() => {
+          setPermanentDeleteCandidate(null)
+          setBulkPermanentConfirmOpen(false)
+        }}
+        onConfirm={() =>
+          permanentDeleteCandidate
+            ? void permanentDeleteProduct(permanentDeleteCandidate)
+            : void bulkPermanentDelete()
+        }
+        open={Boolean(permanentDeleteCandidate) || bulkPermanentConfirmOpen}
       />
       <ProductToast toast={toast} />
     </section>
@@ -1286,15 +1458,14 @@ function ProductDeleteDialog({
     <div className="fixed inset-0 z-[55] grid place-items-center bg-background/85 p-4 backdrop-blur-sm">
       <div className="mx-4 w-full max-w-md overflow-hidden rounded-xl border border-border bg-surface shadow-pop sm:mx-auto">
         <div className="flex gap-3 border-b border-border bg-surface-muted p-5">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FF5A20]/10 text-[#FF5A20]">
             <Trash2 className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-[14px] font-semibold">Delete product{name ? "" : "s"}?</div>
+            <div className="text-[14px] font-semibold">Move to Trash Can?</div>
             <p className="mt-1 text-[12.5px] leading-5 text-muted-foreground">
-              This will soft delete{" "}
               {name ? <span className="font-medium text-foreground">{name}</span> : `${count} selected products`}{" "}
-              from OryCMS products.
+              will be moved to Trash Can. The product slug and media assets will be preserved so it can be restored at any point within 60 days.
             </p>
           </div>
         </div>
@@ -1302,17 +1473,70 @@ function ProductDeleteDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+            className="h-9 rounded-lg bg-white text-foreground border border-border hover:!bg-foreground hover:!text-white font-medium px-3 text-[12.5px] transition-colors shadow-xs cursor-pointer select-none"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-destructive px-3 text-[12.5px] font-medium text-destructive-foreground transition-opacity hover:opacity-90"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#FF5A20] text-white hover:!bg-foreground hover:!text-white font-semibold px-3 text-[12.5px] transition-colors shadow-xs cursor-pointer select-none"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Delete
+            Move to Trash
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ProductPermanentDeleteDialog({
+  count,
+  name,
+  onCancel,
+  onConfirm,
+  open,
+}: {
+  count: number
+  name?: string
+  onCancel: () => void
+  onConfirm: () => void
+  open: boolean
+}) {
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-[55] grid place-items-center bg-background/85 p-4 backdrop-blur-sm">
+      <div className="mx-4 w-full max-w-md overflow-hidden rounded-xl border border-border bg-surface shadow-pop sm:mx-auto">
+        <div className="flex gap-3 border-b border-border bg-surface-muted p-5">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#FF5A20]/20 text-[#FF5A20]">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="text-[14px] font-semibold text-[#FF5A20]">Permanently Purge Product{name ? "" : "s"}?</div>
+            <p className="mt-1 text-[12.5px] leading-5 text-muted-foreground">
+              This action <span className="font-semibold text-foreground">CANNOT be undone</span>.{" "}
+              {name ? <span className="font-medium text-foreground">{name}</span> : `${count} selected products`}{" "}
+              will be permanently removed from the database along with all unreferenced image files from media storage.
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 bg-surface p-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="h-9 rounded-lg bg-white text-foreground border border-border hover:!bg-foreground hover:!text-white font-medium px-3 text-[12.5px] transition-colors shadow-xs cursor-pointer select-none"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#FF5A20] text-white hover:!bg-foreground hover:!text-white font-semibold px-3 text-[12.5px] transition-colors shadow-xs cursor-pointer select-none"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Permanently Purge
           </button>
         </div>
       </div>
@@ -1738,6 +1962,16 @@ function uploadProductImage(
     request.open("POST", "/api/orycms/media")
     request.send(form)
   })
+}
+
+function getRemainingTrashDays(deletedAt?: string | null): string {
+  if (!deletedAt) return "—"
+  const deletedTime = new Date(deletedAt).getTime()
+  const now = Date.now()
+  const daysPassed = Math.floor((now - deletedTime) / (1000 * 60 * 60 * 24))
+  const remaining = Math.max(0, 60 - daysPassed)
+  if (remaining === 0) return "Purges today"
+  return `Purges in ${remaining} day${remaining === 1 ? "" : "s"}`
 }
 
 function formatBytes(bytes: number) {

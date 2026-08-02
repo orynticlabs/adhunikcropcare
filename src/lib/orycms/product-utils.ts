@@ -45,6 +45,7 @@ export type OryCMSProductInput = {
 
 export type OryCMSProductDTO = OryCMSProductInput & {
   createdAt: string
+  deletedAt?: string | null
   id: string
   slug: string
   updatedAt: string

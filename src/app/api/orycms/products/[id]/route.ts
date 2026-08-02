@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { requireOryCMSUser } from "@/lib/orycms/auth"
-import { deleteOryCMSProduct, getOryCMSProduct, saveOryCMSProduct } from "@/lib/orycms/products"
+import { deleteOryCMSProduct, getOryCMSProduct, permanentDeleteOryCMSProduct, saveOryCMSProduct } from "@/lib/orycms/products"
 
 export const runtime = "nodejs"
 
@@ -47,7 +47,14 @@ export async function DELETE(
 ) {
   try {
     await requireOryCMSUser(request)
-    await deleteOryCMSProduct((await params).id)
+    const { id } = await params
+    const isPermanent = request.nextUrl.searchParams.get("permanent") === "true"
+
+    if (isPermanent) {
+      await permanentDeleteOryCMSProduct(id)
+    } else {
+      await deleteOryCMSProduct(id)
+    }
     return NextResponse.json({ success: true, data: null })
   } catch (error) {
     return productError(error, "Failed to delete product.")

@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { requireOryCMSUser } from "@/lib/orycms/auth"
-import { bulkDeleteOryCMSProducts, listOryCMSProducts, saveOryCMSProduct } from "@/lib/orycms/products"
+import { bulkDeleteOryCMSProducts, bulkPermanentDeleteOryCMSProducts, listOryCMSProducts, saveOryCMSProduct } from "@/lib/orycms/products"
 
 export const runtime = "nodejs"
 
 export async function GET(request: NextRequest) {
   try {
     await requireOryCMSUser(request)
-    return NextResponse.json({ success: true, data: await listOryCMSProducts() })
+    const trashOnly = request.nextUrl.searchParams.get("trash") === "true"
+    return NextResponse.json({ success: true, data: await listOryCMSProducts({ trashOnly }) })
   } catch (error) {
     return productError(error, "Failed to load products.")
   }
@@ -29,9 +30,14 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     await requireOryCMSUser(request)
-    const body = (await request.json()) as { ids?: string[] }
+    const body = (await request.json()) as { ids?: string[]; permanent?: boolean }
+    const isPermanent = request.nextUrl.searchParams.get("permanent") === "true" || body.permanent === true
 
-    await bulkDeleteOryCMSProducts(body.ids ?? [])
+    if (isPermanent) {
+      await bulkPermanentDeleteOryCMSProducts(body.ids ?? [])
+    } else {
+      await bulkDeleteOryCMSProducts(body.ids ?? [])
+    }
     return NextResponse.json({ success: true, data: null })
   } catch (error) {
     return productError(error, "Failed to delete products.")
