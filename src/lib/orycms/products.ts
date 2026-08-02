@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client"
+import { Prisma } from "@prisma/client"
 import { revalidateTag, unstable_cache } from "next/cache"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { deleteOryCMSMediaIfUnreferenced } from "@/lib/orycms/media"
@@ -19,6 +19,7 @@ type OryCMSProductRow = {
   brand: string | null
   category: string
   created_at: Date
+  deleted_at: Date | null
   featured: boolean
   full_description: string | null
   how_to_use: string | null
@@ -63,27 +64,39 @@ const listPublishedOryCMSProducts = unstable_cache(
   { revalidate: 60, tags: [STOREFRONT_PRODUCTS_CACHE_TAG] },
 )
 
-export async function listOryCMSProducts(options: { publishedOnly?: boolean } = {}) {
+export async function listOryCMSProducts(options: { publishedOnly?: boolean; trashOnly?: boolean } = {}) {
   if (options.publishedOnly) return listPublishedOryCMSProducts()
 
   await ensureOryCMSProductsSchema()
-  const products = await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
-    SELECT * FROM orycms_products
-    WHERE deleted_at IS NULL
-    ORDER BY featured DESC, updated_at DESC
-  `
+  const products = options.trashOnly
+    ? await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
+        SELECT * FROM orycms_products
+        WHERE deleted_at IS NOT NULL
+        ORDER BY deleted_at DESC
+      `
+    : await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
+        SELECT * FROM orycms_products
+        WHERE deleted_at IS NULL
+        ORDER BY featured DESC, updated_at DESC
+      `
 
   return products.map(toProductDTO)
 }
 
-export async function getOryCMSProduct(id: string) {
+export async function getOryCMSProduct(id: string, includeDeleted = false) {
   await ensureOryCMSProductsSchema()
 
-  const [product] = await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
-    SELECT * FROM orycms_products
-    WHERE id = ${id}::uuid AND deleted_at IS NULL
-    LIMIT 1
-  `
+  const [product] = includeDeleted
+    ? await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
+        SELECT * FROM orycms_products
+        WHERE id = ${id}::uuid
+        LIMIT 1
+      `
+    : await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
+        SELECT * FROM orycms_products
+        WHERE id = ${id}::uuid AND deleted_at IS NULL
+        LIMIT 1
+      `
 
   return product ? toProductDTO(product) : null
 }
@@ -198,16 +211,92 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
 
 export async function deleteOryCMSProduct(id: string) {
   await ensureOryCMSProductsSchema()
-  const product = await getOryCMSProduct(id)
 
   await orycmsPrisma.$executeRaw`
     UPDATE orycms_products
     SET deleted_at = now(),
-        slug = slug || '-deleted-' || left(id::text, 8),
-        sku = sku || '-deleted-' || left(id::text, 8),
         updated_at = now()
     WHERE id = ${id}::uuid
       AND deleted_at IS NULL
+  `
+
+  revalidateStorefrontProducts()
+}
+
+function revalidateStorefrontProducts() {
+  revalidateTag(STOREFRONT_PRODUCTS_CACHE_TAG, { expire: 0 })
+}
+
+export async function bulkDeleteOryCMSProducts(ids: string[]) {
+  const validIds = ids.filter(Boolean)
+  if (validIds.length === 0) return
+
+  await orycmsPrisma.$executeRaw`
+    UPDATE orycms_products
+    SET deleted_at = now(),
+        updated_at = now()
+    WHERE id IN (${Prisma.join(validIds.map((id) => Prisma.raw(`'${id}'::uuid`)))})
+      AND deleted_at IS NULL
+  `
+  revalidateStorefrontProducts()
+}
+
+export async function restoreOryCMSProduct(id: string) {
+  await ensureOryCMSProductsSchema()
+  const product = await getOryCMSProduct(id, true)
+  if (!product || !product.deletedAt) return null
+
+  // Check for active slug/SKU collision
+  let targetSlug = product.slug
+  let targetSku = product.sku
+
+  const [existingSlug] = await orycmsPrisma.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM orycms_products WHERE slug = ${targetSlug} AND deleted_at IS NULL AND id != ${id}::uuid LIMIT 1
+  `
+  if (existingSlug) {
+    targetSlug = `${targetSlug}-restored-${Date.now().toString(36)}`
+  }
+
+  const [existingSku] = await orycmsPrisma.$queryRaw<Array<{ id: string }>>`
+    SELECT id FROM orycms_products WHERE sku = ${targetSku} AND deleted_at IS NULL AND id != ${id}::uuid LIMIT 1
+  `
+  if (existingSku) {
+    targetSku = `${targetSku}-RESTORED-${Date.now().toString(36)}`
+  }
+
+  const [restored] = await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
+    UPDATE orycms_products
+    SET deleted_at = NULL,
+        slug = ${targetSlug},
+        sku = ${targetSku},
+        updated_at = now()
+    WHERE id = ${id}::uuid
+    RETURNING *
+  `
+
+  revalidateStorefrontProducts()
+  return restored ? toProductDTO(restored) : null
+}
+
+export async function bulkRestoreOryCMSProducts(ids: string[]) {
+  const validIds = ids.filter(Boolean)
+  if (validIds.length === 0) return []
+
+  const restoredList = []
+  for (const id of validIds) {
+    const item = await restoreOryCMSProduct(id)
+    if (item) restoredList.push(item)
+  }
+  return restoredList
+}
+
+export async function permanentDeleteOryCMSProduct(id: string) {
+  await ensureOryCMSProductsSchema()
+  const product = await getOryCMSProduct(id, true)
+
+  await orycmsPrisma.$executeRaw`
+    DELETE FROM orycms_products
+    WHERE id = ${id}::uuid
   `
 
   if (product) {
@@ -223,12 +312,29 @@ export async function deleteOryCMSProduct(id: string) {
   revalidateStorefrontProducts()
 }
 
-function revalidateStorefrontProducts() {
-  revalidateTag(STOREFRONT_PRODUCTS_CACHE_TAG, { expire: 0 })
+export async function bulkPermanentDeleteOryCMSProducts(ids: string[]) {
+  const validIds = ids.filter(Boolean)
+  for (const id of validIds) {
+    await permanentDeleteOryCMSProduct(id)
+  }
 }
 
-export async function bulkDeleteOryCMSProducts(ids: string[]) {
-  await Promise.all(ids.filter(Boolean).map((id) => deleteOryCMSProduct(id)))
+export async function purgeExpiredTrashOryCMSProducts(daysThreshold = 60) {
+  await ensureOryCMSProductsSchema()
+
+  const expiredProducts = await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
+    SELECT * FROM orycms_products
+    WHERE deleted_at IS NOT NULL
+      AND deleted_at < (now() - (${daysThreshold} || ' days')::interval)
+  `
+
+  let purgedCount = 0
+  for (const product of expiredProducts) {
+    await permanentDeleteOryCMSProduct(product.id)
+    purgedCount++
+  }
+
+  return purgedCount
 }
 
 export async function listOryCMSProductCategories() {
@@ -431,6 +537,7 @@ function toProductDTO(product: OryCMSProductRow): OryCMSProductDTO {
     brand: product.brand ?? "",
     category: product.category,
     createdAt: new Date(product.created_at).toISOString(),
+    deletedAt: product.deleted_at ? new Date(product.deleted_at).toISOString() : null,
     featured: product.featured,
     fullDescription: product.full_description ?? "",
     howToUse: product.how_to_use ?? "",
