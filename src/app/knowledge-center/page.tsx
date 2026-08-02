@@ -3,11 +3,13 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, BookOpen, ChevronRight, PlayCircle, Sprout } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
-import Header from "@/components/layout/header"
+import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 import CropSuccessStories from "@/components/home/crop-success-stories"
+
+export const revalidate = 60
 
 export const metadata: Metadata = {
   title: "Farmer Knowledge Center | Adhunik Crop Care India",
@@ -43,7 +45,7 @@ const RESOURCES = [
 export default function KnowledgeCenterPage() {
   return (
     <div className="min-h-screen bg-[#fbfaf4] text-[#17382d]">
-      <AnnouncementBar /><Header /><CartDrawer />
+      <AnnouncementBar /><HeaderServer /><CartDrawer />
       <main>
         <section className="mx-auto grid max-w-7xl gap-10 px-4 pb-16 pt-32 sm:pt-40 lg:grid-cols-[1fr_.9fr] lg:items-center lg:pb-24">
           <div><nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#738078]"><Link href="/">Home</Link><ChevronRight className="h-3.5 w-3.5" /><span>Knowledge Center</span></nav><p className="mt-12 text-xs font-bold uppercase tracking-[.22em] text-[#689c30]">Learn in the field</p><h1 className="mt-5 font-display text-5xl leading-[.94] sm:text-7xl">Practical knowledge, ready when you are.</h1><p className="mt-6 max-w-xl text-lg leading-8 text-[#627069]">This sample learning hub brings together field notes, simple guides, and crop-care topics in a format built for everyday decisions.</p><Link href="/products" className="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#033927] px-7 text-sm font-bold text-white transition hover:bg-[#689c30] hover:!text-black">Explore products <ArrowRight className="h-4 w-4" /></Link></div>

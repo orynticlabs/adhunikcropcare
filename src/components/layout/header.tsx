@@ -32,14 +32,17 @@ export default function Header({ initialCategories }: { initialCategories?: Stor
 
   /* lock body scroll while drawer is open */
   useEffect(() => {
-    if (initialCategories) return // already have data — skip network fetch
+    if (initialCategories && initialCategories.length > 0) {
+      setCategories(initialCategories)
+      return
+    }
     fetch("/api/categories")
       .then((response) => response.json())
       .then((json) => {
         if (json.success && Array.isArray(json.data)) setCategories(json.data)
       })
       .catch(() => undefined)
-  }, [])
+  }, [initialCategories])
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : ""

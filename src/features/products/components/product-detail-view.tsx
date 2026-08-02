@@ -327,6 +327,10 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
 
   const selected = product.options[activeOption]
   const selectedPackLabel = selected?.label?.trim() || ""
+  const selectedImageId = selected?.imageId
+  const selectedImageIds = selected?.imageIds
+  const selectedImageUrl = selected?.imageUrl
+  const selectedImageUrls = selected?.imageUrls
 
   const visibleImages = useMemo(() => {
     if (!product.packSizeImagesEnabled) return product.images
@@ -338,16 +342,16 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
       if (selectedPackLabel && img.packSizes.includes(selectedPackLabel)) {
         return true
       }
-      if (selected?.imageIds && img.id && selected.imageIds.includes(img.id)) return true
-      if (selected?.imageUrls && selected.imageUrls.includes(img.src)) return true
-      if (selected?.imageId && img.id === selected.imageId) return true
-      if (selected?.imageUrl && img.src === selected.imageUrl) return true
+      if (selectedImageIds && img.id && selectedImageIds.includes(img.id)) return true
+      if (selectedImageUrls && selectedImageUrls.includes(img.src)) return true
+      if (selectedImageId && img.id === selectedImageId) return true
+      if (selectedImageUrl && img.src === selectedImageUrl) return true
 
       return false
     })
 
     return filtered.length > 0 ? filtered : product.images
-  }, [product.images, product.packSizeImagesEnabled, selectedPackLabel, selected?.imageId, selected?.imageIds, selected?.imageUrl, selected?.imageUrls])
+  }, [product.images, product.packSizeImagesEnabled, selectedPackLabel, selectedImageId, selectedImageIds, selectedImageUrl, selectedImageUrls])
 
   useEffect(() => {
     if (!product.packSizeImagesEnabled) return

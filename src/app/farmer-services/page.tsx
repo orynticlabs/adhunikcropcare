@@ -3,11 +3,13 @@ import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, ChevronRight, ClipboardCheck, MapPinned, Sprout, UsersRound } from "lucide-react"
 import AnnouncementBar from "@/components/layout/announcement-bar"
-import Header from "@/components/layout/header"
+import HeaderServer from "@/components/layout/header-server"
 import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 import CropSuccessStories from "@/components/home/crop-success-stories"
+
+export const revalidate = 60
 
 export const metadata: Metadata = {
   title: "Crop Protection Programs & Advisory | Adhunik Crop Care",
@@ -59,7 +61,7 @@ const CROP_SOLUTIONS = [
 export default function FarmerServicesPage() {
   return (
     <div className="min-h-screen bg-[#f5f7f0] text-[#17382d]">
-      <AnnouncementBar /><Header /><CartDrawer />
+      <AnnouncementBar /><HeaderServer /><CartDrawer />
       <main>
         <section className="relative isolate overflow-hidden bg-[#173f31] px-4 pb-20 pt-32 text-white sm:pt-40"><Image src="https://images.unsplash.com/photo-1595974482597-4b8da8879bc5?w=1800&q=88" alt="Farmer receiving crop advice in green field" fill priority sizes="100vw" className="-z-20 object-cover opacity-45" /><div className="absolute inset-0 -z-10 bg-[#0c3126]/60" /><div className="mx-auto max-w-7xl"><nav className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-white/65"><Link href="/">Home</Link><ChevronRight className="h-3.5 w-3.5" /><span>Farmer Services</span></nav><div className="mt-16 grid gap-10 lg:grid-cols-[1.2fr_.8fr] lg:items-end"><div><p className="text-xs font-bold uppercase tracking-[.22em] text-[#d7e99d]">Guidance for the field</p><h1 className="mt-5 font-display text-5xl leading-[.94] sm:text-7xl">Crop-Specific Protection Programs</h1><p className="mt-6 max-w-2xl text-lg leading-8 text-white/78">Our technical agronomist team develops integrated crop management solutions helping Indian farmers achieve healthier crops and higher farm profitability.</p></div><Link href="/contact" className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-white px-7 text-sm font-bold text-[#033927] transition-colors hover:bg-[#033927] hover:!text-white">Ask a crop question <ArrowRight className="h-4 w-4" /></Link></div></div></section>
 

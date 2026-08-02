@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     `)
     const total = parseInt(countRows[0]?.count || "0", 10)
 
-    const logs = await orycmsPrisma.$queryRawUnsafe<any[]>(`
+    const logs = await orycmsPrisma.$queryRawUnsafe<Record<string, unknown>[]>(`
       SELECT id, "adminId", "adminEmail", "targetUserId", action, "ipAddress", details, "createdAt"
       FROM orycms_admin_audit_logs
       ${whereClause}

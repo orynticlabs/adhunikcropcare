@@ -8,6 +8,8 @@ import SiteFooter from "@/components/layout/site-footer"
 import CartDrawer from "@/features/cart/components/cart-drawer"
 import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 
+export const revalidate = 60
+
 export const metadata: Metadata = {
   title: "Herbicides Manufacturer in India | Adhunik Crop Care",
   description:

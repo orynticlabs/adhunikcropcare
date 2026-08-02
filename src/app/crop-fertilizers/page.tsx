@@ -22,6 +22,8 @@ import CartDrawer from "@/features/cart/components/cart-drawer"
 import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 import CropSuccessStories from "@/components/home/crop-success-stories"
 
+export const revalidate = 60
+
 export const metadata: Metadata = {
   title: "Bio Fertilizers & Plant Nutrition | Adhunik Crop Care",
   description:

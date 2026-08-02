@@ -8,6 +8,8 @@ import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-
 import CropSuccessStories from "@/components/home/crop-success-stories"
 import { listOryCMSFaqs } from "@/lib/orycms/faqs"
 
+export const revalidate = 60
+
 export const metadata: Metadata = {
   title: "Frequently Asked Questions | Adhunik Crop Care",
   description:

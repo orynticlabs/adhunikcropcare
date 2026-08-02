@@ -8,7 +8,7 @@ export async function GET() {
     const categories = await listOryCMSCategories({ activeOnly: true })
     return NextResponse.json(
       { success: true, data: categories.map(({ id, name, slug }) => ({ id, name, slug })) },
-      { headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600" } },
+      { headers: { "Cache-Control": "public, max-age=30, s-maxage=60, stale-while-revalidate=120" } },
     )
   } catch {
     return NextResponse.json({ success: true, data: [] })

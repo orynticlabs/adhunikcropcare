@@ -517,7 +517,7 @@ function UserModal({ onClose, onSaved, onToast, user }: { onClose: () => void; o
               Send invitation email automatically
             </label>
             <p className="text-[11.5px] text-orange-900/80 leading-relaxed pl-7">
-              Password will be set by the invited user via a 24-hour one-time link. The creating admin does not set or view the user's password.
+              Password will be set by the invited user via a 24-hour one-time link. The creating admin does not set or view the user&apos;s password.
             </p>
           </div>
         ) : null}
