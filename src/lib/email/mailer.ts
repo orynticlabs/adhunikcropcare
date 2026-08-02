@@ -1,8 +1,8 @@
 import "server-only"
 import crypto from "crypto"
 import nodemailer from "nodemailer"
-import { emailTemplates, type EmailTemplateName } from "@/lib/email/templates"
-import { orycmsPrisma } from "@/lib/orycms/prisma"
+import { emailTemplates, type EmailTemplateName } from "./templates"
+import { orycmsPrisma } from "../orycms/prisma"
 
 export const OPTIONAL_EMAIL_TYPES = ["cartUpdate", "offerAnnouncement", "saleAnnouncement"] as const
 type OptionalEmailType = typeof OPTIONAL_EMAIL_TYPES[number]
@@ -250,3 +250,22 @@ export async function sendContactAdminNotifications(recipients: string[], data: 
     return { error: error instanceof Error ? error.message : String(error), recipients: unique, skipped: true }
   }
 }
+
+export type AdminInvitationEmailData = {
+  fullName: string
+  invitedBy?: string
+  setupUrl: string
+  to: string
+}
+
+export async function sendAdminInvitationEmail(data: AdminInvitationEmailData) {
+  return sendEmail({
+    template: "adminInvitation",
+    to: data.to,
+    fullName: data.fullName,
+    invitedBy: data.invitedBy,
+    setupUrl: data.setupUrl,
+    unsubscribeUrl: `${emailBaseUrl()}/privacy-policy`,
+  })
+}
+

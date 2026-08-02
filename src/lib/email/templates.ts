@@ -17,6 +17,7 @@ export type EmailTemplateName =
   | "shipmentOutForDelivery"
   | "shipmentDelivered"
   | "shipmentCancelled"
+  | "adminInvitation"
 
 type TemplateInput = {
   actionUrl?: string
@@ -30,6 +31,7 @@ type TemplateInput = {
   email?: string
   estimatedDelivery?: string
   fullName?: string
+  invitedBy?: string
   location?: string
   message?: string
   mobileNumber?: string
@@ -41,6 +43,7 @@ type TemplateInput = {
   paymentMethod?: string
   paymentStatus?: string
   productName?: string
+  setupUrl?: string
   stockQuantity?: number
   refundStatus?: string
   ticketId?: string
@@ -253,6 +256,30 @@ export const emailTemplates: Record<EmailTemplateName, (input: TemplateInput) =>
   shipmentOutForDelivery: (i) => shipmentEmail("Out for delivery today", `<p>Hello ${escapeHtml(i.firstName)},</p><p>Your order <strong>${escapeHtml(i.orderNumber)}</strong> is out for delivery and should reach you today.</p>`, i),
   shipmentDelivered: (i) => shipmentEmail("Your order has been delivered", `<p>Hello ${escapeHtml(i.firstName)},</p><p>Your order <strong>${escapeHtml(i.orderNumber)}</strong> has been delivered. We hope you love it!</p>`, i),
   shipmentCancelled: (i) => shipmentEmail("Your shipment was cancelled", `<p>Hello ${escapeHtml(i.firstName)},</p><p>The shipment for your order <strong>${escapeHtml(i.orderNumber)}</strong> has been cancelled. If this is unexpected, please contact support.</p>`, i),
+  adminInvitation: (i) => ({
+    subject: `Invitation to join ${brand} Admin`,
+    text: [
+      `Hello ${i.fullName ?? "Admin"},`,
+      `You have been invited to join the ${brand} OryCMS Admin Dashboard${i.invitedBy ? ` by ${i.invitedBy}` : ""}.`,
+      `Please set up your password using the link below (expires in 24 hours):`,
+      i.setupUrl ?? "",
+    ].join("\n"),
+    html: layout(
+      "Admin Invitation",
+      `<p>Hello <strong>${escapeHtml(i.fullName ?? "Admin")}</strong>,</p>
+      <p style="font-size:14.5px;line-height:1.6;color:#033927;background:#eff4e9;padding:14px 18px;border-radius:12px;border:1px solid #dce5d8">
+        You have been invited to join the <strong>${brand}</strong> OryCMS Admin Panel${i.invitedBy ? ` by <strong>${escapeHtml(i.invitedBy)}</strong>` : ""}.
+      </p>
+      <p style="margin-top:20px;font-size:13.5px;color:#495850">
+        Please click the button below to create your password and activate your admin account. This one-time setup link is valid for <strong>24 hours</strong>.
+      </p>
+      ${button("Set Your Password", i.setupUrl)}
+      <p style="font-size:12px;color:#66756e;margin-top:20px">
+        For security, the creating administrator does not set or know your password. Password setup must occur directly through this link.
+      </p>`,
+      i.unsubscribeUrl,
+    ),
+  }),
 }
 
 /** Shared builder for the five shipment lifecycle emails (AWB/courier/tracking rows). */

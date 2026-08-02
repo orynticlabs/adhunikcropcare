@@ -251,8 +251,8 @@ export function OryCMSContactEnquiriesAdmin() {
                 className={cn(
                   "rounded-md px-3 py-1 text-[12px] font-semibold capitalize transition-colors cursor-pointer select-none",
                   statusFilter === st
-                    ? "bg-[#033927] text-white shadow-xs"
-                    : "text-muted-foreground hover:bg-surface-muted hover:text-foreground",
+                    ? "bg-foreground text-white shadow-xs"
+                    : "text-muted-foreground hover:!bg-surface-muted hover:!text-foreground",
                 )}
               >
                 {st === "all" ? `All (${counts.total})` : `${st} (${counts[st === "new" ? "countNew" : st === "read" ? "countRead" : "countClosed"]})`}
@@ -265,7 +265,7 @@ export function OryCMSContactEnquiriesAdmin() {
         {loading ? (
           <div className="p-12 text-center text-[13px] text-muted-foreground">
             <div className="inline-flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 animate-spin text-[#033927]" />
+              <RefreshCw className="h-4 w-4 animate-spin text-foreground" />
               Loading contact enquiries…
             </div>
           </div>
@@ -301,13 +301,13 @@ export function OryCMSContactEnquiriesAdmin() {
                   className={cn(
                     "grid gap-4 p-4 lg:px-5 lg:py-4 transition-colors cursor-pointer select-none",
                     "lg:grid-cols-[140px_220px_160px_1fr_130px_130px_160px] lg:items-center",
-                    isHighlighted && "bg-emerald-50/70 ring-1 ring-inset ring-emerald-400",
-                    isSelected ? "bg-[#edf3e9]/60" : "hover:bg-surface-muted/50",
+                    isHighlighted && "bg-orange-50/70 ring-1 ring-inset ring-orange-400",
+                    isSelected ? "bg-orange-50/40" : "hover:!bg-surface-muted/50",
                   )}
                 >
                   {/* Ticket ID */}
                   <div>
-                    <span className="inline-flex items-center rounded-md border border-[#689c30]/30 bg-[#edf3e9] px-2.5 py-1 font-mono text-[11.5px] font-bold text-[#033927]">
+                    <span className="inline-flex items-center rounded-md border border-[#FF5A20]/30 bg-[#FF5A20]/10 px-2.5 py-1 font-mono text-[11.5px] font-bold text-[#FF5A20]">
                       {item.ticketId}
                     </span>
                   </div>
@@ -316,11 +316,11 @@ export function OryCMSContactEnquiriesAdmin() {
                   <div className="space-y-0.5 min-w-0">
                     <div className="text-[13.5px] font-semibold text-foreground truncate">{item.fullName}</div>
                     <div className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground truncate">
-                      <Mail className="h-3 w-3 shrink-0 text-[#033927]" />
+                      <Mail className="h-3 w-3 shrink-0 text-muted-foreground" />
                       <span className="truncate">{item.email}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground truncate">
-                      <Phone className="h-3 w-3 shrink-0 text-[#033927]" />
+                      <Phone className="h-3 w-3 shrink-0 text-muted-foreground" />
                       <span>{item.countryCode} {item.mobileNumber}</span>
                     </div>
                   </div>
@@ -370,8 +370,8 @@ export function OryCMSContactEnquiriesAdmin() {
                         className={cn(
                           "rounded-lg px-2 py-1 text-[11px] font-semibold capitalize transition-all cursor-pointer select-none border",
                           item.status === st
-                            ? "bg-[#033927] text-white border-[#033927] shadow-2xs"
-                            : "bg-surface text-foreground border-border hover:bg-[#689c30] hover:!text-black hover:border-[#689c30] disabled:opacity-40",
+                            ? "bg-foreground text-white border-foreground shadow-2xs"
+                            : "bg-surface text-foreground border-border hover:!bg-[#FF5A20] hover:!text-white hover:!border-[#FF5A20] disabled:opacity-40",
                         )}
                       >
                         {st}
@@ -392,19 +392,19 @@ export function OryCMSContactEnquiriesAdmin() {
           className="fixed inset-0 z-50 flex items-center justify-end bg-black/75 backdrop-blur-md p-4 lg:p-6 animate-in fade-in duration-200"
         >
           <div
-            className="w-full max-w-xl rounded-2xl border-2 border-border bg-white text-[#033927] p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto"
+            className="w-full max-w-xl rounded-2xl border-2 border-border bg-white text-foreground p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="rounded-md border border-[#689c30]/40 bg-[#edf3e9] px-2.5 py-1 font-mono text-[12px] font-bold text-[#033927]">
+                  <span className="rounded-md border border-[#FF5A20]/40 bg-[#FF5A20]/10 px-2.5 py-1 font-mono text-[12px] font-bold text-[#FF5A20]">
                     #{selectedEnquiry.ticketId}
                   </span>
                   <StatusBadge status={selectedEnquiry.status} />
                 </div>
-                <h2 className="mt-2 text-[20px] font-bold tracking-tight text-[#033927]">
+                <h2 className="mt-2 text-[20px] font-bold tracking-tight text-foreground">
                   {selectedEnquiry.fullName}
                 </h2>
                 <div className="text-[12px] text-muted-foreground mt-0.5">
@@ -414,7 +414,7 @@ export function OryCMSContactEnquiriesAdmin() {
               <button
                 type="button"
                 onClick={() => setSelectedEnquiry(null)}
-                className="grid h-8 w-8 place-items-center rounded-full border border-border bg-white text-[#033927] hover:bg-[#033927] hover:text-white cursor-pointer select-none transition-colors"
+                className="grid h-8 w-8 place-items-center rounded-full border border-border bg-white text-foreground hover:!bg-foreground hover:!text-white cursor-pointer select-none transition-colors"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -429,76 +429,76 @@ export function OryCMSContactEnquiriesAdmin() {
 
             {/* Contact Details Grid */}
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-[#d7e0da] bg-[#edf3e9]/50 p-3.5 space-y-1">
-                <div className="text-[11px] font-semibold text-[#033927]/70 flex items-center justify-between">
+              <div className="rounded-xl border border-border bg-surface-muted/50 p-3.5 space-y-1">
+                <div className="text-[11px] font-semibold text-muted-foreground flex items-center justify-between">
                   <span>Mobile Number</span>
                   <button
                     type="button"
                     onClick={() => handleCopy(`${selectedEnquiry.countryCode} ${selectedEnquiry.mobileNumber}`, "Mobile Number")}
-                    className="text-[#033927] hover:text-[#689c30] font-bold cursor-pointer inline-flex items-center gap-1 text-[10.5px]"
+                    className="text-foreground hover:!text-[#FF5A20] font-bold cursor-pointer inline-flex items-center gap-1 text-[10.5px]"
                   >
                     <Copy className="h-3 w-3" /> Copy
                   </button>
                 </div>
-                <div className="text-[13.5px] font-bold text-[#033927] flex items-center gap-2">
-                  <Phone className="h-3.5 w-3.5 text-[#033927]" />
+                <div className="text-[13.5px] font-bold text-foreground flex items-center gap-2">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                   <a href={`tel:${selectedEnquiry.mobileNumber}`} className="hover:underline">
                     {selectedEnquiry.countryCode} {selectedEnquiry.mobileNumber}
                   </a>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[#d7e0da] bg-[#edf3e9]/50 p-3.5 space-y-1">
-                <div className="text-[11px] font-semibold text-[#033927]/70 flex items-center justify-between">
+              <div className="rounded-xl border border-border bg-surface-muted/50 p-3.5 space-y-1">
+                <div className="text-[11px] font-semibold text-muted-foreground flex items-center justify-between">
                   <span>Email Address</span>
                   <button
                     type="button"
                     onClick={() => handleCopy(selectedEnquiry.email, "Email Address")}
-                    className="text-[#033927] hover:text-[#689c30] font-bold cursor-pointer inline-flex items-center gap-1 text-[10.5px]"
+                    className="text-foreground hover:!text-[#FF5A20] font-bold cursor-pointer inline-flex items-center gap-1 text-[10.5px]"
                   >
                     <Copy className="h-3 w-3" /> Copy
                   </button>
                 </div>
-                <div className="text-[13.5px] font-bold text-[#033927] flex items-center gap-2 min-w-0">
-                  <Mail className="h-3.5 w-3.5 shrink-0 text-[#033927]" />
+                <div className="text-[13.5px] font-bold text-foreground flex items-center gap-2 min-w-0">
+                  <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <a href={`mailto:${selectedEnquiry.email}`} className="hover:underline truncate">
                     {selectedEnquiry.email}
                   </a>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[#d7e0da] bg-[#edf3e9]/50 p-3.5 space-y-1">
-                <div className="text-[11px] font-semibold text-[#033927]/70">Topic</div>
-                <div className="text-[13px] font-bold text-[#033927] capitalize">
+              <div className="rounded-xl border border-border bg-surface-muted/50 p-3.5 space-y-1">
+                <div className="text-[11px] font-semibold text-muted-foreground">Topic</div>
+                <div className="text-[13px] font-bold text-foreground capitalize">
                   {label(selectedEnquiry.topic)}
                 </div>
               </div>
 
-              <div className="rounded-xl border border-[#d7e0da] bg-[#edf3e9]/50 p-3.5 space-y-1">
-                <div className="text-[11px] font-semibold text-[#033927]/70">Location</div>
-                <div className="text-[13px] font-bold text-[#033927] flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 text-[#033927]" />
-                  {selectedEnquiry.location || "Not specified"}
+              <div className="rounded-xl border border-border bg-surface-muted/50 p-3.5 space-y-1">
+                <div className="text-[11px] font-semibold text-muted-foreground">Location</div>
+                <div className="text-[13px] font-bold text-foreground flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>{selectedEnquiry.location || "Not specified"}</span>
                 </div>
               </div>
             </div>
 
-            {/* Submitted Message */}
+            {/* Full Message Body */}
             <div className="space-y-2">
-              <div className="text-[12px] font-bold uppercase tracking-wider text-[#033927]">
-                Submitted Message
+              <div className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
+                Message Content
               </div>
-              <div className="rounded-xl border-2 border-[#d7e0da] bg-[#edf3e9]/30 p-4 text-[14px] font-medium leading-relaxed text-[#033927] whitespace-pre-wrap">
+              <div className="rounded-xl border border-border bg-surface-muted/30 p-4 text-[14px] font-medium leading-relaxed text-foreground whitespace-pre-wrap">
                 {selectedEnquiry.message}
               </div>
             </div>
 
-            {/* Status Selector Footer */}
-            <div className="border-t border-border pt-4 flex items-center justify-between gap-4">
-              <div className="text-[12px] font-semibold text-muted-foreground">
-                Update Status:
+            {/* Quick Actions Footer */}
+            <div className="border-t border-border pt-4 space-y-3">
+              <div className="text-[12px] font-bold uppercase tracking-wider text-muted-foreground">
+                Update Ticket Status
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {(["new", "read", "closed"] as const).map((st) => (
                   <button
                     key={st}
@@ -506,13 +506,13 @@ export function OryCMSContactEnquiriesAdmin() {
                     onClick={() => void setStatus(selectedEnquiry, st)}
                     disabled={selectedEnquiry.status === st}
                     className={cn(
-                      "rounded-lg px-3.5 py-1.5 text-[12px] font-bold capitalize transition-all cursor-pointer select-none border",
+                      "flex-1 rounded-xl py-2.5 text-[13px] font-semibold capitalize transition-all cursor-pointer select-none border",
                       selectedEnquiry.status === st
-                        ? "bg-[#033927] text-white border-[#033927] shadow-xs"
-                        : "bg-surface text-foreground border-border hover:bg-[#689c30] hover:!text-black hover:border-[#689c30] disabled:opacity-40",
+                        ? "bg-foreground text-white border-foreground shadow-xs"
+                        : "bg-white text-foreground border-border hover:!bg-[#FF5A20] hover:!text-white hover:!border-[#FF5A20] cursor-pointer select-none",
                     )}
                   >
-                    Set {st}
+                    Set to {st}
                   </button>
                 ))}
               </div>

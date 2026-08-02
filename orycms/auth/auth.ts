@@ -107,7 +107,7 @@ export async function authenticateOryCMSUser(
     buildOryCMSHookContext("beforeLogin", null, { email: normEmail }, null),
   );
 
-  const result = await pool.query<OryCMSAuthUser & { passwordHash: string }>(
+  const result = await pool.query<OryCMSAuthUser & { passwordHash: string | null }>(
     `SELECT id, email, "passwordHash", status, "roleId"
      FROM orycms_users
      WHERE email = $1
@@ -117,13 +117,30 @@ export async function authenticateOryCMSUser(
 
   const user = result.rows[0];
 
-  // Constant-time: always compare even if user not found (dummy hash avoids timing leak)
+  // If user exists but hasn't set a password yet (invited)
+  if (user && !user.passwordHash) {
+    throw new OryCMSAuthError(
+      "ACCOUNT_INACTIVE",
+      "Password setup is pending. Please use the invitation link sent to your email to create your password.",
+      403,
+    );
+  }
+
+  // Constant-time comparison
   const dummyHash = "$2a$12$invalidhashfortimingprotection0000000000000000000000";
   const hash = user?.passwordHash ?? dummyHash;
   const valid = await bcrypt.compare(password, hash);
 
   if (!user || !valid) {
     throw new OryCMSAuthError("INVALID_CREDENTIALS", "Invalid email or password.", 401);
+  }
+
+  if (user.status === "locked") {
+    throw new OryCMSAuthError(
+      "ACCOUNT_INACTIVE",
+      "This account has been locked or frozen by a Super Administrator.",
+      403,
+    );
   }
 
   if (user.status !== "active") {
