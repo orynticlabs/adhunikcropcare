@@ -49,3 +49,15 @@ To maintain visual consistency, high contrast, and brand alignment across the en
 2. **Smooth Transitions**: Always include `transition-colors duration-200` (or `transition-all`) on interactive buttons.
 3. **Cursor Pointer**: Always include `cursor-pointer select-none` on clickable buttons and interactive pills.
 
+# OryCMS Admin Side Design System & Button Color Standards
+
+To maintain distinct identity between the Storefront and OryCMS Admin side:
+- **Do NOT use Storefront Green (`#033927` or `#689c30`) in ANY OryCMS Admin buttons.**
+- OryCMS Admin buttons use the **Charcoal Black (`bg-foreground`), Pure White, and OryCMS Orange (`#FF5A20` / `var(--orycms-orange)`)** theme palette:
+  - **Primary Action Button**: `bg-foreground text-background hover:!bg-[#FF5A20] hover:!text-white font-semibold transition-colors shadow-xs cursor-pointer select-none`
+  - **Secondary / Outlined Button**: `bg-white text-foreground border border-border hover:!bg-foreground hover:!text-white font-medium transition-colors shadow-xs cursor-pointer select-none`
+  - **Orange Accent Action Button**: `bg-[#FF5A20] text-white hover:!bg-foreground hover:!text-white font-semibold transition-colors shadow-xs cursor-pointer select-none`
+  - **Action Icon Buttons (Eye, Edit, Mail, Lock, Delete)**: Must use `!` modifier on all hover classes (e.g. `hover:!bg-foreground hover:!text-white`, `hover:!bg-[#FF5A20] hover:!text-white`, `hover:!bg-destructive hover:!text-white`) and include `cursor-pointer select-none`.
+  - **Checkboxes & Badges**: Checkboxes use `accent-[#FF5A20]` or `accent-foreground`. Status badges use `bg-[#FF5A20]/10 text-[#FF5A20]` for invitation/pending states.
+
+
