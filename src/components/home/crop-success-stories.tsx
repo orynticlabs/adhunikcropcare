@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { ChevronLeft, ChevronRight, Leaf, Play } from "lucide-react"
 
+import { ReelCardSkeleton } from "@/components/ui/skeleton"
+
 export type CropSuccessStory = {
   product: string
   thumbnail?: string
@@ -41,10 +43,29 @@ export default function CropSuccessStories({ stories: propStories }: { stories?:
     }
   }, [propStories])
 
-  if (!loaded || stories.length === 0) return null
+  if (!loaded) {
+    return (
+      <section className="relative py-12 sm:py-16">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="text-center mx-auto max-w-2xl mb-8">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
+              <Leaf className="h-3 w-3" aria-hidden /> Video Guides
+            </div>
+            <h2 className="mt-4 font-display text-3xl sm:text-4xl lg:text-5xl leading-[1.1] tracking-tight">
+              Watch real results in action.
+            </h2>
+          </div>
+          <ReelCardSkeleton count={3} />
+        </div>
+      </section>
+    )
+  }
+
+  if (stories.length === 0) return null
 
   return <CropSuccessStoriesCarousel stories={stories} />
 }
+
 
 function CropSuccessStoriesCarousel({ stories: reelStories }: { stories: CropSuccessStory[] }) {
   const [active, setActive] = useState(0)

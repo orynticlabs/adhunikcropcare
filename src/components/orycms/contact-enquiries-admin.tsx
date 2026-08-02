@@ -18,8 +18,10 @@ import {
   X,
 } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { TableSkeleton } from "../../../orycms/components/ui/skeleton"
 import type { OryCMSContactEnquiryDTO } from "@/lib/orycms/contact-enquiries"
 import { cn } from "@/lib/utils"
+
 
 type FilterStatus = "all" | "new" | "read" | "closed"
 
@@ -263,12 +265,7 @@ export function OryCMSContactEnquiriesAdmin() {
 
         {/* Content Body */}
         {loading ? (
-          <div className="p-12 text-center text-[13px] text-muted-foreground">
-            <div className="inline-flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 animate-spin text-foreground" />
-              Loading contact enquiries…
-            </div>
-          </div>
+          <TableSkeleton rows={5} cols={5} />
         ) : error ? (
           <div className="p-12 text-center text-[13px] text-destructive">{error}</div>
         ) : filtered.length === 0 ? (

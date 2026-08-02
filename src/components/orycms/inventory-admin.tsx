@@ -5,7 +5,9 @@ import Link from "next/link"
 import { AlertTriangle, Download, Eye, FileSpreadsheet, FileText, ImageIcon, PackageSearch, Search } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { Skeleton } from "../../../orycms/components/ui/skeleton"
 import { cn, formatCurrency } from "@/lib/utils"
+
 
 type InventoryItem = {
   availableStock: number
@@ -196,7 +198,13 @@ export function OryCMSInventoryAdmin() {
             </thead>
             <tbody className="divide-y divide-border">
               {loading && !data ? (
-                <tr><td colSpan={15} className="px-4 py-14 text-center text-muted-foreground">Loading live inventory…</td></tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={15} className="px-4 py-3">
+                      <Skeleton className="h-6 w-full rounded-md" />
+                    </td>
+                  </tr>
+                ))
               ) : rows.length ? rows.map((item) => (
                 <tr key={item.id} className="hover:bg-accent/35">
                   <td className="px-4 py-3">

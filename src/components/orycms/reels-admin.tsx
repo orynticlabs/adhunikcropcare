@@ -4,7 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Loader2, Plus, Save, Trash2, Upload, Video, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { CardGridSkeleton } from "../../../orycms/components/ui/skeleton"
 import type { OryCMSReelVideoDTO } from "@/lib/orycms/reel-videos"
+
 
 type Message = { text: string; type: "error" | "success" }
 
@@ -111,7 +113,7 @@ export function OryCMSReelsAdmin() {
       ) : null}
 
       {loading ? (
-        <div className="grid min-h-64 place-items-center rounded-xl border border-border bg-surface"><Loader2 className="h-5 w-5 animate-spin" /></div>
+        <CardGridSkeleton count={3} cols="grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" />
       ) : reels.length === 0 ? (
         <div className="grid min-h-72 place-items-center rounded-xl border border-dashed border-border bg-surface p-8 text-center">
           <div><Video className="mx-auto h-9 w-9 text-muted-foreground" /><p className="mt-3 text-sm font-medium">No reels uploaded yet</p><p className="mt-1 text-xs text-muted-foreground">Upload a published video to show it in the storefront reels area.</p></div>

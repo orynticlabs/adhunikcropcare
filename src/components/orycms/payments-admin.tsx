@@ -18,7 +18,9 @@ import {
 } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { Skeleton } from "../../../orycms/components/ui/skeleton"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
+
 import { cn, formatCurrency } from "@/lib/utils"
 
 type Toast = { id: number; message: string; tone: "success" | "error" }
@@ -238,7 +240,13 @@ export function OryCMSPaymentsAdmin() {
             </thead>
             <tbody className="divide-y divide-border">
               {loading ? (
-                <tr><td colSpan={10} className="px-4 py-10 text-center text-muted-foreground">Loading payments…</td></tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={10} className="px-4 py-3">
+                      <Skeleton className="h-6 w-full rounded-md" />
+                    </td>
+                  </tr>
+                ))
               ) : payments.length === 0 ? (
                 <tr><td colSpan={10} className="px-4 py-14 text-center">
                   <CreditCard className="mx-auto h-10 w-10 text-muted-foreground/30" strokeWidth={1} />

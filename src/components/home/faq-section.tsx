@@ -4,6 +4,8 @@ import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowRight, ChevronDown, Leaf } from "lucide-react"
 
+import { AccordionSkeleton } from "@/components/ui/skeleton"
+
 type FAQItem = {
   id: string
   question: string
@@ -41,11 +43,6 @@ export default function FAQSection() {
     return null
   }
 
-  // Hide section during initial loading until backend check completes
-  if (!loaded) {
-    return null
-  }
-
   // Display top 6 FAQs on the homepage
   const homepageFaqs = faqs.slice(0, 6)
   const hasMoreFaqs = faqs.length > 6
@@ -62,36 +59,43 @@ export default function FAQSection() {
           </h2>
         </div>
 
-        <div className="mt-7 space-y-3">
-          {homepageFaqs.map((faq, i) => (
-            <div
-              key={faq.id || `${i}-${faq.question.slice(0, 15)}`}
-              className={`rounded-2xl border border-border/50 bg-card/70 px-6 shadow-soft transition ${
-                open === i ? "shadow-luxe" : ""
-              }`}
-            >
-              <button
-                type="button"
-                className="flex w-full items-center justify-between py-4 text-left font-display text-lg font-medium cursor-pointer hover:text-[#033927] transition-colors"
-                onClick={() => setOpen(open === i ? null : i)}
-                aria-expanded={open === i}
-              >
-                {faq.question}
-                <ChevronDown
-                  className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                    open === i ? "rotate-180" : ""
+        <div className="mt-7">
+          {!loaded ? (
+            <AccordionSkeleton count={4} />
+          ) : (
+            <div className="space-y-3">
+              {homepageFaqs.map((faq, i) => (
+                <div
+                  key={faq.id || `${i}-${faq.question.slice(0, 15)}`}
+                  className={`rounded-2xl border border-border/50 bg-card/70 px-6 shadow-soft transition ${
+                    open === i ? "shadow-luxe" : ""
                   }`}
-                  aria-hidden
-                />
-              </button>
-              {open === i && (
-                <div className="pb-4 text-sm text-foreground/70 leading-relaxed">
-                  {faq.answer}
+                >
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between py-4 text-left font-display text-lg font-medium cursor-pointer hover:text-[#033927] transition-colors"
+                    onClick={() => setOpen(open === i ? null : i)}
+                    aria-expanded={open === i}
+                  >
+                    {faq.question}
+                    <ChevronDown
+                      className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                        open === i ? "rotate-180" : ""
+                      }`}
+                      aria-hidden
+                    />
+                  </button>
+                  {open === i && (
+                    <div className="pb-4 text-sm text-foreground/70 leading-relaxed">
+                      {faq.answer}
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
-          ))}
+          )}
         </div>
+
 
         {/* If backend contains more than 6 FAQs, show option to view all FAQs */}
         {hasMoreFaqs && (

@@ -4,9 +4,12 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Bell, Boxes, CreditCard, Receipt, Truck, Users } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { TableSkeleton } from "../../../orycms/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
+
 type NotificationKind = "order" | "payment" | "shipment" | "inventory" | "customer" | "admin-user" | "system"
+
 type Notification = {
   body: string
   category: string
@@ -86,7 +89,7 @@ export function OryCMSNotificationsAdmin() {
         </div>
 
         <div className="divide-y divide-border">
-          {loading ? <div className="p-8 text-center text-[13px] text-muted-foreground">Loading notifications…</div> : null}
+          {loading ? <TableSkeleton rows={4} cols={3} /> : null}
           {!loading && items.length === 0 ? <div className="p-8 text-center text-[13px] text-muted-foreground">No notifications found.</div> : null}
           {items.map((notification) => (
             <button

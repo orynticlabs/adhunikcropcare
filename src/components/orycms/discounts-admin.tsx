@@ -8,7 +8,9 @@ import {
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { RichTextEditor } from "@/components/orycms/rich-text-editor"
+import { Skeleton, TableSkeleton } from "../../../orycms/components/ui/skeleton"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
+
 
 // ─── types ───────────────────────────────────────────────────────────────────
 type DiscountType = "percentage" | "fixed" | "free_shipping" | "bxgy"
@@ -192,7 +194,7 @@ function TargetSelector({ appliesTo, targetIds, onChange }: {
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
           className="h-8 w-full rounded-lg border border-border bg-surface pl-8 pr-3 text-[12.5px] outline-none focus:border-border-strong" />
       </div>
-      {loading ? <p className="text-[12px] text-muted-foreground">Loading…</p> : (
+      {loading ? <Skeleton className="h-20 w-full rounded-lg" /> : (
         <div className="max-h-40 overflow-y-auto rounded-lg border border-border">
           {filtered.length === 0 ? <p className="px-3 py-2 text-[12px] text-muted-foreground">No results</p> : filtered.map((opt) => (
             <label key={opt.id} className="flex cursor-pointer items-center gap-2 px-3 py-1.5 hover:bg-accent">
@@ -578,7 +580,7 @@ function DiscountsTab({ show }: { show: (msg: string, type: Toast["type"]) => vo
 
         <div className="flex-1 overflow-auto">
           {loading ? (
-            <div className="grid min-h-64 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            <TableSkeleton rows={5} cols={6} />
           ) : paged.length === 0 ? (
             <div className="grid min-h-64 place-items-center text-center">
               <div><Tag className="mx-auto h-8 w-8 text-muted-foreground/40" />

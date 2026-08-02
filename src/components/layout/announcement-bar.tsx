@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 type AnnouncementDTO = {
+
   id: string
   content: string
   ctaText: string | null
@@ -72,6 +73,7 @@ export default function AnnouncementBar() {
   }, [index, totalCount])
 
   if (totalCount === 0) return null
+
 
   const safeIndex = index % totalCount
 

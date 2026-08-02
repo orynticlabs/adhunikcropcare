@@ -10,6 +10,8 @@ export default function FaqsPageClient({
 }: {
   initialFaqs?: OryCMSFaqDTO[]
 }) {
+
+
   const [faqs, setFaqs] = useState<OryCMSFaqDTO[]>(initialFaqs)
   const [loading, setLoading] = useState(initialFaqs.length === 0)
   const [search, setSearch] = useState("")

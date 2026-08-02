@@ -16,7 +16,9 @@ import {
 } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { CardGridSkeleton } from "../../../orycms/components/ui/skeleton"
 import type { OryCMSFaqDTO } from "@/lib/orycms/faqs"
+
 
 export function OryCMSFaqsAdmin() {
   const [faqs, setFaqs] = useState<OryCMSFaqDTO[]>([])
@@ -215,9 +217,7 @@ export function OryCMSFaqsAdmin() {
       {/* ── FAQ List ──────────────────────────────────────────── */}
       <div className="mt-6">
         {loading && faqs.length === 0 ? (
-          <div className="grid min-h-[200px] place-items-center rounded-2xl border border-border bg-surface text-xs text-muted-foreground sm:text-sm">
-            Loading FAQs…
-          </div>
+          <CardGridSkeleton count={4} cols="grid-cols-1" />
         ) : faqs.length === 0 ? (
           <div className="grid min-h-[220px] place-items-center rounded-2xl border border-dashed border-border bg-surface-muted/30 p-8 text-center">
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-muted text-muted-foreground">
