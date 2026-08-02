@@ -14,7 +14,7 @@ type AuditLogItem = {
   adminEmail: string | null
   adminId: string | null
   createdAt: string
-  details: Record<string, any> | null
+  details: Record<string, unknown> | null
   id: string
   ipAddress: string | null
   targetUserId: string | null
@@ -150,8 +150,11 @@ export function OryCMSAuditLogsList() {
                   </td>
                 </tr>
               ) : logs.map((log) => {
-                const targetEmail = log.details?.targetEmail || log.details?.deletedUser?.email || log.details?.targetUser?.email || "—"
-                const justification = log.details?.justification || log.details?.reason || "—"
+                const details = log.details as Record<string, unknown> | null
+                const deletedUser = details?.deletedUser as Record<string, unknown> | undefined
+                const targetUser = details?.targetUser as Record<string, unknown> | undefined
+                const targetEmail = typeof details?.targetEmail === "string" ? details.targetEmail : typeof deletedUser?.email === "string" ? deletedUser.email : typeof targetUser?.email === "string" ? targetUser.email : "—"
+                const justification = typeof details?.justification === "string" ? details.justification : typeof details?.reason === "string" ? details.reason : "—"
                 return (
                   <tr key={log.id} className="transition-colors hover:!bg-surface-muted/60">
                     <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">

@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client"
-import { revalidateTag, unstable_cache } from "next/cache"
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { deleteOryCMSMediaIfUnreferenced } from "@/lib/orycms/media"
 import { notifyLowStockProduct } from "@/lib/orycms/low-stock"
@@ -224,7 +224,12 @@ export async function deleteOryCMSProduct(id: string) {
 }
 
 function revalidateStorefrontProducts() {
-  revalidateTag(STOREFRONT_PRODUCTS_CACHE_TAG, { expire: 0 })
+  try {
+    revalidateTag(STOREFRONT_PRODUCTS_CACHE_TAG, { expire: 0 })
+    revalidatePath("/", "layout")
+  } catch {
+    // Ignore outside request context
+  }
 }
 
 export async function bulkDeleteOryCMSProducts(ids: string[]) {
@@ -591,15 +596,16 @@ function normalizeImages(value: Prisma.JsonValue): ProductImageInput[] {
 
 function normalizePackSizes(value: Prisma.JsonValue): { packSizes: PackSizeInput[]; enabled: boolean } {
   let enabled = false
-  let rawItems: any[] = []
+  let rawItems: Record<string, unknown>[] = []
 
   if (Array.isArray(value)) {
-    rawItems = value
-    enabled = (value as any).packSizeImagesEnabled ?? rawItems.some((i) => Boolean(i?.imageId || i?.imageUrl || (Array.isArray(i?.imageIds) && i.imageIds.length) || (Array.isArray(i?.imageUrls) && i.imageUrls.length)))
+    rawItems = value as Record<string, unknown>[]
+    const arr = value as unknown as { packSizeImagesEnabled?: boolean }
+    enabled = arr.packSizeImagesEnabled ?? rawItems.some((i) => Boolean(i?.imageId || i?.imageUrl || (Array.isArray(i?.imageIds) && i.imageIds.length) || (Array.isArray(i?.imageUrls) && i.imageUrls.length)))
   } else if (typeof value === "object" && value !== null) {
-    const obj = value as Record<string, any>
+    const obj = value as Record<string, unknown>
     enabled = Boolean(obj.enabled ?? obj.packSizeImagesEnabled)
-    rawItems = Array.isArray(obj.items) ? obj.items : Array.isArray(obj.packSizes) ? obj.packSizes : []
+    rawItems = (Array.isArray(obj.items) ? obj.items : Array.isArray(obj.packSizes) ? obj.packSizes : []) as Record<string, unknown>[]
   }
 
   const packSizes = rawItems
@@ -622,7 +628,7 @@ function normalizePackSizes(value: Prisma.JsonValue): { packSizes: PackSizeInput
         imageUrl: imageUrls[0] || (typeof item.imageUrl === "string" ? item.imageUrl : undefined),
         imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
         price: Number(item.price),
-        size: item.size,
+        size: String(item.size),
       }
     })
 

@@ -1,5 +1,5 @@
-import { revalidateTag, unstable_cache } from "next/cache"
-import { getOrSetCache, invalidateCacheTag } from "@/lib/cache/memory-cache"
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
+import { invalidateCacheTag } from "@/lib/cache/memory-cache"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 
 export type OryCMSFaqDTO = {
@@ -68,26 +68,26 @@ export async function ensureOryCMSFaqsSchema() {
 
 const STOREFRONT_FAQS_CACHE_TAG = "storefront-faqs"
 
-const listPublishedFaqsCached = async () => {
-  return getOrSetCache(
-    "published-orycms-faqs",
-    async () => {
-      await ensureOryCMSFaqsSchema()
-      try {
-        const rows = await orycmsPrisma.$queryRaw<OryCMSFaqRow[]>`
-          SELECT * FROM orycms_faqs
-          WHERE status = 'published' AND deleted_at IS NULL
-          ORDER BY display_order ASC, created_at ASC
-        `
-        return rows.map(toFaqDTO)
-      } catch {
-        return []
-      }
-    },
-    300,
-    [STOREFRONT_FAQS_CACHE_TAG]
-  )
-}
+const listPublishedFaqsCached = unstable_cache(
+  async () => {
+    await ensureOryCMSFaqsSchema()
+    try {
+      const rows = await orycmsPrisma.$queryRaw<OryCMSFaqRow[]>`
+        SELECT * FROM orycms_faqs
+        WHERE status = 'published' AND deleted_at IS NULL
+        ORDER BY display_order ASC, created_at ASC
+      `
+      return rows.map(toFaqDTO)
+    } catch {
+      return []
+    }
+  },
+  ["published-orycms-faqs-cache-v1"],
+  {
+    revalidate: 300,
+    tags: [STOREFRONT_FAQS_CACHE_TAG],
+  }
+)
 
 export async function listOryCMSFaqs(options: { publishedOnly?: boolean } = {}): Promise<OryCMSFaqDTO[]> {
   if (options.publishedOnly) {
@@ -162,6 +162,7 @@ export async function saveOryCMSFaq(input: OryCMSFaqInput, id?: string): Promise
   try {
     invalidateCacheTag(STOREFRONT_FAQS_CACHE_TAG)
     revalidateTag(STOREFRONT_FAQS_CACHE_TAG, { expire: 0 })
+    revalidatePath("/", "layout")
   } catch {
     // Ignore cache revalidation errors outside request context
   }
@@ -179,7 +180,9 @@ export async function deleteOryCMSFaq(id: string): Promise<void> {
   `
 
   try {
+    invalidateCacheTag(STOREFRONT_FAQS_CACHE_TAG)
     revalidateTag(STOREFRONT_FAQS_CACHE_TAG, { expire: 0 })
+    revalidatePath("/", "layout")
   } catch {
     // Ignore
   }

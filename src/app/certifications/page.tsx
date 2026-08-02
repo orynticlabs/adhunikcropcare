@@ -22,6 +22,8 @@ import CropSuccessStories from "@/components/home/crop-success-stories"
 import { CertificationsGallery } from "@/components/certifications/certifications-gallery"
 import { listOryCMSCertificates, type OryCMSCertificateDTO } from "@/lib/orycms/certificates"
 
+export const revalidate = 60
+
 export const metadata: Metadata = {
   title: "Quality Assurance & Manufacturing | Adhunik Crop Care",
   description:

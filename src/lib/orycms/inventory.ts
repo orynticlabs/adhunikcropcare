@@ -206,8 +206,8 @@ function primaryImage(images: unknown) {
 
 function asArray(value: unknown): unknown[] {
   if (Array.isArray(value)) return value
-  if (typeof value === "object" && value !== null && "items" in value && Array.isArray((value as any).items)) {
-    return (value as any).items
+  if (typeof value === "object" && value !== null && "items" in value && Array.isArray((value as Record<string, unknown>).items)) {
+    return (value as Record<string, unknown>).items as unknown[]
   }
   return []
 }

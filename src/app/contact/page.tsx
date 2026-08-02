@@ -22,6 +22,8 @@ import ContactEnquiryForm from "@/components/contact/contact-enquiry-form"
 import FarmersNotCustomersSection from "@/components/home/farmers-not-customers-section"
 import CropSuccessStories from "@/components/home/crop-success-stories"
 
+export const revalidate = 60
+
 export const metadata: Metadata = {
   title: "Contact Adhunik Crop Care | Pesticides Company India",
   description:
