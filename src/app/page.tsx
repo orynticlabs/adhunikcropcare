@@ -463,12 +463,15 @@ export default async function Home() {
           </div>
         </section>
 
+        {/* ══ Farmers, not customers ════════════════════════════ */}
+        <FarmersNotCustomersSection />
+
         {/* ══ FAQ (Database FAQs) ═══════════════════════════════ */}
         <FAQSection />
 
-        {/* ══ Farmers, not customers & Crop Success Stories ══ */}
-        <FarmersNotCustomersSection />
+        {/* ══ Crop Success Stories (Reels) ══════════════════════ */}
         <CropSuccessStories stories={reels} />
+
       </main>
 
       <SiteFooter />

@@ -57,7 +57,8 @@ To maintain distinct identity between the Storefront and OryCMS Admin side:
   - **Primary Action Button**: `bg-foreground text-background hover:!bg-[#FF5A20] hover:!text-white font-semibold transition-colors shadow-xs cursor-pointer select-none`
   - **Secondary / Outlined Button**: `bg-white text-foreground border border-border hover:!bg-foreground hover:!text-white font-medium transition-colors shadow-xs cursor-pointer select-none`
   - **Orange Accent Action Button**: `bg-[#FF5A20] text-white hover:!bg-foreground hover:!text-white font-semibold transition-colors shadow-xs cursor-pointer select-none`
-  - **Action Icon Buttons (Eye, Edit, Mail, Lock, Delete)**: Must use `!` modifier on all hover classes (e.g. `hover:!bg-foreground hover:!text-white`, `hover:!bg-[#FF5A20] hover:!text-white`, `hover:!bg-destructive hover:!text-white`) and include `cursor-pointer select-none`.
+  - **Table Action Icon Buttons (`IconButton`)**: Standard `hover:bg-[#FF5A20] hover:text-white` or `hover:bg-foreground hover:text-white` (without `!` modifier) to allow SVG children to dynamically inherit `currentColor` on hover, while `IconLink` and stand-alone buttons use `hover:!bg-... hover:!text-white`.
+  - **Strict Format Preservation**: Whenever modifying button styling or adding new features, maintain the exact color palette, hover behavior, `!` modifier usage, and `cursor-pointer select-none` classes established for that specific button type without changing its format.
   - **Checkboxes & Badges**: Checkboxes use `accent-[#FF5A20]` or `accent-foreground`. Status badges use `bg-[#FF5A20]/10 text-[#FF5A20]` for invitation/pending states.
 
 

@@ -44,8 +44,13 @@ import {
   X,
 } from "lucide-react"
 import { OryCMSSessionProvider, useOryCMSSession } from "../../../orycms/hooks"
+import { MetricCardSkeleton, Skeleton } from "../../../orycms/components/ui/skeleton"
+
 import { cn, formatCurrency } from "@/lib/utils"
 import { ORYCMS_ADMIN_MENU, ORYCMS_ADMIN_SEARCH_ITEMS } from "@/lib/orycms/admin-menu"
+
+
+
 
 type MenuChild = {
   label: string
@@ -652,10 +657,10 @@ function OryCMSOverview() {
             {now.toLocaleString("en-IN", { dateStyle: "full", timeStyle: "short" })}
           </div>
           <h1 className="mt-1 text-[26px] font-semibold leading-tight tracking-tight">
-            {greeting(now)}, {data?.admin.name ?? "Admin"} <span className="inline-block">👋</span>
+            {greeting(now)}, {loading && !data ? <Skeleton className="inline-block h-7 w-32 align-middle" /> : (data?.admin.name ?? "Admin")} <span className="inline-block">👋</span>
           </h1>
           <p className="mt-1 text-[13.5px] text-muted-foreground">
-            {loading ? "Loading live dashboard…" : data ? `Live database snapshot refreshed ${new Date(data.generatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}.` : "No dashboard data loaded."}
+            {loading ? <Skeleton className="mt-1 h-4 w-64 rounded-md" /> : data ? `Live database snapshot refreshed ${new Date(data.generatedAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}.` : "No dashboard data loaded."}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -673,7 +678,7 @@ function OryCMSOverview() {
 
       <OverviewCard className="overflow-hidden">
         {loading && !data ? (
-          <div className="grid h-32 place-items-center text-sm text-muted-foreground">Loading live KPIs…</div>
+          <MetricCardSkeleton count={4} />
         ) : (
           <div className="grid divide-y divide-border sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
             {metrics.map((metric) => (
@@ -690,19 +695,39 @@ function OryCMSOverview() {
         )}
       </OverviewCard>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.8fr)]">
-        <RevenueOverview chart={data?.revenueChart ?? []} fromDate={fromDate} range={range} setFromDate={setFromDate} setRange={setRange} setToDate={setToDate} toDate={toDate} total={data ? data.revenueChart.reduce((sum, item) => sum + item.value, 0) : 0} trend={data?.kpis.revenueTrend ?? null} />
+      {loading && !data ? (
         <div className="space-y-5">
-          <OrdersPipeline statuses={data?.orderStatuses ?? {}} />
-          <InventoryHealth inventory={data?.inventory} />
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.8fr)]">
+            <Skeleton className="h-80 w-full rounded-2xl" />
+            <div className="space-y-5">
+              <Skeleton className="h-36 w-full rounded-2xl" />
+              <Skeleton className="h-36 w-full rounded-2xl" />
+            </div>
+          </div>
+          <div className="grid gap-5 xl:grid-cols-3">
+            <Skeleton className="h-64 w-full rounded-2xl" />
+            <Skeleton className="h-64 w-full rounded-2xl" />
+            <Skeleton className="h-64 w-full rounded-2xl" />
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(320px,0.8fr)]">
+            <RevenueOverview chart={data?.revenueChart ?? []} fromDate={fromDate} range={range} setFromDate={setFromDate} setRange={setRange} setToDate={setToDate} toDate={toDate} total={data ? data.revenueChart.reduce((sum, item) => sum + item.value, 0) : 0} trend={data?.kpis.revenueTrend ?? null} />
+            <div className="space-y-5">
+              <OrdersPipeline statuses={data?.orderStatuses ?? {}} />
+              <InventoryHealth inventory={data?.inventory} />
+            </div>
+          </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.4fr)_minmax(300px,0.8fr)]">
-        <TopProducts products={data?.topProducts ?? []} />
-        <RecentOrders orders={data?.latestOrders ?? []} />
-        <AlertsAndCustomers alerts={data?.lowStockAlerts ?? []} customers={data?.recentCustomers ?? []} />
-      </div>
+          <div className="grid gap-5 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.4fr)_minmax(300px,0.8fr)]">
+            <TopProducts products={data?.topProducts ?? []} />
+            <RecentOrders orders={data?.latestOrders ?? []} />
+            <AlertsAndCustomers alerts={data?.lowStockAlerts ?? []} customers={data?.recentCustomers ?? []} />
+          </div>
+        </>
+      )}
+
     </section>
   )
 }

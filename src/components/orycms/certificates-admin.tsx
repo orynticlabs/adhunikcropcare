@@ -5,7 +5,9 @@ import Image from "next/image"
 import { Award, Eye, ImagePlus, Loader2, Pencil, Plus, Save, Trash2, Upload, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { CardGridSkeleton } from "../../../orycms/components/ui/skeleton"
 import type { OryCMSCertificateDTO, OryCMSCertificateInput } from "@/lib/orycms/certificates"
+
 
 const EMPTY: OryCMSCertificateInput = {
   certificateNumber: "",
@@ -147,7 +149,7 @@ export function OryCMSCertificatesAdmin() {
       {message ? <div className={`rounded-lg border px-4 py-3 text-[13px] ${message.type === "success" ? "border-success/30 bg-success/10 text-success" : "border-destructive/30 bg-destructive/10 text-destructive"}`}>{message.text}</div> : null}
 
       {loading ? (
-        <div className="grid min-h-64 place-items-center rounded-xl border border-border bg-surface"><Loader2 className="h-5 w-5 animate-spin" /></div>
+        <CardGridSkeleton count={4} cols="grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" />
       ) : certificates.length === 0 ? (
         <div className="grid min-h-72 place-items-center rounded-xl border border-dashed border-border bg-surface p-8 text-center">
           <div><Award className="mx-auto h-9 w-9 text-muted-foreground" /><p className="mt-3 text-sm font-medium">No company certificates yet</p><p className="mt-1 text-xs text-muted-foreground">Add the first certificate and publish it when ready.</p></div>

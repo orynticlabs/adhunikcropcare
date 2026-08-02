@@ -5,7 +5,9 @@ import Link from "next/link"
 import { ArrowLeft, Clock, Eye, FileText, Filter, RefreshCw, Search, ShieldCheck, User } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { Skeleton } from "../../../orycms/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+
 
 type AuditLogItem = {
   action: string
@@ -130,7 +132,13 @@ export function OryCMSAuditLogsList() {
             </thead>
             <tbody className="divide-y divide-border">
               {loading ? (
-                <tr><td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">Loading audit logs…</td></tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={6} className="px-4 py-3">
+                      <Skeleton className="h-6 w-full rounded-md" />
+                    </td>
+                  </tr>
+                ))
               ) : error ? (
                 <tr><td colSpan={6} className="px-4 py-12 text-center text-destructive">{error}</td></tr>
               ) : logs.length === 0 ? (

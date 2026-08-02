@@ -4,7 +4,10 @@ import { useEffect, useMemo, useState } from "react"
 import { Activity, AlertTriangle, CheckCircle2, Database, RefreshCw, Search, Server, Table2, XCircle } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { MetricCardSkeleton, Skeleton } from "../../../orycms/components/ui/skeleton"
+
 import { cn } from "@/lib/utils"
+
 
 const PAGE_SIZE = 10
 
@@ -118,37 +121,57 @@ export function OryCMSDatabaseDashboard() {
       {error ? <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[13px] text-destructive">{error}</div> : null}
       {data?.recentIssues.length ? <HealthNotice issues={data.recentIssues} /> : null}
 
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_2fr]">
-        <div className="rounded-xl border border-border bg-surface p-5 shadow-xs">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Database Health</p>
-              <h2 className={cn("mt-2 text-3xl font-semibold tracking-tight", healthColor(health))}>{health}</h2>
-              <p className="mt-1 text-[13px] text-muted-foreground">{data?.database.type ?? "Database"} · {data?.database.provider ?? "Unknown provider"}</p>
+      {loading && !data ? (
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_2fr]">
+          <div className="rounded-xl border border-border bg-surface p-5 shadow-xs space-y-4">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-44" />
+            <div className="space-y-2 pt-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex justify-between">
+                  <Skeleton className="h-3.5 w-24" />
+                  <Skeleton className="h-3.5 w-32" />
+                </div>
+              ))}
             </div>
-            <StatusIcon health={health} />
           </div>
-          <div className="mt-5 grid gap-3 text-[13px]">
-            <Info label="Connection" value={data?.metrics.connectionStatus ?? "Disconnected"} />
-            <Info label="Host" value={data?.database.host ?? "—"} />
-            <Info label="Database" value={data?.database.databaseName ?? "—"} />
-            <Info label="Version" value={shortVersion(data?.database.version)} />
-            <Info label="Uptime" value={data?.database.uptime ?? "—"} />
-            <Info label="Last successful connection" value={data?.lastSuccessfulConnection ? dateTime(data.lastSuccessfulConnection) : "—"} />
-          </div>
+          <MetricCardSkeleton count={8} />
         </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-[1.2fr_2fr]">
+          <div className="rounded-xl border border-border bg-surface p-5 shadow-xs">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Database Health</p>
+                <h2 className={cn("mt-2 text-3xl font-semibold tracking-tight", healthColor(health))}>{health}</h2>
+                <p className="mt-1 text-[13px] text-muted-foreground">{data?.database.type ?? "Database"} · {data?.database.provider ?? "Unknown provider"}</p>
+              </div>
+              <StatusIcon health={health} />
+            </div>
+            <div className="mt-5 grid gap-3 text-[13px]">
+              <Info label="Connection" value={data?.metrics.connectionStatus ?? "Disconnected"} />
+              <Info label="Host" value={data?.database.host ?? "—"} />
+              <Info label="Database" value={data?.database.databaseName ?? "—"} />
+              <Info label="Version" value={shortVersion(data?.database.version)} />
+              <Info label="Uptime" value={data?.database.uptime ?? "—"} />
+              <Info label="Last successful connection" value={data?.lastSuccessfulConnection ? dateTime(data.lastSuccessfulConnection) : "—"} />
+            </div>
+          </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Metric icon={Activity} label="Active Connections" value={String(data?.metrics.activeConnections ?? "—")} />
-          <Metric icon={Server} label="Pool Usage" value={`${data?.metrics.connectionPoolUsage ?? 0}%`} />
-          <Metric icon={RefreshCw} label="Response Time" value={`${data?.metrics.responseTimeMs ?? 0}ms`} />
-          <Metric icon={Database} label="Database Size" value={data?.metrics.databaseSize ?? "—"} />
-          <Metric icon={Table2} label="Total Tables" value={String(data?.metrics.totalTables ?? "—")} />
-          <Metric icon={Database} label="Total Records" value={compactNumber(data?.metrics.totalRecords ?? 0)} />
-          <Metric icon={CheckCircle2} label="Live Indicator" value={data?.connected ? "Connected" : "Disconnected"} tone={data?.connected ? "success" : "error"} />
-          <Metric icon={AlertTriangle} label="Warnings" value={String(data?.recentIssues.length ?? 0)} tone={data?.recentIssues.length ? "warning" : "success"} />
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <Metric icon={Activity} label="Active Connections" value={String(data?.metrics.activeConnections ?? "—")} />
+            <Metric icon={Server} label="Pool Usage" value={`${data?.metrics.connectionPoolUsage ?? 0}%`} />
+            <Metric icon={RefreshCw} label="Response Time" value={`${data?.metrics.responseTimeMs ?? 0}ms`} />
+            <Metric icon={Database} label="Database Size" value={data?.metrics.databaseSize ?? "—"} />
+            <Metric icon={Table2} label="Total Tables" value={String(data?.metrics.totalTables ?? "—")} />
+            <Metric icon={Database} label="Total Records" value={compactNumber(data?.metrics.totalRecords ?? 0)} />
+            <Metric icon={CheckCircle2} label="Live Indicator" value={data?.connected ? "Connected" : "Disconnected"} tone={data?.connected ? "success" : "error"} />
+            <Metric icon={AlertTriangle} label="Warnings" value={String(data?.recentIssues.length ?? 0)} tone={data?.recentIssues.length ? "warning" : "success"} />
+          </div>
         </div>
-      </div>
+      )}
+
 
       <div className="rounded-xl border border-border bg-surface shadow-xs">
         <div className="flex flex-wrap items-center gap-3 border-b border-border bg-surface-muted px-4 py-3">
@@ -180,7 +203,13 @@ export function OryCMSDatabaseDashboard() {
             </thead>
             <tbody className="divide-y divide-border">
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">Loading database tables…</td></tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={5} className="px-4 py-3">
+                      <Skeleton className="h-6 w-full rounded-md" />
+                    </td>
+                  </tr>
+                ))
               ) : pagedTables.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">No tables found.</td></tr>
               ) : pagedTables.map((table) => (

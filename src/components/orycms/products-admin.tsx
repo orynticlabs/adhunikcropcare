@@ -8,7 +8,9 @@ import { Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, GripV
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSMultiSelect, OryCMSSelect } from "@/components/orycms/custom-select"
 import { RichTextEditor } from "@/components/orycms/rich-text-editor"
+import { TableSkeleton } from "../../../orycms/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -329,9 +331,7 @@ export function OryCMSProductsList() {
         </div>
 
         {loading ? (
-          <div className="grid min-h-64 place-items-center text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-          </div>
+          <TableSkeleton rows={6} cols={6} />
         ) : filtered.length === 0 ? (
           <div className="grid min-h-64 place-items-center text-center text-[13px] text-muted-foreground">
             No products yet. Add your first product.

@@ -5,6 +5,8 @@ import { Leaf } from "lucide-react"
 import TestimonialsCarousel from "@/components/home/testimonials-carousel"
 import type { ProductReview } from "@/lib/orycms/reviews"
 
+import { ReviewCardSkeleton } from "@/components/ui/skeleton"
+
 export default function FarmersNotCustomersSection() {
   const [reviews, setReviews] = useState<ProductReview[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -35,15 +37,10 @@ export default function FarmersNotCustomersSection() {
     return null
   }
 
-  // Do not show placeholder content while fetching
-  if (!loaded) {
-    return null
-  }
-
   return (
     <section className="relative overflow-hidden py-12 sm:py-16 bg-gradient-to-b from-accent/20 to-transparent">
       <div className="mx-auto max-w-7xl px-4">
-        <div className="text-center mx-auto max-w-2xl">
+        <div className="text-center mx-auto max-w-2xl mb-8">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-background/60 px-3 py-1 text-xs font-medium uppercase tracking-widest text-[#033927]">
             <Leaf className="h-3 w-3" aria-hidden /> Voices from the field
           </div>
@@ -52,8 +49,9 @@ export default function FarmersNotCustomersSection() {
           </h2>
         </div>
 
-        <TestimonialsCarousel reviews={reviews} />
+        {!loaded ? <ReviewCardSkeleton count={3} /> : <TestimonialsCarousel reviews={reviews} />}
       </div>
     </section>
   )
 }
+

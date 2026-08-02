@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react"
 import { AlertTriangle, BarChart3, Brain, CalendarDays, Package, RefreshCw, ShoppingBag, TrendingUp, Users } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { MetricCardSkeleton } from "../../../orycms/components/ui/skeleton"
 import { cn, formatCurrency } from "@/lib/utils"
+
 
 type RangeKey = "today" | "7d" | "30d" | "90d" | "month" | "year" | "custom"
 type Row = Record<string, string | number | null | undefined>
@@ -96,7 +98,7 @@ export function OryCMSAnalyticsDashboard() {
       </div>
 
       {error ? <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-[13px] text-destructive">{error}</div> : null}
-      {loading ? <Panel>Loading live business insights…</Panel> : null}
+      {loading ? <MetricCardSkeleton count={8} /> : null}
       {data ? (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

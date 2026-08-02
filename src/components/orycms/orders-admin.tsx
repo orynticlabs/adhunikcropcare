@@ -5,8 +5,10 @@ import Link from "next/link"
 import { ArrowLeft, Ban, CheckCircle2, Eye, FileText, Loader2, Package, Printer, Search, Truck } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { Skeleton } from "../../../orycms/components/ui/skeleton"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
 import { cn, formatCurrency } from "@/lib/utils"
+
 
 const ORDER_PAGE_SIZE = 10
 
@@ -286,7 +288,13 @@ export function OryCMSOrdersList() {
             </thead>
             <tbody className="divide-y divide-border">
               {loading ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">Loading orders…</td></tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={11} className="px-4 py-3">
+                      <Skeleton className="h-6 w-full rounded-md" />
+                    </td>
+                  </tr>
+                ))
               ) : error ? (
                 <tr><td colSpan={11} className="px-4 py-10 text-center text-destructive">{error}</td></tr>
               ) : paged.length === 0 ? (

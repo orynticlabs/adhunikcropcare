@@ -7,7 +7,9 @@ import { ArrowLeft, Edit3, Eye, FileText, Lock, Loader2, Mail, RefreshCw, Search
 import { useOryCMSSession } from "../../../orycms/hooks"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { Skeleton } from "../../../orycms/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+
 
 const PAGE_SIZE = 10
 const ROLES = ["Super Admin", "Admin", "Editor", "Manager", "Support", "Custom"] as const
@@ -254,7 +256,13 @@ export function OryCMSUsersList() {
             </thead>
             <tbody className="divide-y divide-border">
               {loading ? (
-                <tr><td colSpan={10} className="px-4 py-10 text-center text-muted-foreground">Loading admin users…</td></tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={10} className="px-4 py-3">
+                      <Skeleton className="h-6 w-full rounded-md" />
+                    </td>
+                  </tr>
+                ))
               ) : error ? (
                 <tr><td colSpan={10} className="px-4 py-10 text-center text-destructive">{error}</td></tr>
               ) : paged.length === 0 ? (

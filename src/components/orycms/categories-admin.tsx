@@ -7,7 +7,9 @@ import { useRouter } from "next/navigation"
 import { CheckCircle2, ChevronLeft, ChevronRight, ImageIcon, Loader2, Plus, Save, Search, Trash2, Upload, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { TableSkeleton } from "../../../orycms/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
 
 const PAGE_SIZE = 10
@@ -185,9 +187,7 @@ export function OryCMSCategoriesList() {
         </div>
 
         {loading ? (
-          <div className="grid min-h-64 place-items-center text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
-          </div>
+          <TableSkeleton rows={5} cols={5} />
         ) : filtered.length === 0 ? (
           <div className="grid min-h-64 place-items-center text-center text-[13px] text-muted-foreground">
             No categories found. Add your first category.
