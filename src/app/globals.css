@@ -259,6 +259,29 @@ button:hover {
   .contact-select-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #4f7e31;
   }
+
+  .category-theme-scrollbar {
+    scrollbar-color: #689c30 #edf3e8;
+    scrollbar-width: thin;
+  }
+
+  .category-theme-scrollbar::-webkit-scrollbar {
+    height: 5px;
+  }
+
+  .category-theme-scrollbar::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: #edf3e8;
+  }
+
+  .category-theme-scrollbar::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #689c30;
+  }
+
+  .category-theme-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #033927;
+  }
 }
 
 /* Product image auto-advance progress bar */
