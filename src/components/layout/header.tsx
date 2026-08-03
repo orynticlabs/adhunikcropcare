@@ -130,7 +130,7 @@ export default function Header({ initialCategories }: { initialCategories?: Stor
 
             {/* Action icons */}
             <div className="flex items-center gap-0.5">
-              <SearchBox />
+              <SearchBox initialCategories={categories} />
 
               {user ? (
                 <div ref={accountRef} className="relative hidden sm:block">
