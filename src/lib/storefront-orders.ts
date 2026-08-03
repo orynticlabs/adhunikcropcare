@@ -1076,7 +1076,7 @@ function drawSignature(pdf: PdfBuilder, x: number, y: number) {
 function drawFooter(pdf: PdfBuilder) {
   pdf.line(36, 34, 559, 34, [220, 220, 220])
   pdf.text("This is a computer-generated tax invoice. Registered under GST Act.", 36, 24, 7, "normal", 523, [120, 120, 120], "center")
-  pdf.text("Powered by OryCMS  |  Adhunik Crop Care Pvt. Ltd.", 36, 14, 7, "normal", 523, [140, 140, 140], "center")
+  pdf.text("Powered by OryCMS (orynticlabs.com)  |  Adhunik Crop Care Pvt. Ltd.", 36, 14, 7, "normal", 523, [140, 140, 140], "center")
 }
 
 class PdfBuilder {

@@ -3,7 +3,7 @@ import type { NextRequest } from "next/server"
 import { requireOryCMSUser } from "@/lib/orycms/auth"
 import { getOryCMSOrder } from "@/lib/orycms/orders"
 import { buildAdminInvoicePdf } from "@/lib/storefront-orders"
-import { isDocumentKind, proxyDocument } from "@/lib/shiprocket/documents"
+import { checkDocumentStatus, isDocumentKind, proxyDocument } from "@/lib/shiprocket/documents"
 import { ShiprocketError } from "@/lib/shiprocket/client"
 
 export const runtime = "nodejs"
@@ -15,10 +15,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!isDocumentKind(kind)) {
       return NextResponse.json({ success: false, error: { code: "BAD_REQUEST", message: "Unknown document type." } }, { status: 400 })
     }
+
+    const checkOnly = request.nextUrl.searchParams.get("check") === "1" || request.nextUrl.searchParams.get("check") === "true"
+
     const order = await getOryCMSOrder(id)
     if (!order) {
       return NextResponse.json({ success: false, error: { code: "NOT_FOUND", message: "Order not found." } }, { status: 404 })
     }
+
+    if (checkOnly) {
+      const status = await checkDocumentStatus(order.id, kind)
+      return NextResponse.json({ success: true, ready: status.ready, labelUrl: status.url, message: status.message })
+    }
+
     if (kind === "invoice") {
       const invoice = await buildAdminInvoicePdf(order.id)
       return new Response(new Uint8Array(invoice.bytes), {

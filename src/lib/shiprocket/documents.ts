@@ -35,3 +35,16 @@ export async function proxyDocument(orderId: string, kind: PublicDocumentKind, f
     },
   })
 }
+
+export async function checkDocumentStatus(
+  orderId: string,
+  kind: PublicDocumentKind
+): Promise<{ ready: boolean; url: string | null; message?: string }> {
+  try {
+    const url = await ensureDocument(orderId, kind)
+    return { ready: Boolean(url), url: url || null }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Label pending from Shiprocket"
+    return { ready: false, url: null, message }
+  }
+}
