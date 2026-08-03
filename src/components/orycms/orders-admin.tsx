@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Ban, CheckCircle2, Eye, FileText, Loader2, Package, Printer, Search, Truck } from "lucide-react"
+import { AlertCircle, ArrowLeft, Ban, CheckCircle2, Eye, FileText, Loader2, Package, Printer, RefreshCw, Search, Truck } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { Skeleton } from "../../../orycms/components/ui/skeleton"
@@ -200,8 +200,20 @@ export function OryCMSOrdersList() {
             View real storefront orders, payments, shipment status, and customer details.
           </p>
         </div>
-        <div className="rounded-lg border border-border bg-surface px-3 py-2 text-[12.5px] text-muted-foreground">
-          <span className="font-semibold text-foreground">{filtered.length}</span> of {orders.length} orders
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void loadOrders(true)}
+            disabled={loading}
+            title="Refresh list to fetch new incoming orders"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-white px-3.5 text-[12.5px] font-semibold text-foreground hover:!bg-foreground hover:!text-white transition-colors shadow-xs disabled:opacity-60 cursor-pointer select-none"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            {loading ? "Refreshing…" : "Refresh Orders"}
+          </button>
+          <div className="rounded-lg border border-border bg-surface px-3 py-2 text-[12.5px] text-muted-foreground">
+            <span className="font-semibold text-foreground">{filtered.length}</span> of {orders.length} orders
+          </div>
         </div>
       </div>
 
@@ -517,7 +529,10 @@ export function OryCMSOrderDetails({ id }: { id: string }) {
               </Panel>
               <Panel title="Payment">
                 <Info label="Method" value={paymentMethod(order.payment_method)} />
-                <Info label="Status" value={label(order.payment_status)} />
+                <div className="flex items-center justify-between gap-4 py-1.5 text-[13px]">
+                  <span className="text-muted-foreground">Status</span>
+                  <StatusBadge value={order.payment_status} />
+                </div>
                 <Info label="Razorpay Order ID" value={order.razorpay_order_id ?? "—"} />
                 <Info label="Payment ID" value={order.razorpay_payment_id ?? "—"} />
                 <Info label="Invoice" value={order.invoice_number ?? "—"} />
@@ -554,13 +569,14 @@ function FulfillmentActionBar({
   const packed = isPacked(order.status)
   const hasShipment = Boolean(order.shipment?.shiprocket_shipment_id)
   const busy = action !== null
+  const [labelStatusMessage, setLabelStatusMessage] = useState<string>("")
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-5 shadow-xs">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="min-w-0">
+    <div className="rounded-xl border border-border bg-surface p-4 sm:p-5 shadow-xs">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <Package className="h-4 w-4 text-muted-foreground shrink-0" />
             <p className="text-[14px] font-semibold">{hasShipment ? "Shipment created" : packed ? "Order packed" : confirmed ? "Order confirmed" : "Awaiting order confirmation"}</p>
           </div>
           <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-muted-foreground">
@@ -574,15 +590,15 @@ function FulfillmentActionBar({
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 lg:gap-2.5 shrink-0">
           {canConfirmOrder(order) ? (
             <button
               type="button"
               onClick={onConfirm}
               disabled={busy}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-foreground px-5 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="inline-flex h-9.5 items-center justify-center gap-2 rounded-lg bg-foreground px-4 py-2 text-[12.5px] font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer select-none whitespace-nowrap"
             >
-              {action === "confirm" ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {action === "confirm" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
               Confirm Order
             </button>
           ) : null}
@@ -591,9 +607,9 @@ function FulfillmentActionBar({
               type="button"
               onClick={onPack}
               disabled={busy}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-foreground px-5 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="inline-flex h-9.5 items-center justify-center gap-2 rounded-lg bg-foreground px-4 py-2 text-[12.5px] font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer select-none whitespace-nowrap"
             >
-              {action === "pack" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="h-4 w-4" />}
+              {action === "pack" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Package className="h-3.5 w-3.5" />}
               Mark as Packed
             </button>
           ) : null}
@@ -602,16 +618,16 @@ function FulfillmentActionBar({
               type="button"
               onClick={onCreateShipment}
               disabled={busy}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-foreground px-5 text-[13px] font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="inline-flex h-9.5 items-center justify-center gap-2 rounded-lg bg-foreground px-4 py-2 text-[12.5px] font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer select-none whitespace-nowrap"
             >
-              {action === "create-shipment" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+              {action === "create-shipment" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
               Create Shipment
             </button>
           ) : null}
           {hasShipment ? (
             <>
               {order.shipment?.tracking_url ? <DocLink href={order.shipment.tracking_url} label="Track Shipment" icon={Truck} /> : null}
-              <DocLink href={`/api/orycms/orders/${encodeURIComponent(order.id)}/documents/label`} label="Download Shipping Label" icon={Printer} />
+              <ShippingLabelButton orderId={order.id} initialLabelUrl={order.shipment?.label_url} onStatusMessage={setLabelStatusMessage} />
               <DocLink href={`/api/orycms/orders/${encodeURIComponent(order.id)}/documents/invoice`} label="Download Invoice" icon={FileText} />
             </>
           ) : null}
@@ -621,14 +637,21 @@ function FulfillmentActionBar({
               type="button"
               onClick={onCancel}
               disabled={busy}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 text-[13px] font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-60"
+              className="inline-flex h-9.5 items-center justify-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 py-2 text-[12.5px] font-medium text-destructive transition-colors hover:bg-destructive/20 disabled:opacity-60 cursor-pointer select-none whitespace-nowrap"
             >
-              {action === "cancel" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
+              {action === "cancel" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-3.5 w-3.5" />}
               {hasShipment ? "Cancel Shipment" : "Cancel Order"}
             </button>
           ) : null}
         </div>
       </div>
+
+      {labelStatusMessage ? (
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-[12.5px] font-medium text-amber-900 dark:text-amber-200">
+          <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+          <span>{labelStatusMessage}</span>
+        </div>
+      ) : null}
 
       {actionError ? (
         <p className="mt-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[12.5px] text-destructive">{actionError}</p>
@@ -663,10 +686,111 @@ function BulkButton({
 
 function DocLink({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) {
   return (
-    <a href={href} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium transition-colors hover:border-border-strong hover:bg-accent">
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex h-9.5 items-center justify-center gap-1.5 rounded-lg border border-border bg-white px-3.5 py-2 text-[12.5px] font-medium transition-colors hover:border-border-strong hover:bg-accent cursor-pointer select-none whitespace-nowrap shadow-xs"
+    >
       <Icon className="h-3.5 w-3.5" />
       {label}
     </a>
+  )
+}
+
+function ShippingLabelButton({
+  orderId,
+  initialLabelUrl,
+  onStatusMessage,
+}: {
+  orderId: string
+  initialLabelUrl?: string | null
+  onStatusMessage?: (msg: string) => void
+}) {
+  const [labelUrl, setLabelUrl] = useState<string | null>(initialLabelUrl || null)
+  const [checking, setChecking] = useState<boolean>(false)
+
+  useEffect(() => {
+    if (initialLabelUrl) {
+      setLabelUrl(initialLabelUrl)
+      onStatusMessage?.("")
+      return
+    }
+    let isMounted = true
+    setChecking(true)
+    fetch(`/api/orycms/orders/${encodeURIComponent(orderId)}/documents/label?check=1`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (!isMounted) return
+        if (json.success && json.ready && json.labelUrl) {
+          setLabelUrl(json.labelUrl)
+          onStatusMessage?.("")
+        } else {
+          setLabelUrl(null)
+          onStatusMessage?.(json.message || "Shipment not confirmed on Shiprocket yet.")
+        }
+      })
+      .catch((err) => {
+        if (isMounted) onStatusMessage?.(err instanceof Error ? err.message : "Label pending from Shiprocket")
+      })
+      .finally(() => {
+        if (isMounted) setChecking(false)
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [orderId, initialLabelUrl, onStatusMessage])
+
+  async function handleVerify() {
+    setChecking(true)
+    try {
+      const json = await fetch(`/api/orycms/orders/${encodeURIComponent(orderId)}/documents/label?check=1`).then((res) => res.json())
+      if (json.success && json.ready && json.labelUrl) {
+        setLabelUrl(json.labelUrl)
+        onStatusMessage?.("")
+      } else {
+        setLabelUrl(null)
+        onStatusMessage?.(json.message || "Shipment not confirmed on Shiprocket yet.")
+      }
+    } catch (err) {
+      onStatusMessage?.(err instanceof Error ? err.message : "Failed to check label status.")
+    } finally {
+      setChecking(false)
+    }
+  }
+
+  if (labelUrl) {
+    return (
+      <DocLink
+        href={`/api/orycms/orders/${encodeURIComponent(orderId)}/documents/label`}
+        label="Download Shipping Label"
+        icon={Printer}
+      />
+    )
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        disabled
+        title="Label pending: Confirm shipment on Shiprocket dashboard to enable label download"
+        className="inline-flex h-9.5 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface-muted px-3.5 py-2 text-[12.5px] font-semibold text-muted-foreground/60 opacity-60 cursor-not-allowed select-none whitespace-nowrap"
+      >
+        <Printer className="h-3.5 w-3.5" />
+        Download Shipping Label
+      </button>
+      <button
+        type="button"
+        onClick={() => void handleVerify()}
+        disabled={checking}
+        title="Click to check if shipment is confirmed on Shiprocket dashboard"
+        className="inline-flex h-9.5 items-center justify-center gap-1.5 rounded-lg border border-border bg-white px-3 py-2 text-[12px] font-semibold text-foreground transition-colors hover:border-border-strong hover:bg-accent disabled:opacity-60 cursor-pointer select-none whitespace-nowrap shadow-xs"
+      >
+        <RefreshCw className={`h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
+        {checking ? "Checking…" : "Verify Label Status"}
+      </button>
+    </>
   )
 }
 
@@ -805,7 +929,50 @@ function ToastStack({ toasts }: { toasts: Toast[] }) {
 }
 
 function StatusBadge({ muted, value }: { muted?: boolean; value: string }) {
-  return <span className={cn("rounded-full px-2.5 py-1 text-[12px] font-medium", muted ? "bg-muted text-muted-foreground" : "bg-success/10 text-success")}>{label(value)}</span>
+  const val = String(value || "").toLowerCase()
+  const isPaid = val === "paid" || val === "captured" || val === "completed" || val === "success" || val === "successful" || val === "settled"
+  const isFailed = val === "failed" || val === "cancelled" || val === "canceled"
+  const isPending = val === "pending" || val === "unpaid" || val === "processing"
+  const isRefunded = val === "refunded" || val === "partially_refunded"
+
+  if (muted && !isPaid) {
+    return <span className="rounded-full bg-muted px-2.5 py-1 text-[12px] font-medium text-muted-foreground">{label(value)}</span>
+  }
+
+  if (isPaid) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[12px] font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 shadow-2xs">
+        <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+        {label(value)}
+      </span>
+    )
+  }
+
+  if (isFailed) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-1 text-[12px] font-semibold text-red-700 dark:text-red-300 border border-red-500/20">
+        {label(value)}
+      </span>
+    )
+  }
+
+  if (isPending) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2.5 py-1 text-[12px] font-semibold text-amber-800 dark:text-amber-300 border border-amber-500/20">
+        {label(value)}
+      </span>
+    )
+  }
+
+  if (isRefunded) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-purple-500/15 px-2.5 py-1 text-[12px] font-semibold text-purple-700 dark:text-purple-300 border border-purple-500/20">
+        {label(value)}
+      </span>
+    )
+  }
+
+  return <span className="rounded-full bg-muted px-2.5 py-1 text-[12px] font-medium text-muted-foreground">{label(value)}</span>
 }
 
 function Panel({ children, title }: { children: React.ReactNode; title?: string }) {

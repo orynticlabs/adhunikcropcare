@@ -21,6 +21,7 @@ import {
 import { ProductCard } from "@/components/products/product-card"
 import { useCart } from "@/features/cart/cart-context"
 import { useAuth } from "@/features/auth/auth-context"
+import { ReviewCardSkeleton, Skeleton } from "@/components/ui/skeleton"
 
 type ProductImage = {
   src: string
@@ -107,48 +108,7 @@ type ServiceabilityResult = {
   couriers: { name: string; etd?: string; estimatedDeliveryDays?: string; rate?: number; cod?: boolean }[]
 }
 
-const SAMPLE_REVIEWS: Review[] = [
-  {
-    name: "Ramesh Patil",
-    date: "12 Jul, 2026",
-    stars: 5,
-    title: "Visible results on my crop",
-    body: "Applied as recommended and saw stronger, greener growth within a few weeks. Easy to use in the field and the results speak for themselves.",
-    verified: true,
-  },
-  {
-    name: "Suresh Kumar",
-    date: "05 Jul, 2026",
-    stars: 5,
-    title: "Great value for money",
-    body: "One pack covered my whole plot. No wastage, consistent quality, and my yield improved noticeably this season. Will reorder.",
-    verified: true,
-  },
-  {
-    name: "Anita Deshmukh",
-    date: "28 Jun, 2026",
-    stars: 4,
-    title: "Works as promised",
-    body: "Saw healthier foliage within three weeks. Wish it came with a small crop-wise dosage card, but the product itself is excellent.",
-    verified: true,
-  },
-  {
-    name: "Vijay Nair",
-    date: "20 Jun, 2026",
-    stars: 5,
-    title: "Simple and effective",
-    body: "No complicated mixing. Followed the label and my plants responded well. A dependable input from Adhunik.",
-    verified: false,
-  },
-  {
-    name: "Kavita Rao",
-    date: "11 Jun, 2026",
-    stars: 5,
-    title: "Reliable for every season",
-    body: "I have been using this across multiple crops and the quality is consistent. My soil and plants are visibly healthier.",
-    verified: true,
-  },
-]
+
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -386,16 +346,16 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
     }
   }, [activeOption, product.options, product.packSizeImagesEnabled, visibleImages])
 
-  const displayRating = liveTotalReviews > 0 ? liveAverageRating : (reviewsLoading ? product.rating : 0)
-  const displayTotalReviews = liveTotalReviews > 0 ? liveTotalReviews : (reviewsLoading ? product.reviews : 0)
-  const displayBreakdown = liveTotalReviews > 0 ? liveBreakdown : (reviewsLoading ? ratingBreakdown(product.reviews, product.rating) : [
+  const displayRating = liveTotalReviews > 0 ? liveAverageRating : 0
+  const displayTotalReviews = liveTotalReviews > 0 ? liveTotalReviews : 0
+  const displayBreakdown = liveTotalReviews > 0 ? liveBreakdown : [
     { stars: 5, count: 0, percentage: 0 },
     { stars: 4, count: 0, percentage: 0 },
     { stars: 3, count: 0, percentage: 0 },
     { stars: 2, count: 0, percentage: 0 },
     { stars: 1, count: 0, percentage: 0 },
-  ])
-  const displayReviewsList = liveTotalReviews > 0 ? liveReviews : (reviewsLoading ? SAMPLE_REVIEWS : [])
+  ]
+  const displayReviewsList = liveReviews
 
   // Auto-rotate the gallery. Pauses while the user is hovering the image.
   const [paused, setPaused] = useState(false)
@@ -721,10 +681,18 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               </h1>
 
               <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-foreground/80">
-                <span className="inline-flex items-center gap-1 font-semibold text-[#033927]">
-                  <Star className="h-4 w-4 fill-current text-[#e9c46a]" aria-hidden /> {displayRating > 0 ? displayRating.toFixed(1) : "0.0"}
-                </span>
-                <span>({displayTotalReviews} reviews)</span>
+                {reviewsLoading ? (
+                  <Skeleton className="h-5 w-36 rounded-md" />
+                ) : displayTotalReviews > 0 ? (
+                  <>
+                    <span className="inline-flex items-center gap-1 font-semibold text-[#033927]">
+                      <Star className="h-4 w-4 fill-current text-[#e9c46a]" aria-hidden /> {displayRating.toFixed(1)}
+                    </span>
+                    <span>({displayTotalReviews} {displayTotalReviews === 1 ? "review" : "reviews"})</span>
+                  </>
+                ) : (
+                  <span className="text-xs text-foreground/60 italic">No reviews yet</span>
+                )}
                 <span className="text-foreground/30">|</span>
                 <span className="text-sm font-semibold uppercase tracking-widest text-[#033927]">
                   {product.category}
@@ -979,88 +947,113 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div>
               <h2 className="font-display text-2xl font-bold">Customer Reviews</h2>
-              <div className="mt-2 flex items-center gap-2 text-sm text-foreground/70">
-                <Stars rating={displayRating} />
-                <span className="font-semibold text-foreground">{displayRating > 0 ? displayRating.toFixed(1) : "0.0"} out of 5</span>
-                <span>· Based on {displayTotalReviews} reviews</span>
-              </div>
+              {reviewsLoading ? (
+                <div className="mt-2 flex items-center gap-2">
+                  <Skeleton className="h-5 w-48 rounded-md" />
+                </div>
+              ) : (
+                <div className="mt-2 flex items-center gap-2 text-sm text-foreground/70">
+                  <Stars rating={displayRating} />
+                  <span className="font-semibold text-foreground">{displayRating > 0 ? displayRating.toFixed(1) : "0.0"} out of 5</span>
+                  <span>· Based on {displayTotalReviews} {displayTotalReviews === 1 ? "review" : "reviews"}</span>
+                </div>
+              )}
             </div>
             <button
               type="button"
               onClick={handleWriteReviewClick}
-              className="rounded-md border-2 border-[#033927] bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-[#033927] transition-colors hover:bg-[#033927] hover:!text-white"
+              className="rounded-md border-2 border-[#033927] bg-white px-5 py-2.5 text-sm font-bold uppercase tracking-wide text-[#033927] transition-colors hover:bg-[#033927] hover:!text-white cursor-pointer select-none"
             >
               Write a Review
             </button>
           </div>
 
-          {/* Rating breakdown */}
-          <div className="mt-8 grid max-w-md gap-2">
-            {displayBreakdown.map((row) => (
-              <div key={row.stars} className="flex items-center gap-3 text-sm">
-                <span className="w-12 text-foreground/70">{row.stars} star</span>
-                <div className="h-2 flex-1 overflow-hidden rounded-full bg-black/10">
-                  <div
-                    className="h-full bg-[#033927] transition-all duration-500"
-                    style={{ width: `${row.percentage}%` }}
-                  />
-                </div>
-                <span className="w-8 text-right text-foreground/60">{row.count}</span>
+          {reviewsLoading ? (
+            <div className="mt-8 space-y-6" aria-busy="true">
+              <div className="grid max-w-md gap-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="h-4 w-12" />
+                    <Skeleton className="h-2 flex-1" />
+                    <Skeleton className="h-4 w-8" />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-
-          {/* Reviews list */}
-          {displayReviewsList.length === 0 ? (
-            <div className="mt-10 rounded-2xl border border-dashed border-border/70 bg-card/40 p-8 text-center">
-              <p className="text-base font-semibold text-foreground">No reviews yet for this product.</p>
-              <p className="mt-1 text-sm text-muted-foreground">Be the first to share your experience!</p>
-              <button
-                type="button"
-                onClick={handleWriteReviewClick}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#033927] px-5 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#689c30] hover:!text-black"
-              >
-                Write First Review
-              </button>
+              <div className="mt-8">
+                <ReviewCardSkeleton count={2} />
+              </div>
             </div>
           ) : (
-            <div className="mt-10 space-y-6">
-              {displayReviewsList.slice(0, visibleReviews).map((r, i) => (
-                <div key={r.id || `${r.name}-${i}`} className="rounded-xl border border-border/60 bg-white p-5 shadow-xs">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#033927]/10 text-sm font-bold text-[#033927]">
-                        {r.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{r.name}</p>
-                        {r.verified && (
-                          <p className="text-xs font-medium text-[#689c30]">✓ Verified Buyer</p>
-                        )}
-                      </div>
+            <>
+              {/* Rating breakdown */}
+              <div className="mt-8 grid max-w-md gap-2">
+                {displayBreakdown.map((row) => (
+                  <div key={row.stars} className="flex items-center gap-3 text-sm">
+                    <span className="w-12 text-foreground/70">{row.stars} star</span>
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-black/10">
+                      <div
+                        className="h-full bg-[#033927] transition-all duration-500"
+                        style={{ width: `${row.percentage}%` }}
+                      />
                     </div>
-                    <span className="text-xs text-foreground/50">{r.date}</span>
+                    <span className="w-8 text-right text-foreground/60">{row.count}</span>
                   </div>
-                  <div className="mt-3">
-                    <Stars rating={r.stars} />
-                  </div>
-                  {r.title?.trim() && <p className="mt-2 font-semibold text-foreground">{r.title}</p>}
-                  <p className="mt-1 text-sm leading-relaxed text-foreground/75">{r.body}</p>
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
 
-          {visibleReviews < displayReviewsList.length && (
-            <div className="mt-8 flex justify-center">
-              <button
-                type="button"
-                onClick={() => setVisibleReviews(displayReviewsList.length)}
-                className="rounded-md border border-border/60 bg-white px-6 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-black/5"
-              >
-                Load more reviews ({displayReviewsList.length - visibleReviews} remaining)
-              </button>
-            </div>
+              {/* Reviews list */}
+              {displayReviewsList.length === 0 ? (
+                <div className="mt-10 rounded-2xl border border-dashed border-border/70 bg-card/40 p-8 text-center">
+                  <p className="text-base font-semibold text-foreground">No reviews yet for this product.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Be the first to share your experience!</p>
+                  <button
+                    type="button"
+                    onClick={handleWriteReviewClick}
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#033927] px-5 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#689c30] hover:!text-black cursor-pointer select-none"
+                  >
+                    Write First Review
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-10 space-y-6">
+                  {displayReviewsList.slice(0, visibleReviews).map((r, i) => (
+                    <div key={r.id || `${r.name}-${i}`} className="rounded-xl border border-border/60 bg-white p-5 shadow-xs">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#033927]/10 text-sm font-bold text-[#033927]">
+                            {r.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold">{r.name}</p>
+                            {r.verified && (
+                              <p className="text-xs font-medium text-[#689c30]">✓ Verified Buyer</p>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-xs text-foreground/50">{r.date}</span>
+                      </div>
+                      <div className="mt-3">
+                        <Stars rating={r.stars} />
+                      </div>
+                      {r.title?.trim() && <p className="mt-2 font-semibold text-foreground">{r.title}</p>}
+                      <p className="mt-1 text-sm leading-relaxed text-foreground/75">{r.body}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {visibleReviews < displayReviewsList.length && (
+                <div className="mt-8 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleReviews(displayReviewsList.length)}
+                    className="rounded-md border border-border/60 bg-white px-6 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-black/5 cursor-pointer select-none"
+                  >
+                    Load more reviews ({displayReviewsList.length - visibleReviews} remaining)
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </section>
 

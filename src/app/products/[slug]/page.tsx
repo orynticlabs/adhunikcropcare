@@ -89,7 +89,7 @@ function mapOryCMSProductToDetail(
     ],
     options,
     packSizeImagesEnabled: product.packSizeImagesEnabled,
-    rating: 4.8,
+    rating: 0,
     recommended: recommended.slice(0, 4).map((item) => ({
       badge: item.featured ? "Featured" : item.category,
       desc: item.shortDescription,
@@ -97,10 +97,10 @@ function mapOryCMSProductToDetail(
       images: ensureProductImages(item).map((image) => image.url),
       name: item.name,
       price: formatINR(item.salePrice ?? item.price),
-      rating: "4.8",
+      rating: "0.0",
       slug: item.slug,
     })),
-    reviews: 120,
+    reviews: 0,
     safety: [
       "Use gloves while handling and wash hands after application.",
       "Keep away from children, animal feed, and drinking water.",
@@ -141,7 +141,7 @@ function mapToRecommendedDTO(item: OryCMSProductDTO) {
     images: ensureProductImages(item).map((image) => image.url),
     name: item.name,
     price: formatINR(item.salePrice ?? item.price),
-    rating: "4.8",
+    rating: "0.0",
     slug: item.slug,
   }
 }

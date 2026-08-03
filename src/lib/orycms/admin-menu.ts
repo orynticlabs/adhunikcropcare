@@ -127,13 +127,6 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
             slug: "collections/cod-rules",
             description: "Configure minimum completed order requirement for Cash on Delivery (COD).",
           },
-          {
-            section: "Content",
-            label: "Payments",
-            href: adminHref("/payments"),
-            slug: "payments",
-            description: "Review payment providers, transactions, and payout configuration.",
-          },
         ],
       },
       {
@@ -210,6 +203,13 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
         href: adminHref("/database"),
         slug: "database",
         description: "Review schema, Neon connection, and migration status.",
+      },
+      {
+        section: "Platform",
+        label: "Payments",
+        href: adminHref("/payments"),
+        slug: "payments",
+        description: "Review payment providers, transactions, and payout configuration.",
       },
       {
         section: "Platform",
