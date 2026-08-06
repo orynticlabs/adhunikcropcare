@@ -7,6 +7,7 @@ import { ArrowLeft, Edit3, Eye, FileText, Lock, Loader2, Mail, RefreshCw, Search
 import { useOryCMSSession } from "../../../orycms/hooks"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { OryCMSAuditLogsList } from "./audit-logs-admin"
 import { Skeleton } from "../../../orycms/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
@@ -67,6 +68,7 @@ export function OryCMSUsersList() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [toasts, setToasts] = useState<Toast[]>([])
   const [users, setUsers] = useState<AdminUser[]>([])
+  const [showAuditLogs, setShowAuditLogs] = useState(false)
   const isSuper = roleName === "Owner" || roleName === "Super Admin"
 
   async function loadUsers(showLoader: boolean) {
@@ -178,9 +180,9 @@ export function OryCMSUsersList() {
           </button>
           {isSuper ? (
             <>
-              <Link href="/admin/audit-logs" className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3.5 text-[12.5px] font-medium text-foreground transition-colors hover:!bg-foreground hover:!text-white cursor-pointer select-none">
+              <button type="button" onClick={() => setShowAuditLogs(true)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3.5 text-[12.5px] font-medium text-foreground transition-colors hover:!bg-foreground hover:!text-white cursor-pointer select-none">
                 <FileText className="h-3.5 w-3.5" /> Audit Logs
-              </Link>
+              </button>
               <button type="button" onClick={() => setEditing("new")} className="h-9 rounded-lg bg-foreground px-4 text-[12.5px] font-semibold text-background transition-colors hover:!bg-[#FF5A20] hover:!text-white cursor-pointer select-none">
                 Create User
               </button>
@@ -354,6 +356,7 @@ export function OryCMSUsersList() {
       {verifyUser ? <ManualVerifyModal user={verifyUser} onClose={() => setVerifyUser(null)} onSaved={() => { toast(`Email for ${verifyUser.fullName} verified manually.`, "success"); setVerifyUser(null); void loadUsers(false) }} onToast={toast} /> : null}
       {lockUser ? <LockModal user={lockUser} onClose={() => setLockUser(null)} onSaved={(msg) => { toast(msg, "success"); setLockUser(null); void loadUsers(false) }} onToast={toast} /> : null}
       {confirm ? <ConfirmModal action={confirm.action} count={confirm.ids.length} saving={saving} onClose={() => setConfirm(null)} onConfirm={() => void runBulk(confirm.action, confirm.ids)} /> : null}
+      {showAuditLogs ? <OryCMSAuditLogsList isModal onClose={() => setShowAuditLogs(false)} /> : null}
       <ToastStack toasts={toasts} />
     </section>
   )

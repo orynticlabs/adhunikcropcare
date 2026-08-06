@@ -473,7 +473,7 @@ export default function SearchBox({ initialCategories }: { initialCategories?: C
                         <Search className="h-5 w-5" aria-hidden />
                       </span>
                       <div>
-                        <h2 className="font-display text-2xl font-bold leading-none text-[#203129]">
+                        <h2 className="font-sans text-2xl leading-none text-[#203129]">
                           Search Store
                         </h2>
                         <p className="mt-1 text-xs font-medium text-[#66756d]">
@@ -617,7 +617,7 @@ export default function SearchBox({ initialCategories }: { initialCategories?: C
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-2">
-                              <h3 className="truncate font-display text-base font-semibold text-[#203129] group-hover:text-[#689c30] transition-colors">
+                              <h3 className="truncate font-sans text-base font-semibold text-[#203129] group-hover:text-[#689c30] transition-colors">
                                 {item.label}
                               </h3>
                               <ChevronRight className="h-4 w-4 shrink-0 text-[#88968d] transition-transform group-hover:translate-x-0.5 group-hover:text-[#689c30]" />
@@ -626,7 +626,7 @@ export default function SearchBox({ initialCategories }: { initialCategories?: C
                               <span className="inline-flex items-center rounded-full border border-[#689c30]/25 bg-[#689c30]/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#033927]">
                                 {item.category || item.type}
                               </span>
-                              <span className="font-display text-sm font-bold text-[#033927]">
+                              <span className="font-sans text-sm font-bold text-[#033927]">
                                 {item.price}
                               </span>
                             </div>
@@ -639,7 +639,7 @@ export default function SearchBox({ initialCategories }: { initialCategories?: C
                       <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#689c30]/10 text-[#689c30]">
                         <Search className="h-6 w-6" aria-hidden />
                       </span>
-                      <h3 className="mt-4 font-display text-lg font-bold text-[#203129]">No products found</h3>
+                      <h3 className="mt-4 font-sans text-lg font-bold text-[#203129]">No products found</h3>
                       <p className="mt-1.5 text-xs text-[#66756d]">
                         No items match &quot;{query}&quot;. Try selecting &quot;All&quot; or resetting filters.
                       </p>

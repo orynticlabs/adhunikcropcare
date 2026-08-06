@@ -370,7 +370,7 @@ export function OryCMSProductsList() {
               { label: "All active status", value: "all" },
               { label: "Published", value: "published" },
               { label: "Draft", value: "draft" },
-              { label: "Trash Can 🗑️", value: "trash" },
+              { label: "Trash Can", value: "trash" },
             ]}
             className="w-auto"
           />

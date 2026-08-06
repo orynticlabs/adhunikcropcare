@@ -1,7 +1,7 @@
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { validateEmail } from "@/lib/storefront-auth"
 
-export type OryCMSOrderNotificationEmailDTO = {
+export type OryCMSNotificationEmailDTO = {
   createdAt: string
   email: string
   enabled: boolean
@@ -10,7 +10,7 @@ export type OryCMSOrderNotificationEmailDTO = {
   updatedAt: string
 }
 
-type OrderNotificationEmailRow = {
+type NotificationEmailRow = {
   createdAt: Date | string
   email: string
   enabled: boolean
@@ -41,7 +41,7 @@ function normalizeLabel(label: string | null | undefined) {
   return value.length > 0 ? value : null
 }
 
-function toDTO(row: OrderNotificationEmailRow): OryCMSOrderNotificationEmailDTO {
+function toDTO(row: NotificationEmailRow): OryCMSNotificationEmailDTO {
   return {
     createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
     email: row.email,
@@ -57,21 +57,21 @@ function isUniqueViolation(error: unknown) {
     || (error instanceof Error && /duplicate key|unique constraint/i.test(error.message))
 }
 
-export async function listOrderNotificationEmails(): Promise<OryCMSOrderNotificationEmailDTO[]> {
-  const rows = await orycmsPrisma.$queryRawUnsafe<OrderNotificationEmailRow[]>(
-    `SELECT ${SELECT} FROM orycms_order_notification_emails ORDER BY created_at ASC`,
+export async function listNotificationEmails(): Promise<OryCMSNotificationEmailDTO[]> {
+  const rows = await orycmsPrisma.$queryRawUnsafe<NotificationEmailRow[]>(
+    `SELECT ${SELECT} FROM orycms_notification_emails ORDER BY created_at ASC`,
   )
   return rows.map(toDTO)
 }
 
-export async function createOrderNotificationEmail(input: CreateInput): Promise<OryCMSOrderNotificationEmailDTO> {
+export async function createNotificationEmail(input: CreateInput): Promise<OryCMSNotificationEmailDTO> {
   const email = normalizeEmail(input.email)
   const label = normalizeLabel(input.label)
   if (!validateEmail(email)) throw new Error("Enter a valid email address.")
 
   try {
-    const [row] = await orycmsPrisma.$queryRaw<OrderNotificationEmailRow[]>`
-      INSERT INTO orycms_order_notification_emails (id, email, label, enabled, created_at, updated_at)
+    const [row] = await orycmsPrisma.$queryRaw<NotificationEmailRow[]>`
+      INSERT INTO orycms_notification_emails (id, email, label, enabled, created_at, updated_at)
       VALUES (gen_random_uuid(), ${email}, ${label}, true, now(), now())
       RETURNING id, email, label, enabled, created_at AS "createdAt", updated_at AS "updatedAt"
     `
@@ -82,10 +82,10 @@ export async function createOrderNotificationEmail(input: CreateInput): Promise<
   }
 }
 
-export async function updateOrderNotificationEmail(id: string, input: UpdateInput): Promise<OryCMSOrderNotificationEmailDTO> {
-  const [current] = await orycmsPrisma.$queryRaw<OrderNotificationEmailRow[]>`
+export async function updateNotificationEmail(id: string, input: UpdateInput): Promise<OryCMSNotificationEmailDTO> {
+  const [current] = await orycmsPrisma.$queryRaw<NotificationEmailRow[]>`
     SELECT id, email, label, enabled, created_at AS "createdAt", updated_at AS "updatedAt"
-    FROM orycms_order_notification_emails WHERE id = ${id}::uuid LIMIT 1
+    FROM orycms_notification_emails WHERE id = ${id}::uuid LIMIT 1
   `
   if (!current) throw new Error("Recipient not found.")
 
@@ -95,8 +95,8 @@ export async function updateOrderNotificationEmail(id: string, input: UpdateInpu
   if (!validateEmail(email)) throw new Error("Enter a valid email address.")
 
   try {
-    const [row] = await orycmsPrisma.$queryRaw<OrderNotificationEmailRow[]>`
-      UPDATE orycms_order_notification_emails
+    const [row] = await orycmsPrisma.$queryRaw<NotificationEmailRow[]>`
+      UPDATE orycms_notification_emails
       SET email = ${email}, label = ${label}, enabled = ${enabled}, updated_at = now()
       WHERE id = ${id}::uuid
       RETURNING id, email, label, enabled, created_at AS "createdAt", updated_at AS "updatedAt"
@@ -108,22 +108,21 @@ export async function updateOrderNotificationEmail(id: string, input: UpdateInpu
   }
 }
 
-export async function deleteOrderNotificationEmail(id: string): Promise<void> {
+export async function deleteNotificationEmail(id: string): Promise<void> {
   const affected = await orycmsPrisma.$executeRaw`
-    DELETE FROM orycms_order_notification_emails WHERE id = ${id}::uuid
+    DELETE FROM orycms_notification_emails WHERE id = ${id}::uuid
   `
   if (Number(affected) === 0) throw new Error("Recipient not found.")
 }
 
 /**
- * Enabled recipient addresses used by the order-placement email hook. A fresh DB
- * read on every order means changes on the Settings page take effect immediately
- * without an application restart. Returns an empty array when nothing is
- * configured, so callers can skip sending entirely.
+ * Enabled recipient addresses used by email hooks. A fresh DB read on every event
+ * means changes on the Settings page take effect immediately without an application restart.
+ * Returns an empty array when nothing is configured.
  */
-export async function getEnabledOrderNotificationRecipients(): Promise<string[]> {
+export async function getEnabledNotificationRecipients(): Promise<string[]> {
   const rows = await orycmsPrisma.$queryRaw<{ email: string }[]>`
-    SELECT email FROM orycms_order_notification_emails WHERE enabled = true ORDER BY created_at ASC
+    SELECT email FROM orycms_notification_emails WHERE enabled = true ORDER BY created_at ASC
   `
   return rows.map((row) => row.email)
 }

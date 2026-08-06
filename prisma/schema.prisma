@@ -538,7 +538,7 @@ model StorefrontContactEnquiry {
   @@map("storefront_contact_enquiries")
 }
 
-model OryCMSOrderNotificationEmail {
+model OryCMSNotificationEmail {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email     String   @unique
   label     String?
@@ -546,20 +546,8 @@ model OryCMSOrderNotificationEmail {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  @@index([enabled], map: "orycms_order_notification_emails_enabled_idx")
-  @@map("orycms_order_notification_emails")
-}
-
-model OryCMSContactNotificationEmail {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email     String   @unique
-  label     String?
-  enabled   Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-
-  @@index([enabled], map: "orycms_contact_notification_emails_enabled_idx")
-  @@map("orycms_contact_notification_emails")
+  @@index([enabled], map: "orycms_notification_emails_enabled_idx")
+  @@map("orycms_notification_emails")
 }
 
 model OryCMSShiprocketSettings {

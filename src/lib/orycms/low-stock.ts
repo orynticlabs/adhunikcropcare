@@ -1,6 +1,6 @@
 import { emailBaseUrl, sendLowStockAdminNotifications } from "@/lib/email/mailer"
 import { getOryCMSNotificationSettings } from "@/lib/orycms/notification-settings"
-import { getEnabledOrderNotificationRecipients } from "@/lib/orycms/order-notification-emails"
+import { getEnabledNotificationRecipients } from "@/lib/orycms/notification-emails"
 import { createOryCMSNotification, ensureOryCMSNotificationsSchema } from "@/lib/orycms/notifications"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 
@@ -36,7 +36,7 @@ export async function notifyLowStockProduct(product: { id: string; name: string;
   const claimed = await claimLowStockEmail(product.id)
   if (!claimed) return
 
-  const recipients = await getEnabledOrderNotificationRecipients()
+  const recipients = await getEnabledNotificationRecipients()
   await sendLowStockAdminNotifications(recipients, {
     adminProductUrl: `${emailBaseUrl()}/admin/products/${product.id}`,
     productName: product.name,

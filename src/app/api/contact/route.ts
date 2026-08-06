@@ -10,7 +10,7 @@ const TOPIC_LABELS: Record<string, string> = {
   technical_support: "Technical Agronomist Support",
 }
 import { generateContactTicketId } from "@/lib/orycms/contact-enquiries"
-import { getEnabledContactNotificationRecipients } from "@/lib/orycms/contact-notification-emails"
+import { getEnabledNotificationRecipients } from "@/lib/orycms/notification-emails"
 import { createOryCMSNotification } from "@/lib/orycms/notifications"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { rateLimit, requestKey, requireCsrf } from "@/lib/storefront-auth"
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     )
 
     // 2. Send Admin Notification Email to configured recipients
-    void getEnabledContactNotificationRecipients()
+    void getEnabledNotificationRecipients()
       .then((recipients) => sendContactAdminNotifications(recipients, contactData))
       .catch((err) => console.error("[Email Error] Failed to send contact admin notifications:", err))
 

@@ -273,8 +273,8 @@ export default function SettingsPage() {
             <Card className="p-5">
               <SectionHeader
                 icon={MailPlus}
-                title="Order notification emails"
-                description="Send a detailed notification to these addresses whenever a new order is placed. Disabled or empty lists receive nothing."
+                title="Notification emails"
+                description="Send detailed notifications to these addresses whenever a new order is placed, low stock threshold is reached, or a contact form is submitted. Disabled or empty lists receive nothing."
               />
               <div className="mt-5 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface-muted/40 p-4">
                 <label className="min-w-[200px] flex-1 space-y-1.5">
@@ -282,7 +282,7 @@ export default function SettingsPage() {
                   <Input
                     value={newNotificationEmail}
                     onChange={(e) => setNewNotificationEmail(e.target.value)}
-                    placeholder="warehouse@yourdomain.com"
+                    placeholder="team@yourdomain.com"
                   />
                 </label>
                 <Button
@@ -303,7 +303,7 @@ export default function SettingsPage() {
               <div className="mt-4 space-y-2">
                 {orderNotificationEmails.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-border bg-surface-muted/30 px-4 py-6 text-center text-[12.5px] text-muted-foreground">
-                    No recipients yet. No order notification emails are sent until you add an address above.
+                    No recipients yet. No notification emails are sent until you add an address above.
                   </div>
                 ) : (
                   orderNotificationEmails.map((item) => (

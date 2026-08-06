@@ -137,9 +137,7 @@ export function OryCMSSettingsPage() {
             </div>
           </Card>
 
-          <OrderNotificationEmailsCard onToast={toast} />
-
-          <ContactNotificationEmailsCard onToast={toast} />
+          <NotificationEmailsCard onToast={toast} />
 
           <ShiprocketSettingsCard onToast={toast} />
 
@@ -216,7 +214,7 @@ export function OryCMSSettingsPage() {
   )
 }
 
-function OrderNotificationEmailsCard({ onToast }: { onToast: (message: string, tone: Toast["tone"]) => void }) {
+function NotificationEmailsCard({ onToast }: { onToast: (message: string, tone: Toast["tone"]) => void }) {
   const [items, setItems] = useState<NotificationEmail[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -229,7 +227,7 @@ function OrderNotificationEmailsCard({ onToast }: { onToast: (message: string, t
 
   useEffect(() => {
     let active = true
-    fetch("/api/orycms/settings/order-notification-emails", { cache: "no-store" })
+    fetch("/api/orycms/settings/notification-emails", { cache: "no-store" })
       .then((response) => response.json())
       .then((json) => {
         if (!active) return
@@ -257,7 +255,7 @@ function OrderNotificationEmailsCard({ onToast }: { onToast: (message: string, t
     }
     setAdding(true)
     try {
-      const json = await fetch("/api/orycms/settings/order-notification-emails", {
+      const json = await fetch("/api/orycms/settings/notification-emails", {
         body: JSON.stringify({ email, label: newLabel }),
         headers: { "content-type": "application/json" },
         method: "POST",
@@ -277,7 +275,7 @@ function OrderNotificationEmailsCard({ onToast }: { onToast: (message: string, t
   async function patch(id: string, body: { email?: string; enabled?: boolean; label?: string | null }, successMessage: string) {
     setBusyId(id)
     try {
-      const json = await fetch(`/api/orycms/settings/order-notification-emails/${id}`, {
+      const json = await fetch(`/api/orycms/settings/notification-emails/${id}`, {
         body: JSON.stringify(body),
         headers: { "content-type": "application/json" },
         method: "PATCH",
@@ -319,7 +317,7 @@ function OrderNotificationEmailsCard({ onToast }: { onToast: (message: string, t
   async function remove(id: string) {
     setBusyId(id)
     try {
-      const json = await fetch(`/api/orycms/settings/order-notification-emails/${id}`, { method: "DELETE" }).then((response) => response.json())
+      const json = await fetch(`/api/orycms/settings/notification-emails/${id}`, { method: "DELETE" }).then((response) => response.json())
       if (!json.success) throw new Error(json.error?.message ?? "Failed to delete recipient.")
       setItems((current) => current.filter((item) => item.id !== id))
       onToast("Recipient removed.", "success")
@@ -336,8 +334,8 @@ function OrderNotificationEmailsCard({ onToast }: { onToast: (message: string, t
     <Card>
       <SectionHeader
         icon={MailPlus}
-        title="Order notification emails"
-        description="Send a detailed notification to these addresses whenever a new order is placed. Disabled or empty lists receive nothing."
+        title="Notification emails"
+        description="Send detailed notifications to these addresses whenever a new order is placed, low stock threshold is reached, or a contact form is submitted. Disabled or empty lists receive nothing."
       />
 
       <form onSubmit={addEmail} className="mt-5 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface-muted/40 p-4">
@@ -347,7 +345,7 @@ function OrderNotificationEmailsCard({ onToast }: { onToast: (message: string, t
             type="email"
             value={newEmail}
             onChange={(event) => setNewEmail(event.target.value)}
-            placeholder="warehouse@yourdomain.com"
+            placeholder="team@yourdomain.com"
             className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
           />
         </label>
@@ -357,7 +355,7 @@ function OrderNotificationEmailsCard({ onToast }: { onToast: (message: string, t
             type="text"
             value={newLabel}
             onChange={(event) => setNewLabel(event.target.value)}
-            placeholder="Warehouse team"
+            placeholder="Operations team"
             className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
           />
         </label>
@@ -381,7 +379,7 @@ function OrderNotificationEmailsCard({ onToast }: { onToast: (message: string, t
           </div>
         ) : items.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border bg-surface-muted/30 px-4 py-6 text-center text-[12.5px] text-muted-foreground">
-            No recipients yet. No order notification emails are sent until you add an address above.
+            No recipients yet. No notification emails are sent until you add an address above.
           </div>
         ) : (
           <div className="space-y-2">
@@ -481,263 +479,6 @@ function OrderNotificationEmailsCard({ onToast }: { onToast: (message: string, t
   )
 }
 
-function ContactNotificationEmailsCard({ onToast }: { onToast: (message: string, tone: Toast["tone"]) => void }) {
-  const [items, setItems] = useState<NotificationEmail[]>([])
-  const [loading, setLoading] = useState(true)
-  const [busyId, setBusyId] = useState<string | null>(null)
-  const [adding, setAdding] = useState(false)
-  const [newEmail, setNewEmail] = useState("")
-  const [newLabel, setNewLabel] = useState("")
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editEmail, setEditEmail] = useState("")
-  const [editLabel, setEditLabel] = useState("")
-
-  useEffect(() => {
-    let active = true
-    fetch("/api/orycms/settings/contact-notification-emails", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((json) => {
-        if (!active) return
-        if (!json.success) throw new Error(json.error?.message ?? "Failed to load contact recipients.")
-        setItems(Array.isArray(json.data) ? json.data : [])
-      })
-      .catch((error) => {
-        if (active) onToast(error instanceof Error ? error.message : "Failed to load contact recipients.", "error")
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  async function addEmail(event: React.FormEvent) {
-    event.preventDefault()
-    const email = newEmail.trim().toLowerCase()
-    if (!isValidEmail(email)) {
-      onToast("Enter a valid email address.", "error")
-      return
-    }
-    setAdding(true)
-    try {
-      const json = await fetch("/api/orycms/settings/contact-notification-emails", {
-        body: JSON.stringify({ email, label: newLabel }),
-        headers: { "content-type": "application/json" },
-        method: "POST",
-      }).then((response) => response.json())
-      if (!json.success) throw new Error(json.error?.message ?? "Failed to add contact recipient.")
-      setItems((current) => [...current, json.data])
-      setNewEmail("")
-      setNewLabel("")
-      onToast("Contact recipient added.", "success")
-    } catch (error) {
-      onToast(error instanceof Error ? error.message : "Failed to add contact recipient.", "error")
-    } finally {
-      setAdding(false)
-    }
-  }
-
-  async function patch(id: string, body: { email?: string; enabled?: boolean; label?: string | null }, successMessage: string) {
-    setBusyId(id)
-    try {
-      const json = await fetch(`/api/orycms/settings/contact-notification-emails/${id}`, {
-        body: JSON.stringify(body),
-        headers: { "content-type": "application/json" },
-        method: "PATCH",
-      }).then((response) => response.json())
-      if (!json.success) throw new Error(json.error?.message ?? "Failed to update recipient.")
-      setItems((current) => current.map((item) => (item.id === id ? json.data : item)))
-      onToast(successMessage, "success")
-      return true
-    } catch (error) {
-      onToast(error instanceof Error ? error.message : "Failed to update recipient.", "error")
-      return false
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  async function toggleEnabled(item: NotificationEmail) {
-    await patch(item.id, { enabled: !item.enabled }, item.enabled ? "Contact recipient disabled." : "Contact recipient enabled.")
-  }
-
-  function startEdit(item: NotificationEmail) {
-    setEditingId(item.id)
-    setEditEmail(item.email)
-    setEditLabel(item.label ?? "")
-  }
-
-  async function saveEdit(event: React.FormEvent) {
-    event.preventDefault()
-    if (!editingId) return
-    const email = editEmail.trim().toLowerCase()
-    if (!isValidEmail(email)) {
-      onToast("Enter a valid email address.", "error")
-      return
-    }
-    const ok = await patch(editingId, { email, label: editLabel }, "Contact recipient updated.")
-    if (ok) setEditingId(null)
-  }
-
-  async function remove(id: string) {
-    setBusyId(id)
-    try {
-      const json = await fetch(`/api/orycms/settings/contact-notification-emails/${id}`, { method: "DELETE" }).then((response) => response.json())
-      if (!json.success) throw new Error(json.error?.message ?? "Failed to delete recipient.")
-      setItems((current) => current.filter((item) => item.id !== id))
-      onToast("Contact recipient removed.", "success")
-    } catch (error) {
-      onToast(error instanceof Error ? error.message : "Failed to delete recipient.", "error")
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  const enabledCount = items.filter((item) => item.enabled).length
-
-  return (
-    <Card>
-      <SectionHeader
-        icon={MailPlus}
-        title="Contact form notification emails"
-        description="Configure admin email addresses to receive instant notifications whenever a user fills the Contact Us form."
-      />
-
-      <form onSubmit={addEmail} className="mt-5 flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface-muted/40 p-4">
-        <label className="min-w-[200px] flex-1 space-y-1.5">
-          <span className="text-[11.5px] font-medium text-muted-foreground">Contact Admin Email address</span>
-          <input
-            type="email"
-            value={newEmail}
-            onChange={(event) => setNewEmail(event.target.value)}
-            placeholder="contact-admin@yourdomain.com"
-            className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
-          />
-        </label>
-        <label className="min-w-[160px] flex-1 space-y-1.5">
-          <span className="text-[11.5px] font-medium text-muted-foreground">Label (optional)</span>
-          <input
-            type="text"
-            value={newLabel}
-            onChange={(event) => setNewLabel(event.target.value)}
-            placeholder="Contact Desk / Support Admin"
-            className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={adding}
-          className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3 text-[12.5px] font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60"
-        >
-          {adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-          Add contact email
-        </button>
-      </form>
-
-      <div className="mt-4">
-        {loading ? (
-          <div className="grid min-h-[96px] place-items-center text-[12.5px] text-muted-foreground">
-            <span className="inline-flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Loading contact recipients…
-            </span>
-          </div>
-        ) : items.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border bg-surface-muted/30 px-4 py-6 text-center text-[12.5px] text-muted-foreground">
-            No contact notification recipients configured. No admin emails are sent on contact submissions until you add an address above.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="text-[11.5px] text-muted-foreground">
-              {enabledCount} of {items.length} contact recipient{items.length === 1 ? "" : "s"} enabled.
-            </div>
-            {items.map((item) =>
-              editingId === item.id ? (
-                <form
-                  key={item.id}
-                  onSubmit={saveEdit}
-                  className="flex flex-wrap items-end gap-3 rounded-lg border border-border bg-surface p-3"
-                >
-                  <label className="min-w-[200px] flex-1 space-y-1.5">
-                    <span className="text-[11px] font-medium text-muted-foreground">Email address</span>
-                    <input
-                      type="email"
-                      value={editEmail}
-                      onChange={(event) => setEditEmail(event.target.value)}
-                      className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
-                    />
-                  </label>
-                  <label className="min-w-[160px] flex-1 space-y-1.5">
-                    <span className="text-[11px] font-medium text-muted-foreground">Label (optional)</span>
-                    <input
-                      type="text"
-                      value={editLabel}
-                      onChange={(event) => setEditLabel(event.target.value)}
-                      className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
-                    />
-                  </label>
-                  <button
-                    type="submit"
-                    disabled={busyId === item.id}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-foreground px-3 text-[12px] font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60"
-                  >
-                    {busyId === item.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                    Save
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditingId(null)}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 text-[12px] font-medium transition-colors hover:border-border-strong hover:bg-accent"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    Cancel
-                  </button>
-                </form>
-              ) : (
-                <div
-                  key={item.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface px-3 py-2.5"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[12.5px] font-medium">{item.email}</span>
-                      {item.label ? (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10.5px] text-muted-foreground">{item.label}</span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Toggle checked={item.enabled} disabled={busyId === item.id} onChange={() => toggleEnabled(item)} />
-                    <button
-                      type="button"
-                      onClick={() => startEdit(item)}
-                      disabled={busyId === item.id}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:border-border-strong hover:bg-accent hover:text-foreground disabled:opacity-50"
-                      title="Edit recipient"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => remove(item.id)}
-                      disabled={busyId === item.id}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-destructive/30 bg-destructive/5 text-destructive transition-colors hover:bg-destructive/15 disabled:opacity-50"
-                      title="Remove recipient"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ),
-            )}
-          </div>
-        )}
-      </div>
-    </Card>
-  )
-}
 
 type NotificationToggles = {
   enabled: boolean
