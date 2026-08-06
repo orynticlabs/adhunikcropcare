@@ -5,7 +5,7 @@ import sharp from "sharp"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
 import { ensureStorefrontAuthSchema, normalizePhone, validateEmail } from "@/lib/storefront-auth"
 import { emailBaseUrl, sendAdminEmail, sendEmail, sendOrderAdminNotifications } from "@/lib/email/mailer"
-import { getEnabledOrderNotificationRecipients } from "@/lib/orycms/order-notification-emails"
+import { getEnabledNotificationRecipients } from "@/lib/orycms/notification-emails"
 import { createOryCMSNotification } from "@/lib/orycms/notifications"
 import { notifyLowStockProduct } from "@/lib/orycms/low-stock"
 import { validateCouponCode, recordDiscountUsage } from "@/lib/orycms/discounts"
@@ -627,7 +627,7 @@ export async function sendOrderConfirmationEmail(order: StorefrontOrderRow) {
 }
 
 async function sendConfiguredAdminOrderNotifications(order: StorefrontOrderRow) {
-  const recipients = await getEnabledOrderNotificationRecipients()
+  const recipients = await getEnabledNotificationRecipients()
   if (recipients.length === 0) return { skipped: true }
   const contact = order.contact as { email?: string; firstName?: string; lastName?: string; phone?: string } | null
   const customerName = [contact?.firstName, contact?.lastName].filter(Boolean).join(" ")

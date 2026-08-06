@@ -1,16 +1,16 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { requireOryCMSUser } from "@/lib/orycms/auth"
-import { createOrderNotificationEmail, listOrderNotificationEmails } from "@/lib/orycms/order-notification-emails"
+import { createNotificationEmail, listNotificationEmails } from "@/lib/orycms/notification-emails"
 
 export const runtime = "nodejs"
 
 export async function GET(request: NextRequest) {
   try {
     await requireOryCMSUser(request)
-    return NextResponse.json({ success: true, data: await listOrderNotificationEmails() })
+    return NextResponse.json({ success: true, data: await listNotificationEmails() })
   } catch (error) {
-    return notificationEmailError(error, "Failed to load order notification emails.")
+    return notificationEmailError(error, "Failed to load notification emails.")
   }
 }
 
@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
   try {
     await requireOryCMSUser(request)
     const body = (await request.json()) as { email?: string; label?: string | null }
-    return NextResponse.json({ success: true, data: await createOrderNotificationEmail(body) }, { status: 201 })
+    return NextResponse.json({ success: true, data: await createNotificationEmail(body) }, { status: 201 })
   } catch (error) {
-    return notificationEmailError(error, "Failed to add order notification email.")
+    return notificationEmailError(error, "Failed to add notification email.")
   }
 }
 
