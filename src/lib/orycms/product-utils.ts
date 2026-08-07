@@ -12,10 +12,17 @@ export type ProductImageInput = {
 export type PackSizeInput = {
   size: string
   price: number
+  mrp: number
+  salePrice: number
+  sku?: string
+  batchNumber?: string
+  stockQuantity: number
   imageId?: string
   imageUrl?: string
   imageIds?: string[]
   imageUrls?: string[]
+  isDefault?: boolean
+  verifySlug?: string
 }
 
 export type OryCMSProductInput = {
@@ -41,6 +48,25 @@ export type OryCMSProductInput = {
   stockQuantity: number
   tags: string[]
   unit: string
+  isVerificationUpdate?: boolean
+
+  // Product verification fields
+  verifyDescription?: string
+  verifyImage?: ProductImageInput | null
+  mfgDate?: string
+  expiryDate?: string
+  packTiming?: string
+  packDate?: string
+  supervisorName?: string
+  contractorName?: string
+  literature?: string
+  msds?: string
+  license?: string
+  cir?: string
+  eprNumber?: string
+  plasticCategory?: string
+  leafletInfo?: string
+  uin?: string
 }
 
 export type OryCMSProductDTO = OryCMSProductInput & {

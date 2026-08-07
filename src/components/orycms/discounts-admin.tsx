@@ -7,6 +7,7 @@ import {
 } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { OryCMSDatePicker } from "@/components/orycms/custom-datepicker"
 import { RichTextEditor } from "@/components/orycms/rich-text-editor"
 import { Skeleton, TableSkeleton } from "../../../orycms/components/ui/skeleton"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
@@ -319,10 +320,10 @@ function DiscountForm({ initial, onSave, onCancel, saving }: {
           <SectionLabel>Schedule</SectionLabel>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Start Date & Time">
-              <input type="datetime-local" value={toLocalDatetime(d.startsAt)} onChange={(e) => p({ startsAt: fromLocalDatetime(e.target.value) })} className={INPUT} />
+              <OryCMSDatePicker showTime value={toLocalDatetime(d.startsAt)} onChange={(val) => p({ startsAt: fromLocalDatetime(val) })} />
             </Field>
             <Field label="End Date & Time">
-              <input type="datetime-local" value={toLocalDatetime(d.endsAt)} onChange={(e) => p({ endsAt: fromLocalDatetime(e.target.value) })} className={INPUT} />
+              <OryCMSDatePicker showTime value={toLocalDatetime(d.endsAt)} onChange={(val) => p({ endsAt: fromLocalDatetime(val) })} />
             </Field>
           </div>
         </div>
@@ -434,10 +435,10 @@ function AnnouncementForm({ initial, onSave, onCancel, saving }: {
           <SectionLabel>Schedule</SectionLabel>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Start Date & Time">
-              <input type="datetime-local" value={toLocalDatetime(a.startsAt)} onChange={(e) => p({ startsAt: fromLocalDatetime(e.target.value) })} className={INPUT} />
+              <OryCMSDatePicker showTime value={toLocalDatetime(a.startsAt)} onChange={(val) => p({ startsAt: fromLocalDatetime(val) })} />
             </Field>
             <Field label="End Date & Time">
-              <input type="datetime-local" value={toLocalDatetime(a.endsAt)} onChange={(e) => p({ endsAt: fromLocalDatetime(e.target.value) })} className={INPUT} />
+              <OryCMSDatePicker showTime value={toLocalDatetime(a.endsAt)} onChange={(val) => p({ endsAt: fromLocalDatetime(val) })} />
             </Field>
           </div>
         </div>

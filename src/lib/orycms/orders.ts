@@ -211,25 +211,94 @@ async function getOrderForConfirmation(id: string, lock = false, db: QueryClient
 }
 
 async function reserveOrderItems(order: StorefrontOrderRow, db: QueryClient) {
-  const items = Array.isArray(order.items) ? order.items as OrderItem[] : []
+  const items = Array.isArray(order.items) ? order.items as (OrderItem & { size?: string })[] : []
   if (items.length === 0) throw new Error("Order has no items to reserve.")
   const reserved: OrderItem[] = []
   for (const item of aggregateItems(items)) {
     const slug = productSlug(item)
-    const [product] = await db.$queryRaw<{ id: string; slug: string; stock_quantity: number }[]>`
-      SELECT id, slug, stock_quantity FROM orycms_products
+    interface PackSizeItem {
+      size: string
+      stockQuantity: number
+      sku: string
+      mrp: number
+      salePrice: number
+      isDefault?: boolean
+    }
+
+    const [product] = await db.$queryRaw<{ id: string; slug: string; pack_sizes: unknown; stock_quantity: number }[]>`
+      SELECT id, slug, pack_sizes, stock_quantity FROM orycms_products
       WHERE (id::text = ${String(item.productId ?? "")} OR slug = ${slug} OR lower(name) = lower(${item.name ?? ""}))
         AND status = 'published' AND deleted_at IS NULL
       LIMIT 1
     `
     if (!product) throw new Error(`${item.name ?? "Product"} is not available.`)
     const quantity = Math.max(1, Math.floor(Number(item.quantity ?? item.qty ?? 1) || 1))
-    const updated = await db.$executeRaw`
-      UPDATE orycms_products
-      SET stock_quantity = stock_quantity - ${quantity}, updated_at = now()
-      WHERE id = ${product.id}::uuid AND stock_quantity >= ${quantity}
-    `
-    if (Number(updated) !== 1) throw new Error(`${item.name ?? "Product"} does not have enough stock.`)
+
+    let packSizesObj = product.pack_sizes
+    if (typeof packSizesObj === "string") {
+      try {
+        packSizesObj = JSON.parse(packSizesObj)
+      } catch {
+        packSizesObj = null
+      }
+    }
+    const packItems = (
+      packSizesObj && typeof packSizesObj === "object" && !Array.isArray(packSizesObj) && "items" in packSizesObj
+        ? (packSizesObj as { items: unknown }).items
+        : Array.isArray(packSizesObj)
+          ? packSizesObj
+          : []
+    ) as PackSizeItem[]
+
+    if (packItems.length > 0) {
+      const sizeToFind = (item.size || "").trim()
+      let packIndex = packItems.findIndex(
+        (p) => String(p.size).trim().toLowerCase() === sizeToFind.toLowerCase()
+      )
+
+      if (packIndex === -1) {
+        packIndex = packItems.findIndex((p) => Boolean(p.isDefault))
+      }
+      if (packIndex === -1) {
+        packIndex = 0
+      }
+
+      const matchedPack = packItems[packIndex]
+      if (!matchedPack || matchedPack.stockQuantity < quantity) {
+        throw new Error(
+          `${item.name ?? "Product"} (${matchedPack?.size || "Default Pack"}) does not have enough stock.`
+        )
+      }
+
+      matchedPack.stockQuantity = Number(matchedPack.stockQuantity) - quantity
+      const newTotalStock = packItems.reduce((sum, p) => sum + Number(p.stockQuantity || 0), 0)
+
+      const updatedPackSizesJson = JSON.stringify({
+        enabled: Boolean(
+          (packSizesObj as Record<string, unknown> | null)?.enabled ||
+          (packSizesObj as Record<string, unknown> | null)?.packSizeImagesEnabled
+        ),
+        items: packItems,
+      })
+
+      const updated = await db.$executeRaw`
+        UPDATE orycms_products
+        SET
+          pack_sizes = ${updatedPackSizesJson}::jsonb,
+          stock_quantity = ${newTotalStock},
+          updated_at = now()
+        WHERE id = ${product.id}::uuid AND stock_quantity >= ${quantity}
+      `
+      if (Number(updated) !== 1) throw new Error(`${item.name ?? "Product"} does not have enough stock.`)
+    } else {
+      const updated = await db.$executeRaw`
+        UPDATE orycms_products
+        SET stock_quantity = stock_quantity - ${quantity}, updated_at = now()
+        WHERE id = ${product.id}::uuid AND stock_quantity >= ${quantity}
+      `
+      if (Number(updated) !== 1) throw new Error(`${item.name ?? "Product"} does not have enough stock.`)
+    }
+
     reserved.push({ ...item, quantity, productId: product.id, productSlug: product.slug })
   }
   return items.map((item) => {
@@ -238,7 +307,7 @@ async function reserveOrderItems(order: StorefrontOrderRow, db: QueryClient) {
   })
 }
 
-type OrderItem = { id?: string; name?: string; productId?: string; productSlug?: string; quantity?: number; qty?: number }
+type OrderItem = { id?: string; name?: string; productId?: string; productSlug?: string; quantity?: number; qty?: number; size?: string }
 
 async function validateReservedOrderItems(order: StorefrontOrderRow, db: QueryClient) {
   const items = Array.isArray(order.items) ? order.items as OrderItem[] : []

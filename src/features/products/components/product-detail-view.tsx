@@ -39,6 +39,8 @@ type ProductOption = {
   imageUrl?: string
   imageIds?: string[]
   imageUrls?: string[]
+  sku?: string
+  stockQuantity?: number
 }
 
 type RecommendedProduct = {
@@ -292,6 +294,9 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
   const selectedImageUrl = selected?.imageUrl
   const selectedImageUrls = selected?.imageUrls
 
+  const activeStockQuantity = selected?.stockQuantity !== undefined ? selected.stockQuantity : product.stockQuantity
+  const activeSku = selected?.sku || product.sku
+
   const visibleImages = useMemo(() => {
     if (!product.packSizeImagesEnabled) return product.images
 
@@ -385,7 +390,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
   }, [paused, visibleImages.length])
 
   function addQuantityToCart() {
-    if (product.stockQuantity === 0) return
+    if (activeStockQuantity === 0) return
     for (let index = 0; index < quantity; index += 1) {
       addItem({
         name: product.title,
@@ -475,9 +480,9 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
     ["Category", product.category],
     ...(product.brand ? ([["Brand", product.brand]] as Array<[string, string]>) : []),
     ...(product.unit ? ([["Pack unit", product.unit]] as Array<[string, string]>) : []),
-    ...(product.sku ? ([["SKU", product.sku]] as Array<[string, string]>) : []),
-    ...(product.stockQuantity !== undefined
-      ? ([["Availability", product.stockQuantity > 0 ? `${product.stockQuantity} in stock` : "Out of stock"]] as Array<[string, string]>)
+    ...(activeSku ? ([["SKU", activeSku]] as Array<[string, string]>) : []),
+    ...(activeStockQuantity !== undefined
+      ? ([["Availability", activeStockQuantity > 0 ? `${activeStockQuantity} in stock` : "Out of stock"]] as Array<[string, string]>)
       : []),
   ]
 
@@ -810,11 +815,11 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
               <button
                 type="button"
                 onClick={addQuantityToCart}
-                disabled={product.stockQuantity === 0}
+                disabled={activeStockQuantity === 0}
                 className="inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-[#033927] px-6 text-sm font-bold uppercase tracking-wide text-white transition-colors hover:bg-[#689c30] hover:!text-black disabled:cursor-not-allowed disabled:bg-neutral-400 disabled:hover:!text-white"
               >
                 <ShoppingBag className="h-4 w-4" aria-hidden />
-                {product.stockQuantity === 0 ? "Out of Stock" : "Add to Cart"}
+                {activeStockQuantity === 0 ? "Out of Stock" : "Add to Cart"}
               </button>
             </div>
 

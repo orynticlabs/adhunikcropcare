@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
 import { cn, formatCurrency } from "@/lib/utils"
 
@@ -144,6 +145,8 @@ export function OryCMSSettingsPage() {
           <ShipmentNotificationsCard onToast={toast} />
 
           <NotificationsCard onToast={toast} />
+
+          <VerificationSettingsCard onToast={toast} />
 
           <Card>
             <SectionHeader
@@ -643,22 +646,16 @@ function ShiprocketSettingsCard({ onToast }: { onToast: (message: string, tone: 
             </label>
             <Field label="Channel ID (optional)" value={form.channelId} onChange={(value) => setValue("channelId", value)} />
             {pickupLocations.length > 0 ? (
-              <label className="space-y-1.5">
-                <span className="text-[11.5px] font-medium text-muted-foreground">Pickup location</span>
-                <select
-                  value={form.pickupLocation}
-                  onChange={(event) => selectPickupLocation(event.target.value)}
-                  className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
-                >
-                  <option value="">Choose pickup location</option>
-                  {pickupLocations.map((location) => (
-                    <option key={location.id} value={location.pickupLocation}>
-                      {location.pickupLocation}
-                      {location.pincode ? ` · ${location.pincode}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <OryCMSSelect
+                label="Pickup location"
+                value={form.pickupLocation}
+                onChange={(val) => selectPickupLocation(val)}
+                options={pickupLocations.map((location) => ({
+                  label: `${location.pickupLocation}${location.pincode ? ` · ${location.pincode}` : ""}`,
+                  value: location.pickupLocation,
+                }))}
+                placeholder="Choose pickup location"
+              />
             ) : (
               <Field label={loadingPickupLocations ? "Pickup location (loading…)" : "Pickup location"} value={form.pickupLocation} onChange={(value) => setValue("pickupLocation", value)} />
             )}
@@ -905,11 +902,13 @@ function SettingRow({
 
 function Field({
   label,
+  placeholder,
   value,
   onChange,
   className,
 }: {
   label: string
+  placeholder?: string
   value: string
   onChange: (value: string) => void
   className?: string
@@ -920,6 +919,7 @@ function Field({
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
         className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none focus:border-border-strong"
       />
     </label>
@@ -954,6 +954,98 @@ function Toggle({
         )}
       />
     </button>
+  )
+}
+
+function VerificationSettingsCard({ onToast }: { onToast: (message: string, tone: Toast["tone"]) => void }) {
+  const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
+  const [address, setAddress] = useState("")
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    fetch("/api/orycms/settings/verification", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!active) return
+        if (json.success && json.data) {
+          setEmail(json.data.email || "")
+          setPhone(json.data.phone || "")
+          setAddress(json.data.address || "")
+        }
+      })
+      .catch(() => {})
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [])
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!email.trim() || !phone.trim() || !address.trim()) {
+      onToast("Please fill all verification settings fields.", "error")
+      return
+    }
+    setSaving(true)
+    try {
+      const json = await fetch("/api/orycms/settings/verification", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, phone, address }),
+      }).then((response) => response.json())
+      if (!json.success) throw new Error(json.error?.message ?? "Failed to save verification settings.")
+      setEmail(json.data.email)
+      setPhone(json.data.phone)
+      setAddress(json.data.address)
+      onToast("Verification settings saved.", "success")
+    } catch (error) {
+      onToast(error instanceof Error ? error.message : "Failed to save.", "error")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Card>
+      <SectionHeader
+        icon={CheckCircle2}
+        title="Product Verification Settings"
+        description="Default support contact details displayed on public product verification pages."
+      />
+      {loading ? (
+        <div className="mt-5 grid min-h-[64px] place-items-center text-[12.5px] text-muted-foreground">
+          <span className="inline-flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading…</span>
+        </div>
+      ) : (
+        <form onSubmit={handleSave} className="mt-5 space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Support Email" placeholder="e.g., support@company.com" value={email} onChange={setEmail} />
+            <Field label="Support Phone" placeholder="e.g., +1 (555) 123-4567" value={phone} onChange={setPhone} />
+          </div>
+          <div className="flex flex-col space-y-1.5">
+            <span className="text-[12px] font-medium">Support Address</span>
+            <textarea
+              required
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="min-h-16 w-full rounded-lg border border-border bg-surface px-3 py-2 text-[13px] outline-none focus:border-border-strong focus:ring-1 focus:ring-primary/20"
+              placeholder="Company headquarters or support address"
+            />
+          </div>
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-4 text-[12.5px] font-semibold text-background hover:!bg-[#FF5A20] hover:!text-white transition-colors shadow-xs cursor-pointer select-none disabled:opacity-60"
+            >
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              Save Settings
+            </button>
+          </div>
+        </form>
+      )}
+    </Card>
   )
 }
 

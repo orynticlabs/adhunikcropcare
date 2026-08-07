@@ -5,6 +5,7 @@ import Image from "next/image"
 import { Award, Eye, ImagePlus, Loader2, Pencil, Plus, Save, Trash2, Upload, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { OryCMSDatePicker } from "@/components/orycms/custom-datepicker"
 import { CardGridSkeleton } from "../../../orycms/components/ui/skeleton"
 import type { OryCMSCertificateDTO, OryCMSCertificateInput } from "@/lib/orycms/certificates"
 
@@ -188,9 +189,9 @@ export function OryCMSCertificatesAdmin() {
               <Field label="Issuing authority"><input required value={form.issuingAuthority} onChange={(e) => setForm({ ...form, issuingAuthority: e.target.value })} className={INPUT} placeholder="Certification body" /></Field>
               <Field label="Certificate number"><input value={form.certificateNumber} onChange={(e) => setForm({ ...form, certificateNumber: e.target.value })} className={INPUT} /></Field>
               <Field label="Document URL"><input type="url" value={form.documentUrl} onChange={(e) => setForm({ ...form, documentUrl: e.target.value })} className={INPUT} placeholder="https://...pdf" /></Field>
-              <Field label="Issue date"><input type="date" value={form.issuedOn} onChange={(e) => setForm({ ...form, issuedOn: e.target.value })} className={INPUT_DATE} /></Field>
+              <Field label="Issue date"><OryCMSDatePicker required value={form.issuedOn || ""} onChange={(val) => setForm({ ...form, issuedOn: val })} /></Field>
               <div className="space-y-1">
-                <Field label="Expiry date"><input type="date" value={form.expiresOn} onChange={(e) => setForm({ ...form, expiresOn: e.target.value })} className={INPUT_DATE} /></Field>
+                <Field label="Expiry date"><OryCMSDatePicker value={form.expiresOn || ""} onChange={(val) => setForm({ ...form, expiresOn: val })} /></Field>
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
                   <span>💡 Leave blank if this certificate does not expire (Lifetime / Permanent validity).</span>
                   {form.expiresOn ? (

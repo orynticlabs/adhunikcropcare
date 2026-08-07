@@ -38,10 +38,17 @@ export const ORYCMS_ADMIN_MENU: { section: string; items: OryCMSAdminModule[] }[
         children: [
           {
             section: "Commerce",
-            label: "Products",
+            label: "Product Listing",
             href: adminHref("/products"),
             slug: "products",
             description: "Manage product catalog items, variants, prices, and merchandising.",
+          },
+          {
+            section: "Commerce",
+            label: "Product Verification",
+            href: adminHref("/verification"),
+            slug: "verification",
+            description: "Manage product verification details, QR codes, and UIN generation.",
           },
           {
             section: "Commerce",
