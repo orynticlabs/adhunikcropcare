@@ -49,6 +49,7 @@ import { MetricCardSkeleton, Skeleton } from "../../../orycms/components/ui/skel
 
 import { cn, formatCurrency } from "@/lib/utils"
 import { ORYCMS_ADMIN_MENU, ORYCMS_ADMIN_SEARCH_ITEMS } from "@/lib/orycms/admin-menu"
+import { OryCMSDatePicker } from "@/components/orycms/custom-datepicker"
 
 
 
@@ -311,7 +312,9 @@ function DashboardShell({
   }, [])
 
   const sessionWarningSecondsRef = useRef<number | null>(null)
-  sessionWarningSecondsRef.current = sessionWarningSeconds
+  useEffect(() => {
+    sessionWarningSecondsRef.current = sessionWarningSeconds
+  }, [sessionWarningSeconds])
 
   useEffect(() => {
     if (!user || !roleName) return
@@ -890,8 +893,8 @@ function RevenueOverview({
           </div>
           {range === "custom" ? (
             <div className="flex flex-wrap items-center gap-2">
-              <input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="h-7 rounded-md border border-border bg-surface px-2 text-[12px] outline-none" />
-              <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="h-7 rounded-md border border-border bg-surface px-2 text-[12px] outline-none" />
+              <OryCMSDatePicker value={fromDate} onChange={setFromDate} className="w-32" triggerClassName="h-7 rounded-md text-[12px] px-2 bg-surface border border-border" />
+              <OryCMSDatePicker value={toDate} onChange={setToDate} className="w-32" triggerClassName="h-7 rounded-md text-[12px] px-2 bg-surface border border-border" />
             </div>
           ) : null}
         </div>

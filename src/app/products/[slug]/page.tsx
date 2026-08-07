@@ -50,7 +50,18 @@ function mapOryCMSProductToDetail(
   const packs =
     product.packSizes.length > 0
       ? product.packSizes
-      : [{ price: product.salePrice ?? product.price, size: `1 ${product.unit}` }]
+      : [
+          {
+            price: Number(product.salePrice ?? product.price),
+            mrp: Number(product.price),
+            salePrice: Number(product.salePrice ?? 0),
+            sku: product.sku,
+            batchNumber: "DEFAULT",
+            stockQuantity: product.stockQuantity,
+            size: `1 ${product.unit}`,
+            isDefault: true,
+          } as OryCMSProductDTO["packSizes"][number],
+        ]
   const targetPrice = product.salePrice && product.salePrice > 0 ? product.salePrice : product.price
   const defaultPackIndex = packs.findIndex((p) => Math.abs(Number(p.price) - Number(targetPrice)) < 0.01)
   const defaultOptionIndex = defaultPackIndex >= 0 ? defaultPackIndex : 0
@@ -67,6 +78,8 @@ function mapOryCMSProductToDetail(
       label: pack.size,
       originalPrice: comparePrice(original, original === pack.price ? 1.2 : 1),
       price: formatINR(pack.price),
+      sku: pack.sku || product.sku,
+      stockQuantity: pack.stockQuantity !== undefined ? pack.stockQuantity : product.stockQuantity,
     }
   })
 

@@ -1,10 +1,12 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import React from "react"
 import Link from "next/link"
-import { AlertTriangle, Download, Eye, FileSpreadsheet, FileText, ImageIcon, PackageSearch, Search } from "lucide-react"
+import { AlertTriangle, ChevronLeft, ChevronRight, Download, Eye, FileSpreadsheet, FileText, ImageIcon, PackageSearch, Search } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { OryCMSDatePicker } from "@/components/orycms/custom-datepicker"
 import { Skeleton } from "../../../orycms/components/ui/skeleton"
 import { cn, formatCurrency } from "@/lib/utils"
 
@@ -176,8 +178,18 @@ export function OryCMSInventoryAdmin() {
             <option value="all">All brands</option>
             {data?.filters.brands.map((item) => <option key={item} value={item}>{item}</option>)}
           </Select>
-          <input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none" />
-          <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none" />
+          <OryCMSDatePicker
+            placeholder="From Date"
+            value={dateFrom}
+            onChange={setDateFrom}
+            className="w-36 flex-1 sm:flex-none"
+          />
+          <OryCMSDatePicker
+            placeholder="To Date"
+            value={dateTo}
+            onChange={setDateTo}
+            className="w-36 flex-1 sm:flex-none"
+          />
           <Select value={sortBy} onChange={setSortBy}>
             <option value="updated-desc">Last updated</option>
             <option value="stock-asc">Stock low-high</option>
@@ -188,10 +200,10 @@ export function OryCMSInventoryAdmin() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-[1300px] w-full text-left text-[12.5px]">
+          <table className="min-w-[1000px] w-full text-left text-[12.5px]">
             <thead className="border-b border-border bg-surface-muted text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
               <tr>
-                {["Product Image", "Product Name", "SKU", "Category", "Brand", "Pack Size", "Current Stock", "Reserved", "Available", "Units Sold", "Reorder", "Status", "Last Restocked", "Last Updated", "Actions"].map((head) => (
+                {["Product Image", "Product Name", "Category", "Brand", "Current Stock", "Reserved", "Available", "Units Sold", "Reorder", "Status", "Last Restocked", "Last Updated", "Actions"].map((head) => (
                   <th key={head} className="px-4 py-3 font-medium">{head}</th>
                 ))}
               </tr>
@@ -200,7 +212,7 @@ export function OryCMSInventoryAdmin() {
               {loading && !data ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td colSpan={15} className="px-4 py-3">
+                    <td colSpan={13} className="px-4 py-3">
                       <Skeleton className="h-6 w-full rounded-md" />
                     </td>
                   </tr>
@@ -213,10 +225,8 @@ export function OryCMSInventoryAdmin() {
                     </div>
                   </td>
                   <td className="max-w-[220px] px-4 py-3 font-medium">{item.productName}</td>
-                  <td className="px-4 py-3 font-mono text-muted-foreground">{item.sku}</td>
                   <td className="px-4 py-3">{item.category}</td>
                   <td className="px-4 py-3">{item.brand || "—"}</td>
-                  <td className="max-w-[180px] px-4 py-3 text-muted-foreground">{item.packSize}</td>
                   <td className="num px-4 py-3 font-semibold">{item.currentStock}</td>
                   <td className="num px-4 py-3">{item.reservedStock}</td>
                   <td className="num px-4 py-3 font-semibold">{item.availableStock}</td>
@@ -232,7 +242,7 @@ export function OryCMSInventoryAdmin() {
                   </td>
                 </tr>
               )) : (
-                <tr><td colSpan={15} className="px-4 py-14 text-center text-muted-foreground">No inventory records match your filters.</td></tr>
+                <tr><td colSpan={13} className="px-4 py-14 text-center text-muted-foreground">No inventory records match your filters.</td></tr>
               )}
             </tbody>
           </table>
@@ -302,14 +312,28 @@ function Empty({ message }: { message: string }) {
 }
 
 function Select({ children, onChange, value }: { children: React.ReactNode; onChange: (value: string) => void; value: string }) {
-  const options = (Array.isArray(children) ? children : [children]).flatMap((child) => {
-    if (child && typeof child === "object" && "props" in child) {
-      const val = child.props.value !== undefined ? child.props.value : String(child.props.children || "")
-      const label = String(child.props.children || val)
-      return [{ label, value: String(val) }]
-    }
-    return []
-  })
+  const options: { label: string; value: string }[] = []
+  
+  const flattenChildren = (node: React.ReactNode) => {
+    React.Children.forEach(node, (child) => {
+      if (!child) return
+      if (Array.isArray(child)) {
+        flattenChildren(child)
+      } else if (child && typeof child === "object" && "props" in child) {
+        const element = child as React.ReactElement<{ value?: unknown; children?: React.ReactNode }>
+        if (element.type === React.Fragment) {
+          flattenChildren(element.props.children)
+        } else {
+          const val = element.props.value !== undefined ? element.props.value : String(element.props.children || "")
+          const label = String(element.props.children || val)
+          options.push({ label, value: String(val) })
+        }
+      }
+    })
+  }
+
+  flattenChildren(children)
+
   return <OryCMSSelect value={value} onChange={onChange} options={options} className="min-w-36 flex-1 sm:flex-none" />
 }
 
@@ -381,3 +405,4 @@ function escapeHtml(value: string) {
 function dateTime(value: string) {
   return new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
 }
+

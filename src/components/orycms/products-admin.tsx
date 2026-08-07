@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation"
 import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, GripVertical, ImageIcon, Loader2, Plus, RefreshCw, RotateCcw, Save, Search, Star, Trash2, Upload, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSMultiSelect, OryCMSSelect } from "@/components/orycms/custom-select"
+import { OryCMSDatePicker } from "@/components/orycms/custom-datepicker"
 import { RichTextEditor } from "@/components/orycms/rich-text-editor"
 import { TableSkeleton } from "../../../orycms/components/ui/skeleton"
 import { cn } from "@/lib/utils"
@@ -24,7 +25,21 @@ const ALLOWED_TYPES = new Set([
 ])
 
 type ProductImage = { id?: string; name?: string; url: string; packSizes?: string[] }
-type PackSize = { price: number; size: string; imageId?: string; imageUrl?: string; imageIds?: string[]; imageUrls?: string[] }
+type PackSize = {
+  price: number
+  mrp: number
+  salePrice: number
+  sku?: string
+  batchNumber?: string
+  stockQuantity: number
+  isDefault?: boolean
+  verifySlug?: string
+  size: string
+  imageId?: string
+  imageUrl?: string
+  imageIds?: string[]
+  imageUrls?: string[]
+}
 type ProductStatus = "draft" | "published"
 
 type Product = {
@@ -54,6 +69,24 @@ type Product = {
   tags: string[]
   unit: string
   updatedAt: string
+
+  // Verification fields
+  verifyDescription?: string
+  verifyImage?: ProductImage | null
+  mfgDate?: string
+  expiryDate?: string
+  packTiming?: string
+  packDate?: string
+  supervisorName?: string
+  contractorName?: string
+  literature?: string
+  msds?: string
+  license?: string
+  cir?: string
+  eprNumber?: string
+  plasticCategory?: string
+  leafletInfo?: string
+  uin?: string
 }
 
 type Meta = {
@@ -68,35 +101,35 @@ type Toast = {
 }
 
 const DEFAULT_UNITS = [
-  "Kg",
+  "KG",
   "L",
-  "ml",
-  "g",
-  "Bottle",
-  "Box",
+  "ML",
+  "G",
+  "BOTTLE",
+  "BOX",
 ];
 
 function getPackSizeUnitOptions(productUnit: string): string[] {
   const norm = (productUnit || "").trim().toLowerCase()
   if (norm === "kg") {
-    return ["Kg"]
+    return ["KG"]
   }
   if (norm === "g" || norm === "gram" || norm === "gm" || norm === "grams") {
-    return ["g", "Kg"]
+    return ["G", "KG"]
   }
   if (norm === "ml") {
-    return ["ml", "L"]
+    return ["ML", "L"]
   }
   if (norm === "l" || norm === "litre" || norm === "liter" || norm === "litres") {
     return ["L"]
   }
   if (norm === "box" || norm === "boxes") {
-    return ["Box"]
+    return ["BOX"]
   }
   if (norm === "bottle" || norm === "bottles") {
-    return ["Bottle"]
+    return ["BOTTLE"]
   }
-  return productUnit ? [productUnit] : ["Kg", "g", "L", "ml", "Bottle", "Box"]
+  return productUnit ? [productUnit.toUpperCase()] : ["KG", "G", "L", "ML", "BOTTLE", "BOX"]
 }
 
 function parsePackSize(sizeStr: string, allowedUnits: string[]): { qty: string; unit: string } {
@@ -135,7 +168,7 @@ const emptyProduct: Product = {
   metaDescription: "",
   metaTitle: "",
   name: "",
-  packSizes: [{ price: 0, size: "" }],
+  packSizes: [{ size: "", mrp: 0, salePrice: 0, stockQuantity: 0, isDefault: true, price: 0 }],
   packSizeImagesEnabled: false,
   price: 0,
   salePrice: null,
@@ -147,8 +180,26 @@ const emptyProduct: Product = {
   status: "published",
   stockQuantity: 0,
   tags: [],
-  unit: "Kg",
+  unit: "KG",
   updatedAt: "",
+
+  // Verification fields
+  verifyDescription: "",
+  verifyImage: null,
+  mfgDate: "",
+  expiryDate: "",
+  packTiming: "09:00 AM",
+  packDate: "",
+  supervisorName: "",
+  contractorName: "",
+  literature: "",
+  msds: "",
+  license: "",
+  cir: "",
+  eprNumber: "",
+  plasticCategory: "",
+  leafletInfo: "",
+  uin: "",
 }
 
 export function OryCMSProductsList() {
@@ -679,8 +730,43 @@ export function OryCMSProductForm({ id }: { id?: string }) {
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<Toast | null>(null)
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  const [verifyUploadProgress, setVerifyUploadProgress] = useState<number | null>(null)
+  const verifyFileInputRef = useRef<HTMLInputElement>(null)
   const effectiveId = id ?? savedId
   const editing = Boolean(effectiveId)
+  const origin = typeof window !== "undefined" ? window.location.origin : ""
+
+  const parsedTime = useMemo(() => {
+    const match = (product.packTiming || "").match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i)
+    return {
+      hour: match ? match[1] : "09",
+      minute: match ? match[2] : "00",
+      period: match ? match[3].toUpperCase() : "AM"
+    }
+  }, [product.packTiming])
+
+  const updatePackTiming = (key: "hour" | "minute" | "period", val: string) => {
+    const hour = key === "hour" ? val : parsedTime.hour
+    const minute = key === "minute" ? val : parsedTime.minute
+    const period = key === "period" ? val : parsedTime.period
+    patch({ packTiming: `${hour}:${minute} ${period}` })
+  }
+
+  function ensureDefaultPackSize(prod: Product): Product {
+    if (prod.packSizes && prod.packSizes.length > 0) {
+      const hasDefault = prod.packSizes.some((p) => p.isDefault)
+      if (!hasDefault) {
+        return {
+          ...prod,
+          packSizes: prod.packSizes.map((p, idx) => ({
+            ...p,
+            isDefault: idx === 0,
+          })),
+        }
+      }
+    }
+    return prod
+  }
 
   useEffect(() => {
     setSavedId(id ?? "")
@@ -691,13 +777,13 @@ export function OryCMSProductForm({ id }: { id?: string }) {
       fetch(`/api/orycms/products/${id}`)
         .then((response) => response.json())
         .then((json) => {
-          if (json.success) setProduct(json.data)
+          if (json.success) setProduct(ensureDefaultPackSize(json.data))
           else showToast(json.error?.message ?? "Product not found.", "error")
         })
         .catch(() => showToast("Product not found.", "error"))
         .finally(() => setProductLoading(false))
     } else {
-      setProduct(emptyProduct)
+      setProduct(ensureDefaultPackSize(emptyProduct))
       setProductLoading(false)
     }
   }, [id])
@@ -707,16 +793,17 @@ export function OryCMSProductForm({ id }: { id?: string }) {
 
     if (json.success) {
       setMeta(json.data)
-      setProduct((current) =>
-        current.category || json.data.categories.length === 0
+      setProduct((current) => {
+        const nextProd = current.category || json.data.categories.length === 0
           ? current
-          : { ...current, category: json.data.categories[0] },
-      )
+          : { ...current, category: json.data.categories[0] }
+        return ensureDefaultPackSize(nextProd)
+      })
     }
   }
 
   function patch(next: Partial<Product>) {
-    setProduct((current) => ({ ...current, ...next }))
+    setProduct((current) => ensureDefaultPackSize({ ...current, ...next }))
   }
 
   function showToast(message: string, type: Toast["type"]) {
@@ -754,11 +841,38 @@ export function OryCMSProductForm({ id }: { id?: string }) {
 
   async function uploadImage(file?: File) {
     if (!file) return
+    if (product.images.length >= 5) {
+      showToast("You can upload a maximum of 5 product images.", "error")
+      return
+    }
 
     const validationError = validateImageFile(file)
 
     if (validationError) {
       showToast(`${file.name}: ${validationError}`, "error")
+      return
+    }
+
+    try {
+      const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const img = new window.Image()
+        img.src = URL.createObjectURL(file)
+        img.onload = () => {
+          resolve({ width: img.width, height: img.height })
+          URL.revokeObjectURL(img.src)
+        }
+        img.onerror = () => {
+          reject(new Error("Unable to read image dimensions."))
+          URL.revokeObjectURL(img.src)
+        }
+      })
+
+      if (dimensions.width !== 1200 || dimensions.height !== 1200) {
+        showToast(`Product image must be exactly 1200 × 1200 px. (Current: ${dimensions.width} × ${dimensions.height} px)`, "error")
+        return
+      }
+    } catch (err) {
+      showToast("Unable to verify image dimensions.", "error")
       return
     }
 
@@ -788,9 +902,70 @@ export function OryCMSProductForm({ id }: { id?: string }) {
     }
   }
 
+  async function uploadVerifyImage(file?: File) {
+    if (!file) return
+    if (product.verifyImage) {
+      showToast("Only one verification image can be selected. Please remove the existing image first.", "error")
+      return
+    }
+
+    const validationError = validateImageFile(file)
+    if (validationError) {
+      showToast(`${file.name}: ${validationError}`, "error")
+      return
+    }
+
+    try {
+      const dimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const img = new window.Image()
+        img.src = URL.createObjectURL(file)
+        img.onload = () => {
+          resolve({ width: img.width, height: img.height })
+          URL.revokeObjectURL(img.src)
+        }
+        img.onerror = () => {
+          reject(new Error("Unable to read image dimensions."))
+          URL.revokeObjectURL(img.src)
+        }
+      })
+
+      if (dimensions.width !== 1200 || dimensions.height !== 1200) {
+        showToast(`Verification image must be exactly 1200 × 1200 px. (Current: ${dimensions.width} × ${dimensions.height} px)`, "error")
+        return
+      }
+    } catch (err) {
+      showToast("Unable to verify image dimensions.", "error")
+      return
+    }
+
+    try {
+      const asset = await uploadProductImage(file, file.name, setVerifyUploadProgress)
+      const image = {
+        id: asset.id,
+        name: asset.original_filename ?? file.name,
+        url: asset.secure_url,
+      }
+
+      setProduct((current) => ({
+        ...current,
+        verifyImage: image,
+      }))
+      showToast("Verification image uploaded successfully.", "success")
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Upload failed.", "error")
+    } finally {
+      setVerifyUploadProgress(null)
+    }
+  }
+
   function toggleImage(image: ProductImage) {
+    const isSelected = product.images.some((item) => item.url === image.url)
+    if (!isSelected && product.images.length >= 5) {
+      showToast("You can select a maximum of 5 product images.", "error")
+      return
+    }
     patch({
-      images: product.images.some((item) => item.url === image.url)
+      images: isSelected
         ? product.images.filter((item) => item.url !== image.url)
         : [...product.images, image],
     })
@@ -856,30 +1031,33 @@ export function OryCMSProductForm({ id }: { id?: string }) {
       {!productLoading ? (
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-5">
-          <Card title="Product details">
-            <Field label="Product Name*" value={product.name} onChange={(name) => patch({ name })} />
-            <label className="block space-y-1.5">
-              <span className="text-[12px] font-medium">Slug*</span>
-              <input
-                value={product.slug || "Auto alphanumeric after save"}
-                readOnly
-                className="h-9 w-full cursor-not-allowed rounded-lg border border-border bg-surface-muted px-3 text-[13px] text-muted-foreground outline-none"
-              />
-            </label>
+           <Card title="Product details">
+            <Field label="Product Name*" value={product.name} onChange={(name) => patch({ name })} placeholder="e.g. Adhunik Leaf Care" />
+            {editing ? (
+              <label className="block space-y-1.5">
+                <span className="text-[12px] font-medium">Slug*</span>
+                <input
+                  value={product.slug || ""}
+                  readOnly
+                  className="h-9 w-full cursor-not-allowed rounded-lg border border-border bg-surface-muted px-3 text-[13px] text-muted-foreground outline-none"
+                />
+              </label>
+            ) : null}
             <LimitedField
               label="Short Description*"
               value={product.shortDescription}
               onChange={(shortDescription) => patch({ shortDescription })}
+              placeholder="e.g. Highly effective crop care formulation for maximum yield."
               maxLength={85}
             />
-            <label className="block space-y-1.5">
+            <div className="space-y-1.5">
               <span className="text-[12px] font-medium">Full Description</span>
               <RichTextEditor
                 value={product.fullDescription}
                 onChange={(fullDescription) => patch({ fullDescription })}
                 placeholder="Rich text content. Use headings, bold, lists, tables, links, and images."
               />
-            </label>
+            </div>
           </Card>
 
           <Card title="Storefront content">
@@ -889,38 +1067,34 @@ export function OryCMSProductForm({ id }: { id?: string }) {
               collapsible accordions. Format with the rich text toolbar. Leave blank
               to fall back to defaults.
             </p>
-            <label className="block space-y-1.5">
+            <div className="space-y-1.5">
               <span className="text-[12px] font-medium">Product Specifications</span>
               <RichTextEditor
                 value={product.specifications}
                 onChange={(specifications) => patch({ specifications })}
                 placeholder="e.g. Weight: 60g · Quantity: 20 sticks · Lasts: Up to 60 days"
               />
-            </label>
-            <label className="block space-y-1.5">
+            </div>
+            <div className="space-y-1.5">
               <span className="text-[12px] font-medium">How to Use</span>
               <RichTextEditor
                 value={product.howToUse}
                 onChange={(howToUse) => patch({ howToUse })}
                 placeholder="Step-by-step usage instructions."
               />
-            </label>
-            <label className="block space-y-1.5">
+            </div>
+            <div className="space-y-1.5">
               <span className="text-[12px] font-medium">Shipping &amp; Returns</span>
               <RichTextEditor
                 value={product.shippingReturns}
                 onChange={(shippingReturns) => patch({ shippingReturns })}
                 placeholder="Free shipping on orders above ₹499. 30-day replacement for damaged products."
               />
-            </label>
+            </div>
           </Card>
 
           <Card title="Pricing, stock, variants">
-            <div className="grid gap-3 md:grid-cols-3">
-              <Field label="SKU*" value={product.sku} onChange={(sku) => patch({ sku })} />
-              <NumberField label="MRP*" value={product.price} onChange={(price) => patch({ price })} />
-              <NumberField label="Sale Price" value={product.salePrice ?? 0} onChange={(salePrice) => patch({ salePrice: salePrice || null })} />
-              <NumberField label="Stock Quantity*" value={product.stockQuantity} onChange={(stockQuantity) => patch({ stockQuantity })} />
+            <div className="grid gap-3 md:grid-cols-2">
               <OryCMSSelect
                 label="Unit*"
                 value={product.unit}
@@ -950,71 +1124,15 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                   <div className="text-[13px] font-semibold text-foreground">
                     Enable pack-size-specific images (optional)
                   </div>
-                  <div className="text-[11.5px] text-muted-foreground">
-                    Allows associating specific images with individual pack sizes. If unassigned or disabled, default product images are shown.
+                  <div className="text-[12px] text-muted-foreground">
+                    Let storefront customers filter product pictures and view different image sets for each pack size.
                   </div>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(product.packSizeImagesEnabled)}
-                    onChange={(event) => patch({ packSizeImagesEnabled: event.target.checked })}
-                    className="peer sr-only"
-                  />
-                  <div className="peer h-6 w-11 rounded-full bg-border after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-all after:content-[''] peer-checked:bg-[#689c30] peer-checked:after:translate-x-full peer-focus:outline-none" />
-                </label>
+                <Toggle
+                  checked={Boolean(product.packSizeImagesEnabled)}
+                  onChange={(checked) => patch({ packSizeImagesEnabled: checked })}
+                />
               </div>
-
-              <div className="flex items-center justify-between">
-                <div className="text-[12px] font-medium">Pack Sizes*</div>
-                <span className="text-[11px] text-muted-foreground">
-                  Allowed units for {product.unit || "unit"}: {getPackSizeUnitOptions(product.unit).join(", ")}
-                </span>
-              </div>
-
-              {(() => {
-                const effectiveTargetPrice = product.salePrice && product.salePrice > 0 ? product.salePrice : product.price
-                const targetPriceLabel = product.salePrice && product.salePrice > 0 ? "Sale Price" : "MRP"
-                const hasMatchingPackPrice = product.packSizes.some(
-                  (p) => p.size.trim() && Number.isFinite(p.price) && Math.abs(p.price - effectiveTargetPrice) < 0.01
-                )
-
-                if (effectiveTargetPrice <= 0) return null
-
-                return hasMatchingPackPrice ? (
-                  <div className="rounded-lg border border-[#689c30]/40 bg-[#eff4e9] px-3 py-2 text-[12px] font-medium text-[#033927] flex items-center gap-2">
-                    <Check className="h-4 w-4 text-[#689c30] shrink-0" />
-                    <span>
-                      A pack size matching the product {targetPriceLabel} (<strong>₹{effectiveTargetPrice}</strong>) is set as default for storefront customers.
-                    </span>
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[12px] text-amber-800 dark:text-amber-300 flex items-center justify-between gap-2 flex-wrap">
-                    <span>
-                      ⚠️ <strong>Price Match Required:</strong> At least one pack size price must equal ₹{effectiveTargetPrice} (matching product {targetPriceLabel}).
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const allowed = getPackSizeUnitOptions(product.unit)
-                        const defUnit = allowed[0] || "Kg"
-                        if (product.packSizes.length > 0 && product.packSizes[0].size.trim()) {
-                          patch({
-                            packSizes: product.packSizes.map((p, i) => (i === 0 ? { ...p, price: effectiveTargetPrice } : p)),
-                          })
-                        } else {
-                          patch({
-                            packSizes: [...product.packSizes.filter((p) => p.size.trim()), { price: effectiveTargetPrice, size: formatPackSize("1", defUnit) }],
-                          })
-                        }
-                      }}
-                      className="rounded-md bg-amber-600 px-2.5 py-1 text-[11.5px] font-semibold text-white hover:bg-amber-700 transition-colors cursor-pointer"
-                    >
-                      Set Pack Price to ₹{effectiveTargetPrice}
-                    </button>
-                  </div>
-                )
-              })()}
 
               <div className="space-y-3">
                 {product.packSizes.map((pack, index) => {
@@ -1022,67 +1140,140 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                   const parsed = parsePackSize(pack.size, allowedUnits)
 
                   return (
-                    <div key={index} className="space-y-2 rounded-lg border border-border/80 bg-surface/50 p-3">
-                      <div className="grid gap-2 md:grid-cols-[1fr_110px_140px_38px] items-center">
-                        {/* Numeric Pack Quantity */}
-                        <input
-                          type="number"
-                          step="any"
-                          min="0"
-                          value={parsed.qty}
-                          onChange={(event) => {
-                            const val = event.target.value
-                            const newSize = formatPackSize(val, parsed.unit)
-                            patch({
-                              packSizes: product.packSizes.map((item, itemIndex) =>
-                                itemIndex === index ? { ...item, size: newSize } : item,
-                              ),
-                            })
-                          }}
-                          placeholder="Qty (e.g. 5)"
-                          className="h-9 rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
-                        />
+                    <div key={index} className="space-y-3 rounded-lg border border-border/80 bg-surface/50 p-4">
+                      {/* Row 1: Size Qty, Unit, Remove */}
+                      <div className="grid gap-3 md:grid-cols-[120px_130px_auto] items-end">
+                        <div className="flex flex-col space-y-1">
+                          <span className="text-[11px] font-semibold text-muted-foreground">Qty</span>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0"
+                            value={parsed.qty}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(event) => {
+                              const val = event.target.value
+                              const newSize = formatPackSize(val, parsed.unit)
+                              patch({
+                                packSizes: product.packSizes.map((item, itemIndex) =>
+                                  itemIndex === index ? { ...item, size: newSize } : item,
+                                ),
+                              })
+                            }}
+                            placeholder="Qty (e.g. 5)"
+                            className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
+                          />
+                        </div>
 
-                        {/* Unit Select Dropdown */}
-                        <OryCMSSelect
-                          value={parsed.unit}
-                          onChange={(newUnit) => {
-                            const newSize = formatPackSize(parsed.qty, newUnit)
-                            patch({
-                              packSizes: product.packSizes.map((item, itemIndex) =>
-                                itemIndex === index ? { ...item, size: newSize } : item,
-                              ),
-                            })
-                          }}
-                          options={allowedUnits.map((u) => ({ label: u, value: u }))}
-                          placeholder="Unit"
-                          className="w-full"
-                        />
+                        <div className="flex flex-col space-y-1">
+                          <span className="text-[11px] font-semibold text-muted-foreground">Unit</span>
+                          <OryCMSSelect
+                            value={parsed.unit}
+                            onChange={(newUnit) => {
+                              const newSize = formatPackSize(parsed.qty, newUnit)
+                              patch({
+                                packSizes: product.packSizes.map((item, itemIndex) =>
+                                  itemIndex === index ? { ...item, size: newSize } : item,
+                                ),
+                              })
+                            }}
+                            options={allowedUnits.map((u) => ({ label: u, value: u }))}
+                            placeholder="Unit"
+                            className="w-full"
+                          />
+                        </div>
 
-                        {/* Pack Price */}
-                        <input
-                          type="number"
-                          value={pack.price || ""}
-                          onChange={(event) =>
-                            patch({
-                              packSizes: product.packSizes.map((item, itemIndex) =>
-                                itemIndex === index ? { ...item, price: Number(event.target.value) } : item,
-                              ),
-                            })
-                          }
-                          placeholder="Price (₹)"
-                          className="h-9 rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
-                        />
+                        <div className="flex flex-col space-y-1">
+                          <button
+                            type="button"
+                            onClick={() => patch({ packSizes: product.packSizes.filter((_, i) => i !== index) })}
+                            className="grid h-9 w-9 place-items-center rounded-lg border border-border text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                            title="Remove pack size"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
 
-                        {/* Delete Pack Size Button */}
-                        <button
-                          type="button"
-                          onClick={() => patch({ packSizes: product.packSizes.filter((_, i) => i !== index) })}
-                          className="grid h-9 w-9 place-items-center rounded-lg border border-border text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
-                          title="Remove pack size"
-                        >
-                          <X className="h-3.5 w-3.5" />
-                        </button>
+                      {/* Row 2: MRP, Sale Price, Stock, Default Toggle */}
+                      <div className="grid gap-3 md:grid-cols-4 items-center">
+                        <div className="flex flex-col space-y-1">
+                          <span className="text-[11px] font-semibold text-muted-foreground">MRP (₹)*</span>
+                          <input
+                            type="number"
+                            required
+                            value={pack.mrp || ""}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(event) =>
+                              patch({
+                                packSizes: product.packSizes.map((item, itemIndex) =>
+                                  itemIndex === index ? { ...item, mrp: Number(event.target.value) } : item,
+                                ),
+                              })
+                            }
+                            placeholder="e.g. 500"
+                            className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
+                          />
+                        </div>
+
+                        <div className="flex flex-col space-y-1">
+                          <span className="text-[11px] font-semibold text-muted-foreground">Sale Price (USP) (₹)*</span>
+                          <input
+                            type="number"
+                            required
+                            value={pack.salePrice || ""}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(event) =>
+                              patch({
+                                packSizes: product.packSizes.map((item, itemIndex) =>
+                                  itemIndex === index ? { ...item, salePrice: Number(event.target.value) } : item,
+                                ),
+                              })
+                            }
+                            placeholder="e.g. 450"
+                            className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
+                          />
+                        </div>
+
+                        <div className="flex flex-col space-y-1">
+                          <span className="text-[11px] font-semibold text-muted-foreground">Stock Quantity*</span>
+                          <input
+                            type="number"
+                            required
+                            value={pack.stockQuantity !== undefined ? pack.stockQuantity : ""}
+                            onFocus={(e) => e.target.select()}
+                            onChange={(event) =>
+                              patch({
+                                packSizes: product.packSizes.map((item, itemIndex) =>
+                                  itemIndex === index ? { ...item, stockQuantity: Number(event.target.value) } : item,
+                                ),
+                              })
+                            }
+                            placeholder="e.g. 100"
+                            className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition focus:border-primary"
+                          />
+                        </div>
+
+                        <div className="flex items-center space-x-2 pt-5">
+                          <input
+                            type="radio"
+                            name="default_pack_size"
+                            id={`default_pack_${index}`}
+                            checked={Boolean(pack.isDefault)}
+                            onChange={() => {
+                              patch({
+                                packSizes: product.packSizes.map((item, itemIndex) => ({
+                                  ...item,
+                                  isDefault: itemIndex === index,
+                                })),
+                              })
+                            }}
+                            className="h-4 w-4 accent-[#FF5A20] cursor-pointer"
+                          />
+                          <label htmlFor={`default_pack_${index}`} className="text-[12px] font-medium text-foreground cursor-pointer select-none">
+                            Storefront Default
+                          </label>
+                        </div>
                       </div>
 
                       {product.packSizeImagesEnabled && (
@@ -1181,7 +1372,7 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                 onClick={() => {
                   const allowed = getPackSizeUnitOptions(product.unit)
                   const defUnit = allowed[0] || "Kg"
-                  patch({ packSizes: [...product.packSizes, { price: 0, size: formatPackSize("", defUnit) }] })
+                  patch({ packSizes: [...product.packSizes, { mrp: 0, salePrice: 0, stockQuantity: 0, isDefault: false, price: 0, size: formatPackSize("", defUnit) }] })
                 }}
                 className="h-8 rounded-lg border border-border px-3 text-[12px] hover:bg-accent transition-colors cursor-pointer"
               >
@@ -1192,7 +1383,7 @@ export function OryCMSProductForm({ id }: { id?: string }) {
 
           <Card title="SEO and taxonomy">
             <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Brand" value={product.brand} onChange={(brand) => patch({ brand })} />
+              <Field label="Brand" value={product.brand} onChange={(brand) => patch({ brand })} placeholder="e.g. Adhunik" />
               <div>
                 <OryCMSSelect
                   label="Category*"
@@ -1210,9 +1401,9 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                 ) : null}
               </div>
             </div>
-            <Field label="Tags" value={product.tags.join(", ")} onChange={(value) => patch({ tags: value.split(",") })} />
-            <Field label="Meta Title" value={product.metaTitle} onChange={(metaTitle) => patch({ metaTitle })} />
-            <Field label="Meta Description" value={product.metaDescription} onChange={(metaDescription) => patch({ metaDescription })} />
+            <Field label="Tags" value={product.tags.join(", ")} onChange={(value) => patch({ tags: value.split(",") })} placeholder="e.g. organic, fertilizer, cropcare" />
+            <Field label="Meta Title" value={product.metaTitle} onChange={(metaTitle) => patch({ metaTitle })} placeholder="e.g. Buy Organic Leaf Fertilizer | Adhunik Crop Care" />
+            <Field label="Meta Description" value={product.metaDescription} onChange={(metaDescription) => patch({ metaDescription })} placeholder="e.g. Best organic leaf fertilizer formulation for maximizing rice and wheat yields." />
           </Card>
         </div>
 
@@ -1253,9 +1444,15 @@ export function OryCMSProductForm({ id }: { id?: string }) {
             <div className="grid gap-2 sm:grid-cols-2">
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => {
+                  if (product.images.length >= 5) {
+                    showToast("You can upload a maximum of 5 product images.", "error")
+                    return
+                  }
+                  fileInputRef.current?.click()
+                }}
                 disabled={uploadProgress !== null}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-foreground px-3 text-[12.5px] font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-foreground px-3 text-[12.5px] font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer select-none"
               >
                 {uploadProgress !== null ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
                 {uploadProgress !== null ? `Uploading ${uploadProgress}%` : "Upload Image"}
@@ -1263,10 +1460,14 @@ export function OryCMSProductForm({ id }: { id?: string }) {
               <button
                 type="button"
                 onClick={() => {
+                  if (product.images.length >= 5) {
+                    showToast("You can select a maximum of 5 product images.", "error")
+                    return
+                  }
                   void loadMeta()
                   setMediaPickerOpen(true)
                 }}
-                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer select-none"
               >
                 <ImageIcon className="h-3.5 w-3.5" />
                 Media
@@ -1362,34 +1563,34 @@ function validateProduct(product: Product): string | null {
   if (!product.shortDescription.trim()) return "Short Description is required."
   if (product.shortDescription.length > 85) return "Short Description must be 85 characters or fewer."
   if (!product.category.trim()) return "Category is required."
-  if (!product.sku.trim()) return "SKU is required."
   if (!product.unit.trim()) return "Unit is required."
-  if (!Number.isFinite(product.price) || product.price <= 0) return "MRP is required."
-  if (!Number.isFinite(product.stockQuantity) || product.stockQuantity <= 0) return "Stock Quantity is required."
+  
   if (!product.images || product.images.length === 0) return "At least one product image is required."
-  if (
-    !product.packSizes ||
-    product.packSizes.length === 0 ||
-    !product.packSizes.some((p) => p.size.trim() && Number.isFinite(p.price) && p.price > 0)
-  ) {
-    return "At least one valid pack size (with size and price > 0) is required."
+  if (!product.packSizes || product.packSizes.length === 0) {
+    return "At least one valid pack size is required."
   }
-  const targetPrice = product.salePrice && product.salePrice > 0 ? product.salePrice : product.price
-  const priceTypeLabel = product.salePrice && product.salePrice > 0 ? "Sale Price" : "MRP"
-  const hasMatchingPack = product.packSizes.some(
-    (p) => p.size.trim() && Number.isFinite(p.price) && Math.abs(p.price - targetPrice) < 0.01
-  )
-  if (!hasMatchingPack) {
-    return `At least one pack size price must equal ₹${targetPrice} (matching product ${priceTypeLabel}).`
+
+  // Each pack size validation
+  for (const pack of product.packSizes) {
+    if (!pack.size.trim()) return "Pack size label is required."
+    if (!Number.isFinite(pack.mrp) || pack.mrp <= 0) return "MRP for pack size " + pack.size + " must be greater than 0."
+    if (!Number.isFinite(pack.salePrice) || pack.salePrice <= 0) return "Sale Price for pack size " + pack.size + " must be greater than 0."
+    if (pack.salePrice > pack.mrp) return "Sale Price for pack size " + pack.size + " cannot exceed MRP."
+    if (!Number.isFinite(pack.stockQuantity) || pack.stockQuantity < 0) return "Stock Quantity for pack size " + pack.size + " must be 0 or more."
   }
-  if (product.packSizeImagesEnabled) {
-    const hasBasePricePack = product.packSizes.some(
-      (p) => p.size.trim() && Number.isFinite(p.price) && (Math.abs(p.price - product.price) < 0.01 || Math.abs(p.price - targetPrice) < 0.01)
-    )
-    if (!hasBasePricePack) {
-      return "When pack-size-specific images are enabled, at least one pack size must match the product base price."
-    }
+
+  let defaultPacks = product.packSizes.filter((p) => p.isDefault)
+  if (defaultPacks.length === 0 && product.packSizes.length > 0) {
+    product.packSizes[0].isDefault = true
+    defaultPacks = [product.packSizes[0]]
   }
+  if (defaultPacks.length !== 1) {
+    product.packSizes.forEach((p, idx) => {
+      p.isDefault = idx === product.packSizes.findIndex((x) => x.isDefault)
+    })
+    defaultPacks = product.packSizes.filter((p) => p.isDefault)
+  }
+
   return null
 }
 
@@ -1988,3 +2189,36 @@ function formatDateTime(value?: string) {
     timeStyle: "short",
   }).format(new Date(value))
 }
+
+function Toggle({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean
+  onChange: (checked: boolean) => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:opacity-60",
+        checked ? "bg-[#FF5A20]" : "bg-neutral-200",
+      )}
+    >
+      <span
+        className={cn(
+          "inline-block h-4 w-4 transform rounded-full bg-background shadow transition-transform",
+          checked ? "translate-x-4" : "translate-x-0.5",
+        )}
+      />
+    </button>
+  )
+}
+
+

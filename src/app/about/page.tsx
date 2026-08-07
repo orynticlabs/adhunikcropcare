@@ -68,10 +68,10 @@ const VALUES = [
 ]
 
 const MILESTONES = [
-  ["180+", "Projects developed"],
-  ["7,500+", "Satisfied clients"],
-  ["115+", "Team members"],
-  ["100%", "Service commitment"],
+  ["300+", "Products offered"],
+  ["4,000+", "Dealers & distributors"],
+  ["10,000+", "Happy farmers"],
+  ["500", "Team members"],
 ]
 
 const PROMISES = [

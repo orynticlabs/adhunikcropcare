@@ -31,6 +31,19 @@ export function OryCMSSelect({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const containerRef = useRef<HTMLDivElement>(null)
+  const [align, setAlign] = useState<"left" | "right">("left")
+
+  useEffect(() => {
+    if (open && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      const spaceRight = window.innerWidth - rect.left
+      if (spaceRight < 300) {
+        setAlign("right")
+      } else {
+        setAlign("left")
+      }
+    }
+  }, [open])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -84,7 +97,10 @@ export function OryCMSSelect({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-[calc(100%+4px)] z-50 min-w-full w-max max-w-xs rounded-xl border border-border bg-popover text-popover-foreground p-1.5 shadow-xl opacity-100 animate-in fade-in-0 zoom-in-95">
+        <div className={cn(
+          "absolute top-[calc(100%+4px)] z-50 min-w-full w-max max-w-xs rounded-xl border border-border bg-popover text-popover-foreground p-1.5 shadow-xl opacity-100 animate-in fade-in-0 zoom-in-95",
+          align === "right" ? "right-0 left-auto" : "left-0"
+        )}>
           {searchable ? (
             <div className="relative mb-1.5">
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -162,6 +178,19 @@ export function OryCMSMultiSelect({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const containerRef = useRef<HTMLDivElement>(null)
+  const [align, setAlign] = useState<"left" | "right">("left")
+
+  useEffect(() => {
+    if (open && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      const spaceRight = window.innerWidth - rect.left
+      if (spaceRight < 340) {
+        setAlign("right")
+      } else {
+        setAlign("left")
+      }
+    }
+  }, [open])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -231,7 +260,10 @@ export function OryCMSMultiSelect({
       </button>
 
       {open && (
-        <div className="absolute left-0 top-[calc(100%+4px)] z-50 min-w-[240px] w-full max-w-sm rounded-xl border border-border bg-popover text-popover-foreground p-1.5 shadow-xl opacity-100 animate-in fade-in-0 zoom-in-95">
+        <div className={cn(
+          "absolute top-[calc(100%+4px)] z-50 min-w-[240px] w-full max-w-sm rounded-xl border border-border bg-popover text-popover-foreground p-1.5 shadow-xl opacity-100 animate-in fade-in-0 zoom-in-95",
+          align === "right" ? "right-0 left-auto" : "left-0"
+        )}>
           {searchable ? (
             <div className="relative mb-1.5">
               <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { AlertTriangle, BarChart3, Brain, CalendarDays, Package, RefreshCw, ShoppingBag, TrendingUp, Users } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { OryCMSDatePicker } from "@/components/orycms/custom-datepicker"
 import { MetricCardSkeleton } from "../../../orycms/components/ui/skeleton"
 import { cn, formatCurrency } from "@/lib/utils"
 
@@ -86,8 +87,8 @@ export function OryCMSAnalyticsDashboard() {
           />
           {range === "custom" ? (
             <>
-              <input type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none" />
-              <input type="date" value={to} onChange={(event) => setTo(event.target.value)} className="h-9 rounded-lg border border-border bg-surface px-3 text-[12.5px] outline-none" />
+              <OryCMSDatePicker value={from} onChange={setFrom} className="w-32" />
+              <OryCMSDatePicker value={to} onChange={setTo} className="w-32" />
             </>
           ) : null}
           <button type="button" onClick={() => void load(false)} className="inline-flex h-9 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-[12.5px] font-medium transition-colors hover:bg-accent">

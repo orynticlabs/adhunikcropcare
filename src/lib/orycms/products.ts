@@ -1,3 +1,4 @@
+import crypto from "crypto"
 import { Prisma } from "@prisma/client"
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache"
 import { orycmsPrisma } from "@/lib/orycms/prisma"
@@ -41,6 +42,22 @@ type OryCMSProductRow = {
   tags: Prisma.JsonValue
   unit: string
   updated_at: Date
+  verify_description: string | null
+  verify_image: Prisma.JsonValue
+  mfg_date: Date | null
+  expiry_date: Date | null
+  pack_timing: string | null
+  pack_date: Date | null
+  supervisor_name: string | null
+  contractor_name: string | null
+  literature: string | null
+  msds: string | null
+  license: string | null
+  cir: string | null
+  epr_number: string | null
+  plastic_category: string | null
+  leaflet_info: string | null
+  uin: string | null
 }
 
 const fallbackImage =
@@ -120,8 +137,39 @@ export async function getPublishedOryCMSProductBySlug(slug: string) {
 export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) {
   await ensureOryCMSProductsSchema()
 
-  const payload = validateProductInput(input)
+  // Generate a client-side UUID if this is a new product to prevent chicken-and-egg snapshot creation
+  const finalProductId = id || crypto.randomUUID()
+
+  // Load existing product if ID exists to preserve details
+  let existingProduct: any = null
+  let existingPackSizes: any[] = []
+  if (id) {
+    const [existing] = await orycmsPrisma.$queryRaw<any[]>`
+      SELECT * FROM orycms_products WHERE id = ${id}::uuid LIMIT 1
+    `
+    if (existing) {
+      existingProduct = existing
+      existingPackSizes = normalizePackSizes(existing.pack_sizes).packSizes
+    }
+  }
+
+  // Generate UIN if we are explicitly updating verification, and UIN is not yet set
+  let uin = input.uin?.trim() || existingProduct?.uin || ""
+  if (input.isVerificationUpdate && !uin) {
+    uin = await generateUniqueProductUIN()
+  }
+
+  // Validate the inputs and copy default pack sizes parameters to product top-level properties
+  const payload = validateProductInput({ ...input, uin }, existingProduct, existingPackSizes)
   const slug = payload.slug || (await nextAlphanumericSlug())
+
+  // Generate pack-size specific snapshots (and URLs) if details have changed
+  let packSizesWithSlugs = payload.packSizes
+  if (uin && (input.isVerificationUpdate || existingProduct?.uin)) {
+    packSizesWithSlugs = await processVerificationSnapshots(finalProductId, uin, payload)
+  }
+  payload.packSizes = packSizesWithSlugs
+
   const data = toPrismaProductData({ ...payload, slug })
 
   const [product] = id
@@ -148,12 +196,29 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
           stock_quantity = ${data.stockQuantity},
           tags = ${JSON.stringify(payload.tags)}::jsonb,
           unit = ${data.unit},
+          verify_description = ${data.verifyDescription},
+          verify_image = ${data.verifyImage ? JSON.stringify(data.verifyImage) : null}::jsonb,
+          mfg_date = ${data.mfgDate ? data.mfgDate : null}::date,
+          expiry_date = ${data.expiryDate ? data.expiryDate : null}::date,
+          pack_timing = ${data.packTiming},
+          pack_date = ${data.packDate ? data.packDate : null}::date,
+          supervisor_name = ${data.supervisorName},
+          contractor_name = ${data.contractorName},
+          literature = ${data.literature},
+          msds = ${data.msds},
+          license = ${data.license},
+          cir = ${data.cir},
+          epr_number = ${data.eprNumber},
+          plastic_category = ${data.plasticCategory},
+          leaflet_info = ${data.leafletInfo},
+          uin = ${data.uin},
           updated_at = now()
-        WHERE id = ${id}::uuid
+        WHERE id = ${finalProductId}::uuid
         RETURNING *
       `
     : await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
         INSERT INTO orycms_products (
+          id,
           brand,
           category,
           featured,
@@ -174,9 +239,26 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
           status,
           stock_quantity,
           tags,
-          unit
+          unit,
+          verify_description,
+          verify_image,
+          mfg_date,
+          expiry_date,
+          pack_timing,
+          pack_date,
+          supervisor_name,
+          contractor_name,
+          literature,
+          msds,
+          license,
+          cir,
+          epr_number,
+          plastic_category,
+          leaflet_info,
+          uin
         )
         VALUES (
+          ${finalProductId}::uuid,
           ${data.brand},
           ${data.category},
           ${data.featured},
@@ -197,7 +279,23 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
           ${data.status},
           ${data.stockQuantity},
           ${JSON.stringify(payload.tags)}::jsonb,
-          ${data.unit}
+          ${data.unit},
+          ${data.verifyDescription},
+          ${data.verifyImage ? JSON.stringify(data.verifyImage) : null}::jsonb,
+          ${data.mfgDate ? data.mfgDate : null}::date,
+          ${data.expiryDate ? data.expiryDate : null}::date,
+          ${data.packTiming},
+          ${data.packDate ? data.packDate : null}::date,
+          ${data.supervisorName},
+          ${data.contractorName},
+          ${data.literature},
+          ${data.msds},
+          ${data.license},
+          ${data.cir},
+          ${data.eprNumber},
+          ${data.plasticCategory},
+          ${data.leafletInfo},
+          ${data.uin}
         )
         RETURNING *
       `
@@ -379,10 +477,16 @@ export async function listOryCMSProductMedia() {
   }
 }
 
-function validateProductInput(input: OryCMSProductInput) {
+function validateProductInput(
+  input: OryCMSProductInput,
+  existingProduct?: any,
+  existingPackSizes?: any[]
+) {
+  const isVerificationUpdate = Boolean(input.isVerificationUpdate)
+
   const normalized: OryCMSProductInput = {
     ...input,
-    brand: input.brand?.trim(),
+    brand: input.brand !== undefined ? input.brand?.trim() : (existingProduct?.brand || ""),
     category: input.category.trim(),
     fullDescription: sanitizeRichText(input.fullDescription),
     howToUse: sanitizeRichText(input.howToUse),
@@ -412,34 +516,60 @@ function validateProductInput(input: OryCMSProductInput) {
             ? [pack.imageUrl.trim()]
             : []
 
+        const existingPack = existingPackSizes?.find((p) => p.size === pack.size)
+
         return {
           imageId: imageIds[0] || pack.imageId?.trim() || undefined,
           imageIds: imageIds.length > 0 ? imageIds : undefined,
           imageUrl: imageUrls[0] || pack.imageUrl?.trim() || undefined,
           imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
-          price: Number(pack.price),
+          price: Number(pack.salePrice ?? pack.mrp ?? 0), // Keeps storefront compatible (acts as active sell price)
+          mrp: Number(pack.mrp ?? 0),
+          salePrice: Number(pack.salePrice ?? 0),
+          sku: pack.sku ? String(pack.sku).trim() : (existingPack?.sku || ""),
+          batchNumber: pack.batchNumber ? String(pack.batchNumber).trim() : (existingPack?.batchNumber || ""),
+          stockQuantity: Number(pack.stockQuantity ?? 0),
+          isDefault: Boolean(pack.isDefault),
+          verifySlug: pack.verifySlug ? String(pack.verifySlug).trim() : (existingPack?.verifySlug || undefined),
           size: pack.size.trim(),
         }
       })
-      .filter((pack) => pack.size && Number.isFinite(pack.price)),
+      .filter((pack) => pack.size),
     packSizeImagesEnabled: Boolean(input.packSizeImagesEnabled),
-    price: Number(input.price),
-    salePrice: input.salePrice ? Number(input.salePrice) : null,
+    price: Number(input.price || 0), // Overridden
+    salePrice: input.salePrice ? Number(input.salePrice) : null, // Overridden
     shippingReturns: sanitizeRichText(input.shippingReturns),
     shortDescription: input.shortDescription.trim(),
-    sku: input.sku.trim(),
+    sku: input.sku?.trim() || "", // Overridden
     slug: input.slug?.trim(),
     specifications: sanitizeRichText(input.specifications),
-    stockQuantity: Number(input.stockQuantity),
+    stockQuantity: Number(input.stockQuantity || 0), // Overridden
     tags: input.tags.map((tag) => tag.trim()).filter(Boolean),
     unit: input.unit.trim(),
+
+    // Product verification fields
+    verifyDescription: input.verifyDescription !== undefined ? (sanitizeRichText(input.verifyDescription) || "") : (existingProduct?.verify_description || ""),
+    verifyImage: input.verifyImage !== undefined ? (input.verifyImage?.url ? input.verifyImage : null) : (existingProduct?.verify_image || null),
+    mfgDate: input.mfgDate !== undefined ? (input.mfgDate || "") : (existingProduct?.mfg_date ? new Date(existingProduct.mfg_date).toISOString() : ""),
+    expiryDate: input.expiryDate !== undefined ? (input.expiryDate || "") : (existingProduct?.expiry_date ? new Date(existingProduct.expiry_date).toISOString() : ""),
+    packTiming: input.packTiming !== undefined ? (input.packTiming?.trim() || "") : (existingProduct?.pack_timing || ""),
+    packDate: input.packDate !== undefined ? (input.packDate || "") : (existingProduct?.pack_date ? new Date(existingProduct.pack_date).toISOString() : ""),
+    supervisorName: input.supervisorName !== undefined ? (input.supervisorName?.trim() || "") : (existingProduct?.supervisor_name || ""),
+    contractorName: input.contractorName !== undefined ? (input.contractorName?.trim() || "") : (existingProduct?.contractor_name || ""),
+    literature: input.literature !== undefined ? (input.literature?.trim() || "") : (existingProduct?.literature || ""),
+    msds: input.msds !== undefined ? (input.msds?.trim() || "") : (existingProduct?.msds || ""),
+    license: input.license !== undefined ? (input.license?.trim() || "") : (existingProduct?.license || ""),
+    cir: input.cir !== undefined ? (input.cir?.trim() || "") : (existingProduct?.cir || ""),
+    eprNumber: input.eprNumber !== undefined ? (input.eprNumber?.trim() || "") : (existingProduct?.epr_number || ""),
+    plasticCategory: input.plasticCategory !== undefined ? (input.plasticCategory?.trim() || "") : (existingProduct?.plastic_category || ""),
+    leafletInfo: input.leafletInfo !== undefined ? (sanitizeRichText(input.leafletInfo) || "") : (existingProduct?.leaflet_info || ""),
+    uin: input.uin !== undefined ? (input.uin?.trim() || "") : (existingProduct?.uin || ""),
   }
 
   const required = [
     ["Product Name", normalized.name],
     ["Short Description", normalized.shortDescription],
     ["Category", normalized.category],
-    ["SKU", normalized.sku],
     ["Unit", normalized.unit],
   ] as const
 
@@ -451,36 +581,63 @@ function validateProductInput(input: OryCMSProductInput) {
     throw new Error("Short Description must be 85 characters or fewer.")
   }
 
-  if (!Number.isFinite(normalized.price) || normalized.price <= 0) throw new Error("MRP is required.")
-  if (!Number.isFinite(normalized.stockQuantity) || normalized.stockQuantity <= 0) {
-    throw new Error("Stock Quantity is required.")
-  }
   if (!normalized.images || normalized.images.length === 0) {
     throw new Error("At least one product image is required.")
   }
+
   if (!normalized.packSizes || normalized.packSizes.length === 0) {
     throw new Error("At least one valid pack size is required.")
   }
 
-  const targetPrice = normalized.salePrice && normalized.salePrice > 0 ? normalized.salePrice : normalized.price
-  const priceTypeLabel = normalized.salePrice && normalized.salePrice > 0 ? "Sale Price" : "MRP"
-  const hasMatchingPack = normalized.packSizes.some(
-    (p) => p.size.trim() && Number.isFinite(p.price) && Math.abs(p.price - targetPrice) < 0.01
-  )
-  if (!hasMatchingPack) {
-    throw new Error(`At least one pack size price must match the product ${priceTypeLabel} (INR ${targetPrice}).`)
-  }
+  if (isVerificationUpdate) {
+    const requiredVerify = [
+      ["Supervisor Name", normalized.supervisorName],
+      ["Contractor Name", normalized.contractorName],
+      ["Pack Timing", normalized.packTiming],
+      ["Pack Date", normalized.packDate],
+      ["MFG Date", normalized.mfgDate],
+      ["License Number", normalized.license],
+      ["CIR Number", normalized.cir],
+      ["EPR Number", normalized.eprNumber],
+      ["Plastic Category", normalized.plasticCategory],
+      ["Literature Link", normalized.literature],
+      ["MSDS Link", normalized.msds],
+      ["Leaflet Info", normalized.leafletInfo],
+      ["Verify Description", normalized.verifyDescription],
+    ] as const
 
-  if (normalized.packSizeImagesEnabled) {
-    const hasBasePricePack = normalized.packSizes.some(
-      (p) => Math.abs(p.price - normalized.price) < 0.01 || Math.abs(p.price - targetPrice) < 0.01
-    )
-    if (!hasBasePricePack) {
-      throw new Error("When pack-size-specific images are enabled, at least one pack size must match the product base price.")
+    for (const [label, value] of requiredVerify) {
+      if (!value) throw new Error(`${label} is required.`)
+    }
+
+    if (!normalized.verifyImage) {
+      throw new Error("Verification product image is required.")
+    }
+
+    for (const pack of normalized.packSizes) {
+      if (!pack.sku) throw new Error(`SKU for pack size ${pack.size} is required for verification.`)
+      if (!pack.batchNumber) throw new Error(`Batch Number for pack size ${pack.size} is required for verification.`)
     }
   }
 
-  if (!PRODUCT_STATUSES.includes(normalized.status)) throw new Error("Invalid product status.")
+  // Ensure exactly one pack size is marked as default
+  let defaultPacks = normalized.packSizes.filter((p) => p.isDefault)
+  if (defaultPacks.length === 0 && normalized.packSizes.length > 0) {
+    normalized.packSizes[0].isDefault = true
+    defaultPacks = [normalized.packSizes[0]]
+  }
+  if (defaultPacks.length !== 1) {
+    normalized.packSizes.forEach((p, idx) => {
+      p.isDefault = idx === normalized.packSizes.findIndex((x) => x.isDefault)
+    })
+    defaultPacks = normalized.packSizes.filter((p) => p.isDefault)
+  }
+
+  const defaultPack = defaultPacks[0]
+  normalized.sku = defaultPack.sku || ""
+  normalized.price = defaultPack.mrp
+  normalized.salePrice = defaultPack.salePrice || null
+  normalized.stockQuantity = normalized.packSizes.reduce((sum, p) => sum + p.stockQuantity, 0)
 
   return normalized
 }
@@ -532,6 +689,23 @@ function toPrismaProductData(input: OryCMSProductInput & { slug: string }) {
     stockQuantity: input.stockQuantity,
     tags: input.tags as unknown as Prisma.InputJsonValue,
     unit: input.unit,
+
+    verifyDescription: input.verifyDescription || null,
+    verifyImage: input.verifyImage as unknown as Prisma.InputJsonValue || null,
+    mfgDate: input.mfgDate ? input.mfgDate : null,
+    expiryDate: input.expiryDate ? input.expiryDate : null,
+    packTiming: input.packTiming || null,
+    packDate: input.packDate ? input.packDate : null,
+    supervisorName: input.supervisorName || null,
+    contractorName: input.contractorName || null,
+    literature: input.literature || null,
+    msds: input.msds || null,
+    license: input.license || null,
+    cir: input.cir || null,
+    eprNumber: input.eprNumber || null,
+    plasticCategory: input.plasticCategory || null,
+    leafletInfo: input.leafletInfo || null,
+    uin: input.uin || null,
   }
 }
 
@@ -565,6 +739,23 @@ function toProductDTO(product: OryCMSProductRow): OryCMSProductDTO {
     tags: normalizeTags(product.tags),
     unit: product.unit,
     updatedAt: new Date(product.updated_at).toISOString(),
+
+    verifyDescription: product.verify_description ?? "",
+    verifyImage: normalizeVerifyImage(product.verify_image),
+    mfgDate: product.mfg_date ? dateOnly(product.mfg_date) : "",
+    expiryDate: product.expiry_date ? dateOnly(product.expiry_date) : "",
+    packTiming: product.pack_timing ?? "",
+    packDate: product.pack_date ? dateOnly(product.pack_date) : "",
+    supervisorName: product.supervisor_name ?? "",
+    contractorName: product.contractor_name ?? "",
+    literature: product.literature ?? "",
+    msds: product.msds ?? "",
+    license: product.license ?? "",
+    cir: product.cir ?? "",
+    eprNumber: product.epr_number ?? "",
+    plasticCategory: product.plastic_category ?? "",
+    leafletInfo: product.leaflet_info ?? "",
+    uin: product.uin ?? "",
   }
 }
 
@@ -594,6 +785,13 @@ function normalizeImages(value: Prisma.JsonValue): ProductImageInput[] {
     : []
 }
 
+function normalizeVerifyImage(value: Prisma.JsonValue | null): ProductImageInput | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null
+  const image = value as Record<string, unknown>
+  const url = typeof image.url === "string" ? image.url : ""
+  return url ? { id: typeof image.id === "string" ? image.id : undefined, name: typeof image.name === "string" ? image.name : undefined, url } : null
+}
+
 function normalizePackSizes(value: Prisma.JsonValue): { packSizes: PackSizeInput[]; enabled: boolean } {
   let enabled = false
   let rawItems: Record<string, unknown>[] = []
@@ -609,7 +807,7 @@ function normalizePackSizes(value: Prisma.JsonValue): { packSizes: PackSizeInput
   }
 
   const packSizes = rawItems
-    .filter((item) => typeof item?.size === "string" && Number.isFinite(Number(item.price)))
+    .filter((item) => typeof item?.size === "string")
     .map((item) => {
       const imageIds = Array.isArray(item.imageIds)
         ? item.imageIds.filter((id: unknown): id is string => typeof id === "string" && Boolean(id.trim()))
@@ -622,17 +820,179 @@ function normalizePackSizes(value: Prisma.JsonValue): { packSizes: PackSizeInput
           ? [item.imageUrl.trim()]
           : []
 
+      const mrp = Number(item.mrp ?? item.price ?? 0)
+      const salePrice = Number(item.salePrice ?? item.price ?? 0)
+
       return {
         imageId: imageIds[0] || (typeof item.imageId === "string" ? item.imageId : undefined),
         imageIds: imageIds.length > 0 ? imageIds : undefined,
         imageUrl: imageUrls[0] || (typeof item.imageUrl === "string" ? item.imageUrl : undefined),
         imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
-        price: Number(item.price),
+        price: salePrice || mrp,
+        mrp,
+        salePrice,
+        sku: String(item.sku ?? ""),
+        batchNumber: String(item.batchNumber ?? ""),
+        stockQuantity: Number(item.stockQuantity ?? 0),
+        isDefault: Boolean(item.isDefault),
+        verifySlug: String(item.verifySlug ?? ""),
         size: String(item.size),
       }
     })
 
   return { enabled, packSizes }
+}
+
+export async function generateUniqueProductUIN(): Promise<string> {
+  for (let i = 0; i < 15; i++) {
+    const num = Math.floor(10000000 + Math.random() * 90000000)
+    const uin = `ACC-PROD-${num}`
+    const [match] = await orycmsPrisma.$queryRaw<{ id: string }[]>`
+      SELECT id FROM orycms_products WHERE uin = ${uin} LIMIT 1
+    `
+    if (!match) return uin
+  }
+  throw new Error("Failed to generate a unique UIN.")
+}
+
+async function processVerificationSnapshots(
+  productId: string,
+  uin: string,
+  payload: OryCMSProductInput
+): Promise<PackSizeInput[]> {
+  const finalPackSizes: PackSizeInput[] = []
+
+  // Helper to normalize values and avoid null/undefined/empty comparison mismatches
+  const cleanStr = (val: unknown): string => {
+    if (val === null || val === undefined) return ""
+    return String(val).trim()
+  }
+
+  // Fetch the latest snapshot of any pack size for this product to compare global fields
+  const [anyLatestSnapshot] = await orycmsPrisma.$queryRaw<Record<string, unknown>[]>`
+    SELECT * FROM orycms_verified_product_snapshots
+    WHERE product_id = ${productId}::uuid
+    ORDER BY created_at DESC
+    LIMIT 1
+  `
+
+  let globalFieldsChanged = false
+
+  if (anyLatestSnapshot) {
+    const normalizedMfgDate = payload.mfgDate ? new Date(payload.mfgDate).toISOString().slice(0, 10) : ""
+    const normalizedExpDate = payload.expiryDate ? new Date(payload.expiryDate).toISOString().slice(0, 10) : ""
+    const normalizedPackDate = payload.packDate ? new Date(payload.packDate).toISOString().slice(0, 10) : ""
+
+    const snapshotMfgDate = anyLatestSnapshot.mfg_date ? new Date(anyLatestSnapshot.mfg_date as string).toISOString().slice(0, 10) : ""
+    const snapshotExpDate = anyLatestSnapshot.expiry_date ? new Date(anyLatestSnapshot.expiry_date as string).toISOString().slice(0, 10) : ""
+    const snapshotPackDate = anyLatestSnapshot.pack_date ? new Date(anyLatestSnapshot.pack_date as string).toISOString().slice(0, 10) : ""
+
+    const mfgChanged = normalizedMfgDate !== snapshotMfgDate
+    const expChanged = normalizedExpDate !== snapshotExpDate
+    const packDateChanged = normalizedPackDate !== snapshotPackDate
+
+    const payloadImgUrl = payload.verifyImage && typeof payload.verifyImage === "object"
+      ? (payload.verifyImage as { url?: string }).url || ""
+      : ""
+    const snapshotImgUrl = anyLatestSnapshot.verify_image && typeof anyLatestSnapshot.verify_image === "object"
+      ? (anyLatestSnapshot.verify_image as { url?: string }).url || ""
+      : ""
+    const imgChanged = payloadImgUrl !== snapshotImgUrl
+
+    const otherGlobalChanged =
+      cleanStr(anyLatestSnapshot.product_name) !== cleanStr(payload.name) ||
+      cleanStr(anyLatestSnapshot.brand) !== cleanStr(payload.brand || "Adhunik Crop Care") ||
+      cleanStr(anyLatestSnapshot.pack_timing) !== cleanStr(payload.packTiming) ||
+      cleanStr(anyLatestSnapshot.supervisor_name) !== cleanStr(payload.supervisorName) ||
+      cleanStr(anyLatestSnapshot.contractor_name) !== cleanStr(payload.contractorName) ||
+      cleanStr(anyLatestSnapshot.verify_description) !== cleanStr(payload.verifyDescription) ||
+      cleanStr(anyLatestSnapshot.literature) !== cleanStr(payload.literature) ||
+      cleanStr(anyLatestSnapshot.msds) !== cleanStr(payload.msds) ||
+      cleanStr(anyLatestSnapshot.license) !== cleanStr(payload.license) ||
+      cleanStr(anyLatestSnapshot.cir) !== cleanStr(payload.cir) ||
+      cleanStr(anyLatestSnapshot.epr_number) !== cleanStr(payload.eprNumber) ||
+      cleanStr(anyLatestSnapshot.plastic_category) !== cleanStr(payload.plasticCategory) ||
+      cleanStr(anyLatestSnapshot.leaflet_info) !== cleanStr(payload.leafletInfo)
+
+    if (mfgChanged || expChanged || packDateChanged || imgChanged || otherGlobalChanged) {
+      globalFieldsChanged = true
+    }
+  }
+
+  for (const pack of payload.packSizes) {
+    let verifySlug = pack.verifySlug?.trim()
+    let isDifferent = true
+
+    if (verifySlug && !globalFieldsChanged) {
+      const [latestSnapshot] = await orycmsPrisma.$queryRaw<Record<string, unknown>[]>`
+        SELECT * FROM orycms_verified_product_snapshots
+        WHERE slug = ${verifySlug}
+        LIMIT 1
+      `
+      if (latestSnapshot) {
+        const specMatch =
+          cleanStr(latestSnapshot.pack_size) === cleanStr(pack.size) &&
+          cleanStr(latestSnapshot.sku) === cleanStr(pack.sku) &&
+          cleanStr(latestSnapshot.batch_number) === cleanStr(pack.batchNumber) &&
+          Number(latestSnapshot.mrp || 0) === Number(pack.mrp || 0) &&
+          Number(latestSnapshot.sale_price || 0) === Number(pack.salePrice || 0) &&
+          Number(latestSnapshot.stock_quantity || 0) === Number(pack.stockQuantity || 0)
+
+        if (specMatch) {
+          isDifferent = false
+        }
+      }
+    }
+
+    if (isDifferent || !verifySlug) {
+      verifySlug = `acc-verify-${crypto.randomBytes(12).toString("hex")}`
+
+      await orycmsPrisma.$executeRaw`
+        INSERT INTO orycms_verified_product_snapshots (
+          slug, product_id, uin, product_name, brand, pack_size, sku, batch_number, mrp, sale_price, stock_quantity,
+          mfg_date, expiry_date, pack_timing, pack_date, supervisor_name, contractor_name,
+          verify_description, verify_image, literature, msds, license, cir, epr_number, plastic_category, leaflet_info
+        ) VALUES (
+          ${verifySlug},
+          ${productId}::uuid,
+          ${uin},
+          ${payload.name},
+          ${payload.brand || "Adhunik Crop Care"},
+          ${pack.size},
+          ${pack.sku},
+          ${pack.batchNumber},
+          ${pack.mrp},
+          ${pack.salePrice || null},
+          ${pack.stockQuantity},
+          ${payload.mfgDate}::date,
+          ${payload.expiryDate ? payload.expiryDate : null}::date,
+          ${payload.packTiming},
+          ${payload.packDate}::date,
+          ${payload.supervisorName},
+          ${payload.contractorName},
+          ${payload.verifyDescription || null},
+          ${payload.verifyImage ? JSON.stringify(payload.verifyImage) : null}::jsonb,
+          ${payload.literature || null},
+          ${payload.msds || null},
+          ${payload.license || null},
+          ${payload.cir || null},
+          ${payload.eprNumber || null},
+          ${payload.plasticCategory || null},
+          ${payload.leafletInfo || null}
+        )
+      `
+    }
+
+    finalPackSizes.push({ ...pack, verifySlug })
+  }
+
+  return finalPackSizes
+}
+
+function dateOnly(value: Date | string | null): string {
+  if (!value) return ""
+  const date = value instanceof Date ? value : new Date(value)
+  return date.toISOString().slice(0, 10)
 }
 
 function normalizeTags(value: Prisma.JsonValue): string[] {

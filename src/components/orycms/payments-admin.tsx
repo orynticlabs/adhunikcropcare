@@ -18,6 +18,7 @@ import {
 } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
+import { OryCMSDatePicker } from "@/components/orycms/custom-datepicker"
 import { Skeleton } from "../../../orycms/components/ui/skeleton"
 import { playOryCMSToastSound } from "@/lib/orycms/toast-sound"
 
@@ -217,8 +218,8 @@ export function OryCMSPaymentsAdmin() {
           <Select value={status} onChange={(v) => { setPage(1); setStatus(v) }} label="Status" options={["all", "captured", "authorized", "created", "failed", "refunded"]} />
           <Select value={refundStatus} onChange={(v) => { setPage(1); setRefundStatus(v) }} label="Refund" options={["all", "none", "partial", "full", "processed"]} />
           <Select value={method} onChange={(v) => { setPage(1); setMethod(v) }} label="Method" options={["all", "card", "upi", "netbanking", "wallet", "emi"]} />
-          <input type="date" value={from} onChange={(e) => { setPage(1); setFrom(e.target.value) }} className="h-9 rounded-lg border border-border bg-surface px-2 text-[12.5px] outline-none" />
-          <input type="date" value={to} onChange={(e) => { setPage(1); setTo(e.target.value) }} className="h-9 rounded-lg border border-border bg-surface px-2 text-[12.5px] outline-none" />
+          <OryCMSDatePicker value={from} onChange={(val) => { setPage(1); setFrom(val) }} className="w-32 h-9" />
+          <OryCMSDatePicker value={to} onChange={(val) => { setPage(1); setTo(val) }} className="w-32 h-9" />
         </div>
 
         {/* Payments table */}

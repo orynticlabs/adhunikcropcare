@@ -160,10 +160,10 @@ export default async function Home() {
               {/* Stats */}
               <div className="mt-6 sm:mt-7 grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-4 sm:gap-8 text-sm text-foreground/60">
                 {[
-                  { val: "180",  label: "Projects Develop"  },
-                  { val: "100",  label: "Service Guarantee" },
-                  { val: "7500", label: "Satisfied Clients" },
-                  { val: "115",  label: "Team Member"       },
+                  { val: "300+",  label: "Products Offered"  },
+                  { val: "4,000+", label: "Dealers Network"  },
+                  { val: "10,000+", label: "Happy Farmers"   },
+                  { val: "500",   label: "Team Members"      },
                 ].map((s) => (
                   <div key={s.label} className="text-center">
                     <div className="font-display text-2xl text-foreground">{s.val}</div>
