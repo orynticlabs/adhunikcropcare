@@ -23,6 +23,8 @@ export type PackSizeInput = {
   imageUrls?: string[]
   isDefault?: boolean
   verifySlug?: string
+  isVerified?: boolean
+  usp?: number | string | null
 }
 
 export type OryCMSProductInput = {

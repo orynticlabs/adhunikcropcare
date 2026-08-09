@@ -40,7 +40,24 @@ type PackSize = {
   stockQuantity: number
   isDefault?: boolean
   verifySlug?: string
+  isVerified?: boolean
+  usp?: number | string | null
   size: string
+}
+
+function getProductVerificationStatus(product: { uin?: string | null; packSizes?: { verifySlug?: string | null }[] }): "verified" | "partially_completed" | "pending" {
+  const uin = String(product.uin || "").trim()
+  const items = Array.isArray(product.packSizes) ? product.packSizes : []
+  const totalCount = items.length
+  const verifiedCount = items.filter((p: { verifySlug?: string | null }) => Boolean(p.verifySlug)).length
+
+  if (Boolean(uin) && totalCount > 0 && verifiedCount === totalCount) {
+    return "verified"
+  }
+  if (Boolean(uin) && verifiedCount > 0 && verifiedCount < totalCount) {
+    return "partially_completed"
+  }
+  return "pending"
 }
 
 type Product = {
@@ -82,10 +99,10 @@ function formatBytes(bytes: number) {
 }
 
 export function OryCMSVerificationList() {
-  const [products, setProducts] = useState<any[]>([])
+  const [products, setProducts] = useState<Product[] >([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"all" | "verified" | "pending">("all")
+  const [statusFilter, setStatusFilter] = useState<"all" | "verified" | "partially_completed" | "pending">("all")
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null)
   const [toast, setToast] = useState<Toast | null>(null)
 
@@ -117,13 +134,13 @@ export function OryCMSVerificationList() {
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       const uin = String(product.uin || "").trim()
-      const items = Array.isArray(product.packSizes) ? product.packSizes : []
-      const isVerified = Boolean(uin) && items.length > 0 && items.every((p: any) => p.verifySlug)
+      const status = getProductVerificationStatus(product)
 
       const matchesStatus =
         statusFilter === "all" ||
-        (statusFilter === "verified" && isVerified) ||
-        (statusFilter === "pending" && !isVerified)
+        (statusFilter === "verified" && status === "verified") ||
+        (statusFilter === "partially_completed" && status === "partially_completed") ||
+        (statusFilter === "pending" && status === "pending")
 
       const matchesQuery =
         product.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -136,17 +153,17 @@ export function OryCMSVerificationList() {
 
   const stats = useMemo(() => {
     let verifiedCount = 0
+    let partialCount = 0
     let pendingCount = 0
 
     products.forEach((product) => {
-      const uin = String(product.uin || "").trim()
-      const items = Array.isArray(product.packSizes) ? product.packSizes : []
-      const isVerified = Boolean(uin) && items.length > 0 && items.every((p: any) => p.verifySlug)
-      if (isVerified) verifiedCount++
+      const status = getProductVerificationStatus(product)
+      if (status === "verified") verifiedCount++
+      else if (status === "partially_completed") partialCount++
       else pendingCount++
     })
 
-    return { total: products.length, verified: verifiedCount, pending: pendingCount }
+    return { total: products.length, verified: verifiedCount, partial: partialCount, pending: pendingCount }
   }, [products])
 
   if (selectedProduct) {
@@ -173,7 +190,7 @@ export function OryCMSVerificationList() {
       </div>
 
       {/* Stats Summary Cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-border bg-white p-4 shadow-2xs hover:shadow-xs transition-all duration-200">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-[12px] font-semibold tracking-wide uppercase">Total Catalog Items</span>
@@ -184,10 +201,18 @@ export function OryCMSVerificationList() {
 
         <div className="rounded-xl border border-border bg-white p-4 shadow-2xs hover:shadow-xs transition-all duration-200">
           <div className="flex items-center justify-between text-muted-foreground">
-            <span className="text-[12px] font-semibold tracking-wide uppercase text-emerald-600">Verified & Active</span>
+            <span className="text-[12px] font-semibold tracking-wide uppercase text-emerald-600">Fully Verified</span>
             <CheckCircle2 className="h-4.5 w-4.5 text-emerald-500" />
           </div>
           <div className="text-2xl font-bold text-emerald-600 mt-2">{stats.verified}</div>
+        </div>
+
+        <div className="rounded-xl border border-border bg-white p-4 shadow-2xs hover:shadow-xs transition-all duration-200">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-[12px] font-semibold tracking-wide uppercase text-amber-600">Partially Completed</span>
+            <Clock className="h-4.5 w-4.5 text-amber-500" />
+          </div>
+          <div className="text-2xl font-bold text-amber-600 mt-2">{stats.partial}</div>
         </div>
 
         <div className="rounded-xl border border-border bg-white p-4 shadow-2xs hover:shadow-xs transition-all duration-200">
@@ -213,7 +238,7 @@ export function OryCMSVerificationList() {
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5 bg-neutral-100 p-1 rounded-lg">
-          {(["all", "verified", "pending"] as const).map((filter) => (
+          {(["all", "verified", "partially_completed", "pending"] as const).map((filter) => (
             <button
               key={filter}
               type="button"
@@ -225,7 +250,13 @@ export function OryCMSVerificationList() {
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {filter === "all" ? "All Products" : filter === "verified" ? "Verified Only" : "Pending Only"}
+              {filter === "all"
+                ? "All Products"
+                : filter === "verified"
+                ? "Verified Only"
+                : filter === "partially_completed"
+                ? "Partially Completed"
+                : "Pending Only"}
             </button>
           ))}
         </div>
@@ -261,7 +292,8 @@ export function OryCMSVerificationList() {
                 {filteredProducts.map((product) => {
                   const uin = String(product.uin || "").trim()
                   const items = Array.isArray(product.packSizes) ? product.packSizes : []
-                  const isVerified = Boolean(uin) && items.length > 0 && items.every((p: any) => p.verifySlug)
+                  const verifiedCount = items.filter((p: { verifySlug?: string }) => Boolean(p.verifySlug)).length
+                  const status = getProductVerificationStatus(product)
 
                   return (
                     <tr key={product.id} className="hover:bg-neutral-50/25 transition-colors">
@@ -275,7 +307,7 @@ export function OryCMSVerificationList() {
                       <td className="px-6 py-4 font-mono font-semibold text-[11.5px] tracking-wide text-foreground">
                         {uin ? (
                           <span className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            <span className={cn("h-1.5 w-1.5 rounded-full", status === "verified" ? "bg-emerald-500" : "bg-amber-500")} />
                             {uin}
                           </span>
                         ) : (
@@ -286,13 +318,28 @@ export function OryCMSVerificationList() {
                         <span
                           className={cn(
                             "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold border",
-                            isVerified
+                            status === "verified"
                               ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/25"
+                              : status === "partially_completed"
+                              ? "bg-amber-500/10 text-amber-700 border-amber-500/25"
                               : "bg-[#FF5A20]/10 text-[#FF5A20] border-[#FF5A20]/25"
                           )}
                         >
-                          <span className={cn("h-1 w-1 rounded-full", isVerified ? "bg-emerald-600" : "bg-[#FF5A20]")} />
-                          {isVerified ? "Verified" : "Pending Setup"}
+                          <span
+                            className={cn(
+                              "h-1 w-1 rounded-full",
+                              status === "verified"
+                                ? "bg-emerald-600"
+                                : status === "partially_completed"
+                                ? "bg-amber-600"
+                                : "bg-[#FF5A20]"
+                            )}
+                          />
+                          {status === "verified"
+                            ? "Verified"
+                            : status === "partially_completed"
+                            ? `Partially Completed (${verifiedCount}/${items.length})`
+                            : "Pending Setup"}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -322,6 +369,8 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false)
+  const [initialProductStr, setInitialProductStr] = useState<string | null>(null)
   const [toast, setToast] = useState<Toast | null>(null)
   const [verifyUploadProgress, setVerifyUploadProgress] = useState<number | null>(null)
   const verifyFileInputRef = useRef<HTMLInputElement>(null)
@@ -335,6 +384,11 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
   })
 
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+
+  const hasChanges = useMemo(() => {
+    if (!product || initialProductStr === null) return false
+    return JSON.stringify(product) !== initialProductStr
+  }, [product, initialProductStr])
 
   function showToast(message: string, tone: Toast["tone"] = "success") {
     setToast({ message, tone })
@@ -354,7 +408,11 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
           category: prod.category,
           uin: prod.uin,
           status: prod.status,
-          packSizes: prod.packSizes || [],
+          packSizes: (prod.packSizes || []).map((p: PackSize) => ({
+            ...p,
+            isVerified: typeof p.isVerified === "boolean" ? p.isVerified : Boolean(p.verifySlug),
+            usp: p.usp !== undefined && p.usp !== null ? p.usp : (p.salePrice !== undefined && p.salePrice !== null ? p.salePrice : ""),
+          })),
           verifyDescription: prod.verifyDescription || "",
           verifyImage: prod.verifyImage || null,
           mfgDate: prod.mfgDate || "",
@@ -373,11 +431,13 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
         }
 
         setProduct(mapped)
+        setInitialProductStr(JSON.stringify(mapped))
+        setAttemptedSubmit(false)
         setInitialLocks({
-          license: Boolean(prod.license),
-          cir: Boolean(prod.cir),
-          literature: Boolean(prod.literature),
-          msds: Boolean(prod.msds),
+          license: Boolean(prod.license?.trim()),
+          cir: Boolean(prod.cir?.trim()),
+          literature: Boolean(prod.literature?.trim()),
+          msds: Boolean(prod.msds?.trim()),
         })
       } else {
         showToast(json.error?.message || "Failed to load product details.", "error")
@@ -413,6 +473,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
 
   const patch = (fields: Partial<Product>) => {
     setProduct((current) => (current ? { ...current, ...fields } : null))
+    setAttemptedSubmit(false)
   }
 
   const copyToClipboard = async (text: string, index: number) => {
@@ -480,7 +541,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
         }
       }
 
-      const asset = await new Promise<any>((resolve, reject) => {
+      const asset = await new Promise<{ url?: string; id?: string; name?: string; secure_url?: string; original_filename?: string }>((resolve, reject) => {
         request.onerror = () => reject(new Error("Upload failed."))
         request.onload = () => {
           try {
@@ -502,8 +563,8 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
         ...current,
         verifyImage: {
           id: asset.id,
-          name: asset.original_filename ?? file.name,
-          url: asset.secure_url,
+          name: asset.name || asset.original_filename || file.name,
+          url: asset.url || asset.secure_url || "",
         }
       }) : null)
       showToast("Verification image uploaded successfully.", "success")
@@ -518,15 +579,51 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
     e.preventDefault()
     if (!product) return
 
+    setAttemptedSubmit(true)
+
+    const checkedPacks = product.packSizes.filter((p) => p.isVerified)
+    if (checkedPacks.length === 0) {
+      showToast("At least one pack size must be selected for verification.", "error")
+      return
+    }
+
     for (const pack of product.packSizes) {
-      if (!pack.sku?.trim()) {
-        showToast(`SKU is required for pack size "${pack.size}".`, "error")
+      if (pack.mrp <= 0) {
+        showToast(`MRP for pack size "${pack.size}" must be greater than 0.`, "error")
         return
       }
-      if (!pack.batchNumber?.trim()) {
-        showToast(`Batch Number is required for pack size "${pack.size}".`, "error")
+      if (pack.salePrice <= 0) {
+        showToast(`Sale Price for pack size "${pack.size}" must be greater than 0.`, "error")
         return
       }
+      if (pack.salePrice > pack.mrp) {
+        showToast(`MRP (₹${pack.mrp.toFixed(2)}) must be greater than or equal to Sale Price (₹${pack.salePrice.toFixed(2)}) for pack size "${pack.size}".`, "error")
+        return
+      }
+      if (pack.stockQuantity <= 0) {
+        showToast(`Stock Quantity for pack size "${pack.size}" must be greater than 0.`, "error")
+        return
+      }
+
+      if (pack.isVerified) {
+        if (!pack.sku?.trim()) {
+          showToast(`SKU Number is required for pack size "${pack.size}".`, "error")
+          return
+        }
+        if (!pack.batchNumber?.trim()) {
+          showToast(`Batch Number is required for pack size "${pack.size}".`, "error")
+          return
+        }
+        if (pack.usp === undefined || pack.usp === null || pack.usp === "" || Number(pack.usp) <= 0) {
+          showToast(`USP (Unit Sale Price) is required for pack size "${pack.size}".`, "error")
+          return
+        }
+      }
+    }
+
+    if (!product.verifyImage?.url) {
+      showToast("Verification product image (1200×1200 px) is required.", "error")
+      return
     }
 
     setSaving(true)
@@ -543,6 +640,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
       const json = await response.json()
       if (json.success) {
         showToast("Product verification details saved successfully.", "success")
+        setInitialProductStr(JSON.stringify(product))
         void loadProduct()
       } else {
         showToast(json.error?.message || "Failed to save verification details.", "error")
@@ -565,11 +663,12 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
 
   if (!product) return null
 
-  const isFullyConfigured = Boolean(product.uin) && product.packSizes.length > 0 && product.packSizes.every((p) => p.verifySlug)
+  const verificationStatus = getProductVerificationStatus(product)
+  const verifiedPacksCount = product.packSizes.filter((p) => Boolean(p.verifySlug || p.isVerified)).length
 
   return (
     <div className="mx-auto max-w-[1400px] px-6 py-6 lg:px-8 pb-10">
-      <form onSubmit={handleSave} className="space-y-6 max-w-4xl mx-auto">
+      <form onSubmit={handleSave} noValidate className="space-y-6 max-w-4xl mx-auto">
       {/* Header Back Link */}
       <div className="flex items-start gap-3">
         <button
@@ -611,13 +710,24 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold border",
-                isFullyConfigured
+                verificationStatus === "verified"
                   ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20"
-                  : "bg-amber-500/10 text-amber-700 border-amber-500/20"
+                  : verificationStatus === "partially_completed"
+                  ? "bg-amber-500/10 text-amber-700 border-amber-500/20"
+                  : "bg-[#FF5A20]/10 text-[#FF5A20] border-[#FF5A20]/20"
               )}
             >
-              <span className={cn("h-1.5 w-1.5 rounded-full", isFullyConfigured ? "bg-emerald-600" : "bg-amber-600")} />
-              {isFullyConfigured ? "Active & Verified" : "Verification Pending"}
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  verificationStatus === "verified" ? "bg-emerald-600" : verificationStatus === "partially_completed" ? "bg-amber-600" : "bg-[#FF5A20]"
+                )}
+              />
+              {verificationStatus === "verified"
+                ? "Active & Fully Verified"
+                : verificationStatus === "partially_completed"
+                ? `Partially Completed (${verifiedPacksCount}/${product.packSizes.length} Packs)`
+                : "Verification Pending"}
             </span>
           </div>
         </div>
@@ -646,28 +756,45 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
           {product.packSizes.map((pack, index) => (
             <div key={index} className="rounded-xl border border-border bg-white p-4 shadow-2xs hover:border-neutral-300 transition-all duration-200">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-neutral-100 pb-2.5">
-                <span className="text-[12.5px] font-bold text-foreground flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(pack.isVerified)}
+                    onChange={(e) => {
+                      const checked = e.target.checked
+                      patch({
+                        packSizes: product.packSizes.map((item, idx) =>
+                          idx === index ? { ...item, isVerified: checked } : item
+                        ),
+                      })
+                    }}
+                    className="h-4 w-4 rounded border-border text-[var(--orycms-orange)] focus:ring-0 cursor-pointer accent-[#FF5A20]"
+                  />
                   <span className="inline-grid h-5 w-5 place-items-center rounded bg-[#FF5A20]/10 text-[11px] font-bold text-[#FF5A20] shrink-0">
                     {index + 1}
                   </span>
-                  <span>Pack size: <strong className="text-[var(--orycms-orange)] font-bold text-[13px]">{pack.size}</strong></span>
+                  <span className="text-[12.5px] font-bold text-foreground">
+                    Verify pack size: <strong className="text-[var(--orycms-orange)] font-bold text-[13px]">{pack.size}</strong>
+                  </span>
                   {pack.isDefault && (
                     <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-500 border border-neutral-200/50">
                       Storefront Default
                     </span>
                   )}
-                </span>
+                </label>
                 <span className="text-[11.5px] font-semibold text-muted-foreground whitespace-nowrap">
                   MRP: ₹{Number(pack.mrp).toFixed(2)} · Sale Price: ₹{Number(pack.salePrice).toFixed(2)}
                 </span>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 mt-4">
+              <div className="grid gap-4 sm:grid-cols-3 mt-4">
                 <div className="flex flex-col space-y-1">
-                  <span className="text-[12px] font-semibold text-foreground">SKU Number*</span>
+                  <span className="text-[12px] font-semibold text-foreground">
+                    SKU Number{pack.isVerified ? "*" : ""}
+                  </span>
                   <input
                     type="text"
-                    required
+                    disabled={!pack.isVerified}
                     value={pack.sku || ""}
                     onChange={(e) => {
                       const val = e.target.value
@@ -677,16 +804,25 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
                         ),
                       })
                     }}
-                    placeholder="e.g. ACC-PROD-1KG"
-                    className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition duration-200 focus:border-border-strong focus:bg-white"
+                    placeholder={pack.isVerified ? "e.g. ACC-PROD-1KG" : "Check checkbox above to enable verification"}
+                    className={cn(
+                      "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition duration-200 focus:border-border-strong focus:bg-white",
+                      !pack.isVerified && "bg-neutral-50 text-muted-foreground/75 cursor-not-allowed border-neutral-200 font-medium",
+                      pack.isVerified && attemptedSubmit && !pack.sku?.trim() && "border-destructive/60 bg-red-50/20 text-destructive focus:border-destructive"
+                    )}
                   />
+                  {pack.isVerified && attemptedSubmit && !pack.sku?.trim() && (
+                    <span className="text-[11px] font-medium text-destructive">SKU Number is required for verification.</span>
+                  )}
                 </div>
 
                 <div className="flex flex-col space-y-1">
-                  <span className="text-[12px] font-semibold text-foreground">Batch Number*</span>
+                  <span className="text-[12px] font-semibold text-foreground">
+                    Batch Number{pack.isVerified ? "*" : ""}
+                  </span>
                   <input
                     type="text"
-                    required
+                    disabled={!pack.isVerified}
                     value={pack.batchNumber || ""}
                     onChange={(e) => {
                       const val = e.target.value
@@ -696,14 +832,51 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
                         ),
                       })
                     }}
-                    placeholder="e.g. BATCH-001"
-                    className="h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition duration-200 focus:border-border-strong focus:bg-white"
+                    placeholder={pack.isVerified ? "e.g. BATCH-001" : "Check checkbox above to enable verification"}
+                    className={cn(
+                      "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition duration-200 focus:border-border-strong focus:bg-white",
+                      !pack.isVerified && "bg-neutral-50 text-muted-foreground/75 cursor-not-allowed border-neutral-200 font-medium",
+                      pack.isVerified && attemptedSubmit && !pack.batchNumber?.trim() && "border-destructive/60 bg-red-50/20 text-destructive focus:border-destructive"
+                    )}
                   />
+                  {pack.isVerified && attemptedSubmit && !pack.batchNumber?.trim() && (
+                    <span className="text-[11px] font-medium text-destructive">Batch Number is required for verification.</span>
+                  )}
+                </div>
+
+                <div className="flex flex-col space-y-1">
+                  <span className="text-[12px] font-semibold text-foreground">
+                    USP (Unit Sale Price) (₹){pack.isVerified ? "*" : ""}
+                  </span>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    disabled={!pack.isVerified}
+                    value={pack.usp !== undefined && pack.usp !== null ? pack.usp : ""}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      patch({
+                        packSizes: product.packSizes.map((item, idx) =>
+                          idx === index ? { ...item, usp: val } : item
+                        ),
+                      })
+                    }}
+                    placeholder={pack.isVerified ? "e.g. 199.00" : "Check checkbox above to enable verification"}
+                    className={cn(
+                      "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition duration-200 focus:border-border-strong focus:bg-white",
+                      !pack.isVerified && "bg-neutral-50 text-muted-foreground/75 cursor-not-allowed border-neutral-200 font-medium",
+                      pack.isVerified && attemptedSubmit && (pack.usp === undefined || pack.usp === null || pack.usp === "" || Number(pack.usp) <= 0) && "border-destructive/60 bg-red-50/20 text-destructive focus:border-destructive"
+                    )}
+                  />
+                  {pack.isVerified && attemptedSubmit && (pack.usp === undefined || pack.usp === null || pack.usp === "" || Number(pack.usp) <= 0) && (
+                    <span className="text-[11px] font-medium text-destructive">USP (Unit Sale Price) is required for verification.</span>
+                  )}
                 </div>
               </div>
 
               {/* QR and Verify Links Block */}
-              {pack.verifySlug && (
+              {Boolean(pack.verifySlug) && (
                 <div className="mt-4 rounded-xl border border-neutral-100 bg-neutral-50/50 p-3.5 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                   <div className="relative h-20 w-20 shrink-0 border border-border bg-white rounded-lg p-1.5 flex items-center justify-center shadow-3xs group">
                     <img
@@ -722,9 +895,14 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
                   </div>
 
                   <div className="flex-1 min-w-0 space-y-1 text-[12px]">
-                    <div className="font-bold text-foreground flex items-center gap-1.5">
-                      <ShieldCheck className="h-4 w-4 text-emerald-600" />
-                      Verification Active
+                    <div className="font-bold text-foreground flex items-center gap-1.5 flex-wrap">
+                      <ShieldCheck className={cn("h-4 w-4", pack.isVerified ? "text-emerald-600" : "text-amber-600")} />
+                      <span>{pack.isVerified ? "Verification Active" : "Previous Verification Link"}</span>
+                      {!pack.isVerified && (
+                        <span className="rounded-full bg-amber-100/80 px-2.5 py-0.5 text-[10.5px] font-semibold text-amber-800 border border-amber-200/80">
+                          Inactive (Previous Verification)
+                        </span>
+                      )}
                     </div>
                     <div className="text-[11.5px] text-muted-foreground select-all break-all">
                       Verification link: <span className="font-mono text-foreground font-medium">{origin}/verify/product/{pack.verifySlug}</span>
@@ -819,7 +997,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
         <div className="rounded-lg border border-amber-500/25 bg-amber-500/5 p-3 flex gap-2.5 text-[12px] text-amber-800">
           <Lock className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <strong className="font-bold">Lifetime Compliance Lock:</strong> Legally binding identifiers (License Number, CIR Registration, and Document URLs) are securely locked after initial save to prevent unauthorized changes.
+            <strong className="font-bold">Lifetime Compliance Lock:</strong> Compliance fields (License Number, CIR Registration, Literature PDF, and MSDS PDF) remain editable until assigned. Once any field is set with a value, it becomes permanently locked and cannot be changed.
           </div>
         </div>
 
@@ -901,7 +1079,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
 
         {/* Verification Image section */}
         <div className="flex flex-col space-y-2 pt-4 border-t border-neutral-100">
-          <span className="text-[12px] font-semibold text-foreground">Verification Portal Product Image (Strict 1200 x 1200 px)</span>
+          <span className="text-[12px] font-semibold text-foreground">Verification Portal Product Image* (Strict 1200 x 1200 px)</span>
           
           <input
             ref={verifyFileInputRef}
@@ -947,7 +1125,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
           ) : (
             <p className="text-[11.5px] text-muted-foreground flex items-center gap-1 select-none">
               <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/80" />
-              No custom portal image assigned yet. Matches the primary catalog cover if left empty.
+              No custom portal image assigned yet. Upload a 1200 × 1200 px image before saving.
             </p>
           )}
         </div>
@@ -964,8 +1142,8 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
         </button>
         <button
           type="submit"
-          disabled={saving}
-          className="h-10 rounded-lg bg-foreground text-background hover:!bg-[#FF5A20] hover:!text-white font-bold transition-all shadow-xs px-5 text-[13px] flex items-center gap-2 cursor-pointer disabled:opacity-60"
+          disabled={saving || !hasChanges}
+          className="h-10 rounded-lg bg-foreground text-background hover:!bg-[#FF5A20] hover:!text-white font-bold transition-all shadow-xs px-5 text-[13px] flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:!bg-foreground disabled:hover:!text-background select-none"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
           {saving ? "Publishing Records..." : "Save Verification Details"}
@@ -1055,13 +1233,16 @@ function ProductToast({ toast }: { toast: Toast | null }) {
     <div className="fixed bottom-4 right-4 z-[100] animate-in slide-in-from-bottom-2 duration-300">
       <div
         className={cn(
-          "flex items-center gap-2 rounded-xl px-4 py-3 text-[13px] font-bold text-white shadow-xl",
-          toast.tone === "success" && "bg-emerald-600",
-          toast.tone === "error" && "bg-destructive",
-          toast.tone === "info" && "bg-[#FF5A20]"
+          "flex items-center gap-2.5 rounded-xl border bg-white px-4 py-3 text-[13px] font-semibold shadow-lg",
+          toast.tone === "success" && "border-emerald-300 text-emerald-800",
+          toast.tone === "error" && "border-red-300 text-red-800",
+          toast.tone === "info" && "border-neutral-300 text-neutral-800"
         )}
       >
-        {toast.message}
+        {toast.tone === "success" && <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />}
+        {toast.tone === "error" && <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />}
+        {toast.tone === "info" && <HelpCircle className="h-4 w-4 text-neutral-600 shrink-0" />}
+        <span>{toast.message}</span>
       </div>
     </div>
   )

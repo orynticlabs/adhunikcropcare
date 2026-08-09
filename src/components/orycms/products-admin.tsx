@@ -728,6 +728,7 @@ export function OryCMSProductForm({ id }: { id?: string }) {
   const [productLoading, setProductLoading] = useState(Boolean(id))
   const [savedId, setSavedId] = useState(id ?? "")
   const [saving, setSaving] = useState(false)
+  const [initialProductStr, setInitialProductStr] = useState<string | null>(null)
   const [toast, setToast] = useState<Toast | null>(null)
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [verifyUploadProgress, setVerifyUploadProgress] = useState<number | null>(null)
@@ -735,6 +736,11 @@ export function OryCMSProductForm({ id }: { id?: string }) {
   const effectiveId = id ?? savedId
   const editing = Boolean(effectiveId)
   const origin = typeof window !== "undefined" ? window.location.origin : ""
+
+  const hasChanges = useMemo(() => {
+    if (initialProductStr === null) return false
+    return JSON.stringify(product) !== initialProductStr
+  }, [product, initialProductStr])
 
   const parsedTime = useMemo(() => {
     const match = (product.packTiming || "").match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i)
@@ -777,13 +783,18 @@ export function OryCMSProductForm({ id }: { id?: string }) {
       fetch(`/api/orycms/products/${id}`)
         .then((response) => response.json())
         .then((json) => {
-          if (json.success) setProduct(ensureDefaultPackSize(json.data))
-          else showToast(json.error?.message ?? "Product not found.", "error")
+          if (json.success) {
+            const loaded = ensureDefaultPackSize(json.data)
+            setProduct(loaded)
+            setInitialProductStr(JSON.stringify(loaded))
+          } else showToast(json.error?.message ?? "Product not found.", "error")
         })
         .catch(() => showToast("Product not found.", "error"))
         .finally(() => setProductLoading(false))
     } else {
-      setProduct(ensureDefaultPackSize(emptyProduct))
+      const initial = ensureDefaultPackSize(emptyProduct)
+      setProduct(initial)
+      setInitialProductStr(JSON.stringify(initial))
       setProductLoading(false)
     }
   }, [id])
@@ -797,7 +808,9 @@ export function OryCMSProductForm({ id }: { id?: string }) {
         const nextProd = current.category || json.data.categories.length === 0
           ? current
           : { ...current, category: json.data.categories[0] }
-        return ensureDefaultPackSize(nextProd)
+        const ensured = ensureDefaultPackSize(nextProd)
+        setInitialProductStr((prev) => prev ?? JSON.stringify(ensured))
+        return ensured
       })
     }
   }
@@ -829,7 +842,9 @@ export function OryCMSProductForm({ id }: { id?: string }) {
     setSaving(false)
 
     if (json.success) {
-      setProduct(json.data)
+      const saved = ensureDefaultPackSize(json.data)
+      setProduct(saved)
+      setInitialProductStr(JSON.stringify(saved))
       setSavedId(json.data.id)
       showToast("Product saved.", "success")
       router.replace(`/admin/products/${json.data.id}`)
@@ -1017,8 +1032,8 @@ export function OryCMSProductForm({ id }: { id?: string }) {
           <button
             type="button"
             onClick={() => void saveProduct()}
-            disabled={saving}
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3 text-[12.5px] font-medium text-background transition-opacity hover:opacity-90 disabled:opacity-60"
+            disabled={saving || !hasChanges}
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-foreground px-3 text-[12.5px] font-medium text-background transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed select-none cursor-pointer"
           >
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             Save Product
@@ -1217,7 +1232,7 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                         </div>
 
                         <div className="flex flex-col space-y-1">
-                          <span className="text-[11px] font-semibold text-muted-foreground">Sale Price (USP) (₹)*</span>
+                          <span className="text-[11px] font-semibold text-muted-foreground">Sale Price (₹)*</span>
                           <input
                             type="number"
                             required
@@ -1575,8 +1590,8 @@ function validateProduct(product: Product): string | null {
     if (!pack.size.trim()) return "Pack size label is required."
     if (!Number.isFinite(pack.mrp) || pack.mrp <= 0) return "MRP for pack size " + pack.size + " must be greater than 0."
     if (!Number.isFinite(pack.salePrice) || pack.salePrice <= 0) return "Sale Price for pack size " + pack.size + " must be greater than 0."
-    if (pack.salePrice > pack.mrp) return "Sale Price for pack size " + pack.size + " cannot exceed MRP."
-    if (!Number.isFinite(pack.stockQuantity) || pack.stockQuantity < 0) return "Stock Quantity for pack size " + pack.size + " must be 0 or more."
+    if (pack.salePrice > pack.mrp) return "MRP (₹" + pack.mrp.toFixed(2) + ") must be greater than or equal to Sale Price (₹" + pack.salePrice.toFixed(2) + ") for pack size \"" + pack.size + "\"."
+    if (!Number.isFinite(pack.stockQuantity) || pack.stockQuantity <= 0) return "Stock Quantity for pack size " + pack.size + " must be greater than 0."
   }
 
   let defaultPacks = product.packSizes.filter((p) => p.isDefault)

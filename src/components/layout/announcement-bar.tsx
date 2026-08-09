@@ -100,34 +100,45 @@ export default function AnnouncementBar() {
       {/* Message */}
       <div
         ref={textRef}
-        className="flex items-center gap-1.5 text-[11px] sm:text-xs font-medium px-10 text-center"
+        className="flex items-center justify-center text-[10px] sm:text-xs font-medium px-3 sm:px-12 text-center w-full max-w-full overflow-hidden leading-[1.3]"
         style={{
           transition: `opacity ${FADE_MS}ms ease, transform ${FADE_MS}ms ease`,
           color: textColor,
         }}
       >
-        {liveData?.[safeIndex]?.content && (
-          <span
-            className="richtext-inline"
-            // Sanitized server-side before storage
-            dangerouslySetInnerHTML={{ __html: liveData[safeIndex].content }}
-          />
-        )}
-        {liveData?.[safeIndex]?.ctaText && liveData[safeIndex]?.ctaUrl && (
-          <a
-            href={liveData[safeIndex].ctaUrl!}
-            className="ml-2 underline font-semibold hover:opacity-80 transition"
-            style={{ color: textColor }}
-          >
-            {liveData[safeIndex].ctaText}
-          </a>
-        )}
+        <div
+          className="line-clamp-2 max-h-[28px] overflow-hidden text-ellipsis text-center leading-[1.3] [&_p]:inline [&_p]:m-0 [&_span]:inline"
+          style={{
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {liveData?.[safeIndex]?.content && (
+            <span
+              className="richtext-inline [&_p]:inline [&_p]:m-0 [&_span]:inline"
+              // Sanitized server-side before storage
+              dangerouslySetInnerHTML={{ __html: liveData[safeIndex].content }}
+            />
+          )}
+          {liveData?.[safeIndex]?.ctaText && liveData[safeIndex]?.ctaUrl && (
+            <a
+              href={liveData[safeIndex].ctaUrl!}
+              className="ml-1.5 inline-block underline font-semibold hover:opacity-80 transition whitespace-nowrap"
+              style={{ color: textColor }}
+            >
+              {liveData[safeIndex].ctaText}
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Next arrow — desktop only */}
       <button
         onClick={() => { next(); resetTimer() }}
-        className="absolute right-8 hidden sm:flex items-center justify-center h-5 w-5 rounded-full opacity-50 hover:opacity-100 hover:bg-white/10 transition"
+        className="absolute right-3 hidden sm:flex items-center justify-center h-5 w-5 rounded-full opacity-50 hover:opacity-100 hover:bg-white/10 transition"
         aria-label="Next offer"
         style={{ color: textColor }}
       >
@@ -135,7 +146,7 @@ export default function AnnouncementBar() {
       </button>
 
       {/* Dot indicators */}
-      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex items-center gap-1">
+      <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex items-center gap-1">
         {Array.from({ length: totalCount }).map((_, i) => (
           <button
             key={i}
@@ -143,8 +154,8 @@ export default function AnnouncementBar() {
             aria-label={`Go to offer ${i + 1}`}
             className={`rounded-full transition-all duration-300 ${
               i === safeIndex
-                ? "w-3.5 h-[3px] bg-white"
-                : "w-[3px] h-[3px] bg-white/35 hover:bg-[#689c30]"
+                ? "w-3 h-[2px] bg-white"
+                : "w-[2px] h-[2px] bg-white/35 hover:bg-[#689c30]"
             }`}
           />
         ))}

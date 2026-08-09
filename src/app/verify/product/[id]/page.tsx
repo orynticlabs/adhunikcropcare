@@ -35,6 +35,7 @@ type SnapshotRow = {
   batch_number: string
   mrp: string
   sale_price: string | null
+  usp: string | null
   stock_quantity: number
   mfg_date: Date
   expiry_date: Date | null
@@ -212,7 +213,7 @@ export default async function ProductVerificationPage({ params }: { params: Prom
                 <div>
                   <div className="text-[11px] text-slate-400 font-bold uppercase">7. USP (Unit Sale Price)</div>
                   <div className="text-[15px] font-bold text-[#689c30] mt-1">
-                    {snapshot.sale_price ? `₹${Number(snapshot.sale_price).toFixed(2)}` : "N/A"}
+                    {snapshot.usp ? `₹${Number(snapshot.usp).toFixed(2)}` : "N/A"}
                   </div>
                 </div>
               </div>

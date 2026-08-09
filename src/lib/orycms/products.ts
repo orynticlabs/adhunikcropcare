@@ -141,21 +141,22 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
   const finalProductId = id || crypto.randomUUID()
 
   // Load existing product if ID exists to preserve details
-  let existingProduct: any = null
-  let existingPackSizes: any[] = []
+  let existingProduct: Record<string, unknown> | null = null
+  let existingPackSizes: PackSizeInput[] = []
   if (id) {
-    const [existing] = await orycmsPrisma.$queryRaw<any[]>`
+    const [existing] = await orycmsPrisma.$queryRaw<Record<string, unknown>[]>`
       SELECT * FROM orycms_products WHERE id = ${id}::uuid LIMIT 1
     `
     if (existing) {
       existingProduct = existing
-      existingPackSizes = normalizePackSizes(existing.pack_sizes).packSizes
+      existingPackSizes = normalizePackSizes(existing.pack_sizes as Prisma.JsonValue).packSizes
     }
   }
 
-  // Generate UIN if we are explicitly updating verification, and UIN is not yet set
-  let uin = input.uin?.trim() || existingProduct?.uin || ""
-  if (input.isVerificationUpdate && !uin) {
+  // Generate UIN if we are explicitly updating verification, and UIN is not yet set, provided at least one pack is verified
+  let uin = input.uin?.trim() || (typeof existingProduct?.uin === "string" ? existingProduct.uin : "")
+  const hasVerifiedPackInput = (input.packSizes || []).some((p) => Boolean(p.isVerified ?? Boolean(p.verifySlug)))
+  if (input.isVerificationUpdate && !uin && hasVerifiedPackInput) {
     uin = await generateUniqueProductUIN()
   }
 
@@ -479,91 +480,107 @@ export async function listOryCMSProductMedia() {
 
 function validateProductInput(
   input: OryCMSProductInput,
-  existingProduct?: any,
-  existingPackSizes?: any[]
+  existingProduct?: Record<string, unknown> | null,
+  existingPackSizes?: PackSizeInput[]
 ) {
   const isVerificationUpdate = Boolean(input.isVerificationUpdate)
+  const strVal = (val: unknown): string => (typeof val === "string" ? val.trim() : typeof val === "number" ? String(val) : "")
+  const optStrVal = (val: unknown): string | undefined => (typeof val === "string" ? val.trim() || undefined : undefined)
 
   const normalized: OryCMSProductInput = {
     ...input,
-    brand: input.brand !== undefined ? input.brand?.trim() : (existingProduct?.brand || ""),
-    category: input.category.trim(),
-    fullDescription: sanitizeRichText(input.fullDescription),
-    howToUse: sanitizeRichText(input.howToUse),
-    images: (input.images || [])
+    brand: input.brand !== undefined ? strVal(input.brand) : strVal(existingProduct?.brand),
+    category: input.category !== undefined ? strVal(input.category) : strVal(existingProduct?.category),
+    featured: Boolean(input.featured !== undefined ? input.featured : (existingProduct?.featured ?? false)),
+    fullDescription: input.fullDescription !== undefined ? sanitizeRichText(input.fullDescription) : strVal(existingProduct?.full_description),
+    howToUse: input.howToUse !== undefined ? sanitizeRichText(input.howToUse) : strVal(existingProduct?.how_to_use),
+    images: (input.images || (existingProduct ? normalizeImages(existingProduct.images as Prisma.JsonValue) : []))
       .map((image) => ({
         id: image.id,
-        name: image.name?.trim(),
+        name: strVal(image.name) || undefined,
         packSizes: Array.isArray(image.packSizes)
-          ? Array.from(new Set(image.packSizes.map((s) => s.trim()).filter(Boolean)))
+          ? Array.from(new Set(image.packSizes.map((s) => strVal(s)).filter(Boolean)))
           : undefined,
-        url: image.url.trim(),
+        url: strVal(image.url),
       }))
       .filter((image) => image.url),
-    metaDescription: input.metaDescription?.trim(),
-    metaTitle: input.metaTitle?.trim(),
-    name: input.name.trim(),
-    packSizes: (input.packSizes || [])
+    metaDescription: input.metaDescription !== undefined ? strVal(input.metaDescription) : strVal(existingProduct?.meta_description),
+    metaTitle: input.metaTitle !== undefined ? strVal(input.metaTitle) : strVal(existingProduct?.meta_title),
+    name: input.name !== undefined ? strVal(input.name) : strVal(existingProduct?.name),
+    packSizes: (input.packSizes || (existingPackSizes || []))
       .map((pack) => {
+        const packSizeStr = strVal(pack.size)
         const imageIds = Array.isArray(pack.imageIds)
-          ? Array.from(new Set(pack.imageIds.map((id) => String(id).trim()).filter(Boolean)))
-          : pack.imageId?.trim()
+          ? Array.from(new Set(pack.imageIds.map((id) => strVal(id)).filter(Boolean)))
+          : pack.imageId && typeof pack.imageId === "string" && pack.imageId.trim()
             ? [pack.imageId.trim()]
             : []
         const imageUrls = Array.isArray(pack.imageUrls)
-          ? Array.from(new Set(pack.imageUrls.map((url) => String(url).trim()).filter(Boolean)))
-          : pack.imageUrl?.trim()
+          ? Array.from(new Set(pack.imageUrls.map((url) => strVal(url)).filter(Boolean)))
+          : pack.imageUrl && typeof pack.imageUrl === "string" && pack.imageUrl.trim()
             ? [pack.imageUrl.trim()]
             : []
 
-        const existingPack = existingPackSizes?.find((p) => p.size === pack.size)
+        const existingPack = existingPackSizes?.find((p) => p.size === packSizeStr)
+        const isVerified = pack.isVerified !== undefined
+          ? Boolean(pack.isVerified)
+          : Boolean(pack.verifySlug || existingPack?.isVerified || existingPack?.verifySlug)
+
+        const uspVal = pack.usp !== undefined && pack.usp !== null && pack.usp !== ""
+          ? Number(pack.usp)
+          : (existingPack?.usp !== undefined && existingPack?.usp !== null ? Number(existingPack.usp) : (pack.salePrice !== undefined ? Number(pack.salePrice) : null))
 
         return {
-          imageId: imageIds[0] || pack.imageId?.trim() || undefined,
+          imageId: imageIds[0] || (typeof pack.imageId === "string" ? pack.imageId.trim() : undefined),
           imageIds: imageIds.length > 0 ? imageIds : undefined,
-          imageUrl: imageUrls[0] || pack.imageUrl?.trim() || undefined,
+          imageUrl: imageUrls[0] || (typeof pack.imageUrl === "string" ? pack.imageUrl.trim() : undefined),
           imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
-          price: Number(pack.salePrice ?? pack.mrp ?? 0), // Keeps storefront compatible (acts as active sell price)
-          mrp: Number(pack.mrp ?? 0),
-          salePrice: Number(pack.salePrice ?? 0),
-          sku: pack.sku ? String(pack.sku).trim() : (existingPack?.sku || ""),
-          batchNumber: pack.batchNumber ? String(pack.batchNumber).trim() : (existingPack?.batchNumber || ""),
-          stockQuantity: Number(pack.stockQuantity ?? 0),
+          price: Number(pack.salePrice ?? pack.mrp ?? existingPack?.salePrice ?? existingPack?.mrp ?? 0),
+          mrp: Number(pack.mrp ?? existingPack?.mrp ?? 0),
+          salePrice: Number(pack.salePrice ?? existingPack?.salePrice ?? 0),
+          usp: uspVal,
+          sku: pack.sku ? strVal(pack.sku) : strVal(existingPack?.sku),
+          batchNumber: pack.batchNumber ? strVal(pack.batchNumber) : strVal(existingPack?.batchNumber),
+          stockQuantity: Number(pack.stockQuantity ?? existingPack?.stockQuantity ?? 0),
           isDefault: Boolean(pack.isDefault),
-          verifySlug: pack.verifySlug ? String(pack.verifySlug).trim() : (existingPack?.verifySlug || undefined),
-          size: pack.size.trim(),
+          verifySlug: pack.verifySlug ? strVal(pack.verifySlug) : (existingPack?.verifySlug || undefined),
+          isVerified,
+          size: packSizeStr,
         }
       })
       .filter((pack) => pack.size),
-    packSizeImagesEnabled: Boolean(input.packSizeImagesEnabled),
-    price: Number(input.price || 0), // Overridden
+    packSizeImagesEnabled: Boolean(input.packSizeImagesEnabled ?? existingProduct?.pack_size_images_enabled),
+    price: Number(input.price ?? existingProduct?.price ?? 0), // Overridden
     salePrice: input.salePrice ? Number(input.salePrice) : null, // Overridden
-    shippingReturns: sanitizeRichText(input.shippingReturns),
-    shortDescription: input.shortDescription.trim(),
-    sku: input.sku?.trim() || "", // Overridden
-    slug: input.slug?.trim(),
-    specifications: sanitizeRichText(input.specifications),
-    stockQuantity: Number(input.stockQuantity || 0), // Overridden
-    tags: input.tags.map((tag) => tag.trim()).filter(Boolean),
-    unit: input.unit.trim(),
+    shippingReturns: input.shippingReturns !== undefined ? sanitizeRichText(input.shippingReturns) : strVal(existingProduct?.shipping_returns),
+    shortDescription: input.shortDescription !== undefined ? strVal(input.shortDescription) : strVal(existingProduct?.short_description),
+    sku: input.sku ? strVal(input.sku) : strVal(existingProduct?.sku), // Overridden
+    slug: optStrVal(input.slug) || optStrVal(existingProduct?.slug),
+    specifications: input.specifications !== undefined ? sanitizeRichText(input.specifications) : strVal(existingProduct?.specifications),
+    status: input.status || (typeof existingProduct?.status === "string" ? (existingProduct.status as ProductStatus) : "draft"),
+    stockQuantity: Number(input.stockQuantity ?? existingProduct?.stock_quantity ?? 0), // Overridden
+    tags: Array.isArray(input.tags)
+      ? input.tags.map((tag) => strVal(tag)).filter(Boolean)
+      : (existingProduct ? normalizeTags(existingProduct.tags as Prisma.JsonValue) : []),
+    unit: input.unit !== undefined ? strVal(input.unit) : strVal(existingProduct?.unit),
 
     // Product verification fields
-    verifyDescription: input.verifyDescription !== undefined ? (sanitizeRichText(input.verifyDescription) || "") : (existingProduct?.verify_description || ""),
-    verifyImage: input.verifyImage !== undefined ? (input.verifyImage?.url ? input.verifyImage : null) : (existingProduct?.verify_image || null),
-    mfgDate: input.mfgDate !== undefined ? (input.mfgDate || "") : (existingProduct?.mfg_date ? new Date(existingProduct.mfg_date).toISOString() : ""),
-    expiryDate: input.expiryDate !== undefined ? (input.expiryDate || "") : (existingProduct?.expiry_date ? new Date(existingProduct.expiry_date).toISOString() : ""),
-    packTiming: input.packTiming !== undefined ? (input.packTiming?.trim() || "") : (existingProduct?.pack_timing || ""),
-    packDate: input.packDate !== undefined ? (input.packDate || "") : (existingProduct?.pack_date ? new Date(existingProduct.pack_date).toISOString() : ""),
-    supervisorName: input.supervisorName !== undefined ? (input.supervisorName?.trim() || "") : (existingProduct?.supervisor_name || ""),
-    contractorName: input.contractorName !== undefined ? (input.contractorName?.trim() || "") : (existingProduct?.contractor_name || ""),
-    literature: input.literature !== undefined ? (input.literature?.trim() || "") : (existingProduct?.literature || ""),
-    msds: input.msds !== undefined ? (input.msds?.trim() || "") : (existingProduct?.msds || ""),
-    license: input.license !== undefined ? (input.license?.trim() || "") : (existingProduct?.license || ""),
-    cir: input.cir !== undefined ? (input.cir?.trim() || "") : (existingProduct?.cir || ""),
-    eprNumber: input.eprNumber !== undefined ? (input.eprNumber?.trim() || "") : (existingProduct?.epr_number || ""),
-    plasticCategory: input.plasticCategory !== undefined ? (input.plasticCategory?.trim() || "") : (existingProduct?.plastic_category || ""),
-    leafletInfo: input.leafletInfo !== undefined ? (sanitizeRichText(input.leafletInfo) || "") : (existingProduct?.leaflet_info || ""),
-    uin: input.uin !== undefined ? (input.uin?.trim() || "") : (existingProduct?.uin || ""),
+    verifyDescription: input.verifyDescription !== undefined ? (sanitizeRichText(input.verifyDescription) || "") : strVal(existingProduct?.verify_description),
+    verifyImage: input.verifyImage !== undefined ? (input.verifyImage?.url ? input.verifyImage : null) : ((existingProduct?.verify_image as ProductImageInput | null) || null),
+    mfgDate: input.mfgDate !== undefined ? strVal(input.mfgDate) : (existingProduct?.mfg_date ? new Date(String(existingProduct.mfg_date)).toISOString() : ""),
+    expiryDate: input.expiryDate !== undefined ? strVal(input.expiryDate) : (existingProduct?.expiry_date ? new Date(String(existingProduct.expiry_date)).toISOString() : ""),
+    packTiming: input.packTiming !== undefined ? strVal(input.packTiming) : strVal(existingProduct?.pack_timing),
+    packDate: input.packDate !== undefined ? strVal(input.packDate) : (existingProduct?.pack_date ? new Date(String(existingProduct.pack_date)).toISOString() : ""),
+    supervisorName: input.supervisorName !== undefined ? strVal(input.supervisorName) : strVal(existingProduct?.supervisor_name),
+    contractorName: input.contractorName !== undefined ? strVal(input.contractorName) : strVal(existingProduct?.contractor_name),
+    literature: input.literature !== undefined ? strVal(input.literature) : strVal(existingProduct?.literature),
+    msds: input.msds !== undefined ? strVal(input.msds) : strVal(existingProduct?.msds),
+    license: input.license !== undefined ? strVal(input.license) : strVal(existingProduct?.license),
+    cir: input.cir !== undefined ? strVal(input.cir) : strVal(existingProduct?.cir),
+    eprNumber: input.eprNumber !== undefined ? strVal(input.eprNumber) : strVal(existingProduct?.epr_number),
+    plasticCategory: input.plasticCategory !== undefined ? strVal(input.plasticCategory) : strVal(existingProduct?.plastic_category),
+    leafletInfo: input.leafletInfo !== undefined ? sanitizeRichText(input.leafletInfo) : strVal(existingProduct?.leaflet_info),
+    uin: input.uin !== undefined ? strVal(input.uin) : strVal(existingProduct?.uin),
   }
 
   const required = [
@@ -589,6 +606,21 @@ function validateProductInput(
     throw new Error("At least one valid pack size is required.")
   }
 
+  for (const pack of normalized.packSizes) {
+    if (pack.mrp <= 0) {
+      throw new Error(`MRP for pack size "${pack.size}" must be greater than 0.`)
+    }
+    if (pack.salePrice <= 0) {
+      throw new Error(`Sale Price for pack size "${pack.size}" must be greater than 0.`)
+    }
+    if (pack.salePrice > pack.mrp) {
+      throw new Error(`MRP (₹${pack.mrp.toFixed(2)}) must be greater than or equal to Sale Price (₹${pack.salePrice.toFixed(2)}) for pack size "${pack.size}".`)
+    }
+    if (pack.stockQuantity <= 0) {
+      throw new Error(`Stock Quantity for pack size "${pack.size}" must be greater than 0.`)
+    }
+  }
+
   if (isVerificationUpdate) {
     const requiredVerify = [
       ["Supervisor Name", normalized.supervisorName],
@@ -596,14 +628,6 @@ function validateProductInput(
       ["Pack Timing", normalized.packTiming],
       ["Pack Date", normalized.packDate],
       ["MFG Date", normalized.mfgDate],
-      ["License Number", normalized.license],
-      ["CIR Number", normalized.cir],
-      ["EPR Number", normalized.eprNumber],
-      ["Plastic Category", normalized.plasticCategory],
-      ["Literature Link", normalized.literature],
-      ["MSDS Link", normalized.msds],
-      ["Leaflet Info", normalized.leafletInfo],
-      ["Verify Description", normalized.verifyDescription],
     ] as const
 
     for (const [label, value] of requiredVerify) {
@@ -614,9 +638,19 @@ function validateProductInput(
       throw new Error("Verification product image is required.")
     }
 
+    const verifiedPacks = normalized.packSizes.filter((p) => p.isVerified)
+    if (verifiedPacks.length === 0) {
+      throw new Error("At least one pack size must be selected for verification.")
+    }
+
     for (const pack of normalized.packSizes) {
-      if (!pack.sku) throw new Error(`SKU for pack size ${pack.size} is required for verification.`)
-      if (!pack.batchNumber) throw new Error(`Batch Number for pack size ${pack.size} is required for verification.`)
+      if (pack.isVerified) {
+        if (!pack.sku) throw new Error(`SKU for pack size "${pack.size}" is required for verification.`)
+        if (!pack.batchNumber) throw new Error(`Batch Number for pack size "${pack.size}" is required for verification.`)
+        if (pack.usp === null || pack.usp === undefined || Number.isNaN(Number(pack.usp)) || Number(pack.usp) <= 0) {
+          throw new Error(`USP (Unit Sale Price) for pack size "${pack.size}" is required for verification.`)
+        }
+      }
     }
   }
 
@@ -670,7 +704,7 @@ function toPrismaProductData(input: OryCMSProductInput & { slug: string }) {
   return {
     brand: input.brand || null,
     category: input.category,
-    featured: input.featured,
+    featured: Boolean(input.featured),
     fullDescription: input.fullDescription || null,
     howToUse: input.howToUse || null,
     images: input.images as unknown as Prisma.InputJsonValue,
@@ -822,6 +856,10 @@ function normalizePackSizes(value: Prisma.JsonValue): { packSizes: PackSizeInput
 
       const mrp = Number(item.mrp ?? item.price ?? 0)
       const salePrice = Number(item.salePrice ?? item.price ?? 0)
+      const usp = item.usp !== undefined && item.usp !== null && item.usp !== "" ? Number(item.usp) : (salePrice || null)
+
+      const verifySlug = String(item.verifySlug ?? "")
+      const isVerified = typeof item.isVerified === "boolean" ? item.isVerified : Boolean(verifySlug)
 
       return {
         imageId: imageIds[0] || (typeof item.imageId === "string" ? item.imageId : undefined),
@@ -831,11 +869,13 @@ function normalizePackSizes(value: Prisma.JsonValue): { packSizes: PackSizeInput
         price: salePrice || mrp,
         mrp,
         salePrice,
+        usp,
         sku: String(item.sku ?? ""),
         batchNumber: String(item.batchNumber ?? ""),
         stockQuantity: Number(item.stockQuantity ?? 0),
         isDefault: Boolean(item.isDefault),
-        verifySlug: String(item.verifySlug ?? ""),
+        verifySlug,
+        isVerified,
         size: String(item.size),
       }
     })
@@ -920,6 +960,11 @@ async function processVerificationSnapshots(
   }
 
   for (const pack of payload.packSizes) {
+    if (!pack.isVerified) {
+      finalPackSizes.push({ ...pack, verifySlug: pack.verifySlug ? pack.verifySlug.trim() : "", isVerified: false })
+      continue
+    }
+
     let verifySlug = pack.verifySlug?.trim()
     let isDifferent = true
 
@@ -936,6 +981,7 @@ async function processVerificationSnapshots(
           cleanStr(latestSnapshot.batch_number) === cleanStr(pack.batchNumber) &&
           Number(latestSnapshot.mrp || 0) === Number(pack.mrp || 0) &&
           Number(latestSnapshot.sale_price || 0) === Number(pack.salePrice || 0) &&
+          Number(latestSnapshot.usp || latestSnapshot.sale_price || 0) === Number(pack.usp || pack.salePrice || 0) &&
           Number(latestSnapshot.stock_quantity || 0) === Number(pack.stockQuantity || 0)
 
         if (specMatch) {
@@ -949,7 +995,7 @@ async function processVerificationSnapshots(
 
       await orycmsPrisma.$executeRaw`
         INSERT INTO orycms_verified_product_snapshots (
-          slug, product_id, uin, product_name, brand, pack_size, sku, batch_number, mrp, sale_price, stock_quantity,
+          slug, product_id, uin, product_name, brand, pack_size, sku, batch_number, mrp, sale_price, usp, stock_quantity,
           mfg_date, expiry_date, pack_timing, pack_date, supervisor_name, contractor_name,
           verify_description, verify_image, literature, msds, license, cir, epr_number, plastic_category, leaflet_info
         ) VALUES (
@@ -963,6 +1009,7 @@ async function processVerificationSnapshots(
           ${pack.batchNumber},
           ${pack.mrp},
           ${pack.salePrice || null},
+          ${pack.usp !== undefined && pack.usp !== null ? Number(pack.usp) : pack.salePrice || null},
           ${pack.stockQuantity},
           ${payload.mfgDate}::date,
           ${payload.expiryDate ? payload.expiryDate : null}::date,
