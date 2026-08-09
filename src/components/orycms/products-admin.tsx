@@ -567,7 +567,7 @@ export function OryCMSProductsList() {
                         ₹{product.salePrice ?? product.price}
                       </td>
                       <td className="px-4 py-3 text-center font-semibold">
-                        {product.stockQuantity} {product.unit}
+                        {(product.packSizes || []).reduce((sum, p) => sum + Number(p.stockQuantity || 0), 0)}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {isTrashView ? (
@@ -1989,7 +1989,7 @@ function ProductToast({ toast }: { toast: Toast | null }) {
   )
 }
 
-function MediaPickerDialog({
+export function MediaPickerDialog({
   images,
   onClose,
   onToggle,

@@ -23,11 +23,13 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
+  ImageIcon,
 } from "lucide-react"
 import { OryCMSDatePicker } from "@/components/orycms/custom-datepicker"
 import { OryCMSSelect } from "@/components/orycms/custom-select"
 import { RichTextEditor } from "@/components/orycms/rich-text-editor"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
+import { MediaPickerDialog } from "@/components/orycms/products-admin"
 import { cn } from "@/lib/utils"
 
 type ProductImage = { id?: string; name?: string; url: string }
@@ -298,7 +300,7 @@ export function OryCMSVerificationList() {
                   return (
                     <tr key={product.id} className="hover:bg-neutral-50/25 transition-colors">
                       <td className="px-6 py-4 font-bold text-foreground max-w-xs truncate">{product.name}</td>
-                      <td className="px-6 py-4 text-muted-foreground font-medium">{product.brand || "Adhunik"}</td>
+                      <td className="px-6 py-4 text-muted-foreground font-medium">{product.brand?.trim() || "N/A"}</td>
                       <td className="px-6 py-4">
                         <span className="rounded bg-neutral-100 px-2 py-0.5 text-[11px] font-medium text-neutral-600">
                           {product.category}
@@ -373,6 +375,8 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
   const [initialProductStr, setInitialProductStr] = useState<string | null>(null)
   const [toast, setToast] = useState<Toast | null>(null)
   const [verifyUploadProgress, setVerifyUploadProgress] = useState<number | null>(null)
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false)
+  const [metaMedia, setMetaMedia] = useState<{ id?: string; name?: string; url: string }[]>([])
   const verifyFileInputRef = useRef<HTMLInputElement>(null)
   const origin = typeof window !== "undefined" ? window.location.origin : ""
 
@@ -417,7 +421,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
           verifyImage: prod.verifyImage || null,
           mfgDate: prod.mfgDate || "",
           expiryDate: prod.expiryDate || "",
-          packTiming: prod.packTiming || "09:00 AM",
+          packTiming: prod.packTiming || "",
           packDate: prod.packDate || "",
           supervisorName: prod.supervisorName || "",
           contractorName: prod.contractorName || "",
@@ -451,24 +455,40 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
 
   useEffect(() => {
     void loadProduct()
+    fetch("/api/orycms/products/meta")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && Array.isArray(json.data?.media)) {
+          setMetaMedia(json.data.media)
+        }
+      })
+      .catch(() => undefined)
   }, [id])
 
   const parsedTime = useMemo(() => {
-    if (!product) return { hour: "09", minute: "00", period: "AM" }
-    const match = (product.packTiming || "").match(/^(\d{2}):(\d{2})\s*(AM|PM)$/i)
-    return {
-      hour: match ? match[1] : "09",
-      minute: match ? match[2] : "00",
-      period: match ? match[3].toUpperCase() : "AM"
+    if (!product || !product.packTiming) return { hour: "", minute: "", period: "AM" }
+    const match = product.packTiming.match(/^(\d{2}|XX|\s*):(\d{2}|XX|\s*)\s*(AM|PM)$/i)
+    if (match) {
+      return {
+        hour: match[1] === "XX" || !match[1].trim() ? "" : match[1],
+        minute: match[2] === "XX" || !match[2].trim() ? "" : match[2],
+        period: match[3] ? match[3].toUpperCase() : "AM",
+      }
     }
+    return { hour: "", minute: "", period: "AM" }
   }, [product?.packTiming])
 
   const updatePackTiming = (key: "hour" | "minute" | "period", val: string) => {
     if (!product) return
-    const hour = key === "hour" ? val : parsedTime.hour
-    const minute = key === "minute" ? val : parsedTime.minute
-    const period = key === "period" ? val : parsedTime.period
-    patch({ packTiming: `${hour}:${minute} ${period}` })
+    const hour = key === "hour" ? val : (parsedTime.hour || "")
+    const minute = key === "minute" ? val : (parsedTime.minute || "")
+    const period = key === "period" ? val : (parsedTime.period || "AM")
+
+    if (!hour && !minute) {
+      patch({ packTiming: "" })
+    } else {
+      patch({ packTiming: `${hour || "XX"}:${minute || "XX"} ${period}` })
+    }
   }
 
   const patch = (fields: Partial<Product>) => {
@@ -621,6 +641,15 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
       }
     }
 
+
+
+    const hasHour = Boolean(parsedTime.hour)
+    const hasMinute = Boolean(parsedTime.minute)
+    if ((hasHour && !hasMinute) || (!hasHour && hasMinute)) {
+      showToast("Please select both Hour (HH) and Minute (MM) for Pack Time Slot, or leave both unselected.", "error")
+      return
+    }
+
     if (!product.verifyImage?.url) {
       showToast("Verification product image (1200×1200 px) is required.", "error")
       return
@@ -700,7 +729,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Selected Catalog Item</span>
             <h2 className="text-lg font-bold text-foreground">{product.name}</h2>
             <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
-              <span>Brand: <strong className="text-foreground">{product.brand || "Adhunik"}</strong></span>
+              <span>Brand: <strong className="text-foreground">{product.brand?.trim() || "N/A"}</strong></span>
               <span>•</span>
               <span>Category: <strong className="text-foreground">{product.category}</strong></span>
             </div>
@@ -952,18 +981,30 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
               <OryCMSSelect
                 value={parsedTime.hour}
                 onChange={(val) => updatePackTiming("hour", val)}
-                options={Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0"))}
+                options={[
+                  { label: "HH", value: "" },
+                  ...Array.from({ length: 12 }, (_, i) => {
+                    const val = String(i + 1).padStart(2, "0")
+                    return { label: val, value: val }
+                  }),
+                ]}
                 className="w-20 animate-none font-medium"
               />
               <span className="text-[13px] font-bold text-muted-foreground select-none">:</span>
               <OryCMSSelect
                 value={parsedTime.minute}
                 onChange={(val) => updatePackTiming("minute", val)}
-                options={Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"))}
+                options={[
+                  { label: "MM", value: "" },
+                  ...Array.from({ length: 60 }, (_, i) => {
+                    const val = String(i).padStart(2, "0")
+                    return { label: val, value: val }
+                  }),
+                ]}
                 className="w-20 animate-none font-medium"
               />
               <OryCMSSelect
-                value={parsedTime.period}
+                value={parsedTime.period || "AM"}
                 onChange={(val) => updatePackTiming("period", val)}
                 options={["AM", "PM"]}
                 className="w-24 font-bold animate-none"
@@ -1092,7 +1133,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
             }}
           />
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => {
@@ -1107,6 +1148,21 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
             >
               {verifyUploadProgress !== null ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
               {verifyUploadProgress !== null ? `Uploading ${verifyUploadProgress}%` : "Upload Portal Image (1200×1200)"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (product.verifyImage) {
+                  showToast("Only one verification image can be selected. Please remove the existing image first.", "error")
+                  return
+                }
+                setMediaPickerOpen(true)
+              }}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-white text-foreground hover:!bg-foreground hover:!text-white font-semibold transition-all shadow-xs px-4 text-[12.5px] cursor-pointer select-none"
+            >
+              <ImageIcon className="h-4 w-4" />
+              Media Center
             </button>
           </div>
 
@@ -1150,6 +1206,22 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
         </button>
       </div>
 
+      <MediaPickerDialog
+        images={metaMedia}
+        onClose={() => setMediaPickerOpen(false)}
+        onToggle={(image) => {
+          patch({
+            verifyImage: {
+              id: image.id,
+              name: image.name,
+              url: image.url,
+            },
+          })
+          setMediaPickerOpen(false)
+        }}
+        open={mediaPickerOpen}
+        selectedImages={product.verifyImage ? [product.verifyImage] : []}
+      />
       <ProductToast toast={toast} />
     </form>
   </div>
