@@ -820,12 +820,12 @@ model OryCMSVerifiedProductSnapshot {
   salePrice         Decimal? @map("sale_price") @db.Decimal(12, 2)
   usp               Decimal? @map("usp") @db.Decimal(12, 2)
   stockQuantity     Int      @default(0) @map("stock_quantity")
-  mfgDate           DateTime @map("mfg_date") @db.Date
+  mfgDate           DateTime? @map("mfg_date") @db.Date
   expiryDate        DateTime? @map("expiry_date") @db.Date
-  packTiming        String   @map("pack_timing")
-  packDate          DateTime @map("pack_date") @db.Date
-  supervisorName    String   @map("supervisor_name")
-  contractorName    String   @map("contractor_name")
+  packTiming        String?   @map("pack_timing")
+  packDate          DateTime? @map("pack_date") @db.Date
+  supervisorName    String?   @map("supervisor_name")
+  contractorName    String?   @map("contractor_name")
   verifyDescription String?  @map("verify_description")
   verifyImage       Json?    @map("verify_image")
   literature        String?

@@ -558,7 +558,7 @@ function validateProductInput(
     slug: optStrVal(input.slug) || optStrVal(existingProduct?.slug),
     specifications: input.specifications !== undefined ? sanitizeRichText(input.specifications) : strVal(existingProduct?.specifications),
     status: input.status || (typeof existingProduct?.status === "string" ? (existingProduct.status as ProductStatus) : "draft"),
-    stockQuantity: Number(input.stockQuantity ?? existingProduct?.stock_quantity ?? 0), // Overridden
+    stockQuantity: (input.packSizes || (existingPackSizes || [])).reduce((sum, p) => sum + Number(p.stockQuantity || 0), 0),
     tags: Array.isArray(input.tags)
       ? input.tags.map((tag) => strVal(tag)).filter(Boolean)
       : (existingProduct ? normalizeTags(existingProduct.tags as Prisma.JsonValue) : []),
@@ -622,17 +622,6 @@ function validateProductInput(
   }
 
   if (isVerificationUpdate) {
-    const requiredVerify = [
-      ["Supervisor Name", normalized.supervisorName],
-      ["Contractor Name", normalized.contractorName],
-      ["Pack Timing", normalized.packTiming],
-      ["Pack Date", normalized.packDate],
-      ["MFG Date", normalized.mfgDate],
-    ] as const
-
-    for (const [label, value] of requiredVerify) {
-      if (!value) throw new Error(`${label} is required.`)
-    }
 
     if (!normalized.verifyImage) {
       throw new Error("Verification product image is required.")
@@ -769,7 +758,7 @@ function toProductDTO(product: OryCMSProductRow): OryCMSProductDTO {
     slug: product.slug,
     specifications: product.specifications ?? "",
     status: product.status as ProductStatus,
-    stockQuantity: product.stock_quantity,
+    stockQuantity: (packSizes || []).reduce((sum, p) => sum + Number(p.stockQuantity || 0), 0),
     tags: normalizeTags(product.tags),
     unit: product.unit,
     updatedAt: new Date(product.updated_at).toISOString(),
@@ -941,7 +930,7 @@ async function processVerificationSnapshots(
 
     const otherGlobalChanged =
       cleanStr(anyLatestSnapshot.product_name) !== cleanStr(payload.name) ||
-      cleanStr(anyLatestSnapshot.brand) !== cleanStr(payload.brand || "Adhunik Crop Care") ||
+      cleanStr(anyLatestSnapshot.brand) !== cleanStr(payload.brand || "") ||
       cleanStr(anyLatestSnapshot.pack_timing) !== cleanStr(payload.packTiming) ||
       cleanStr(anyLatestSnapshot.supervisor_name) !== cleanStr(payload.supervisorName) ||
       cleanStr(anyLatestSnapshot.contractor_name) !== cleanStr(payload.contractorName) ||
@@ -1003,7 +992,7 @@ async function processVerificationSnapshots(
           ${productId}::uuid,
           ${uin},
           ${payload.name},
-          ${payload.brand || "Adhunik Crop Care"},
+          ${payload.brand || ""},
           ${pack.size},
           ${pack.sku},
           ${pack.batchNumber},
@@ -1011,12 +1000,12 @@ async function processVerificationSnapshots(
           ${pack.salePrice || null},
           ${pack.usp !== undefined && pack.usp !== null ? Number(pack.usp) : pack.salePrice || null},
           ${pack.stockQuantity},
-          ${payload.mfgDate}::date,
+          ${payload.mfgDate ? payload.mfgDate : null}::date,
           ${payload.expiryDate ? payload.expiryDate : null}::date,
-          ${payload.packTiming},
-          ${payload.packDate}::date,
-          ${payload.supervisorName},
-          ${payload.contractorName},
+          ${payload.packTiming || null},
+          ${payload.packDate ? payload.packDate : null}::date,
+          ${payload.supervisorName || null},
+          ${payload.contractorName || null},
           ${payload.verifyDescription || null},
           ${payload.verifyImage ? JSON.stringify(payload.verifyImage) : null}::jsonb,
           ${payload.literature || null},
