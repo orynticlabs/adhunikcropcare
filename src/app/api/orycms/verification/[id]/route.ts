@@ -33,20 +33,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     const body = await request.json()
 
     // Backend immutability enforcement
-    const [existing] = await orycmsPrisma.$queryRaw<any[]>`
+    const [existing] = await orycmsPrisma.$queryRaw<{ license?: string | null; cir?: string | null; literature?: string | null; msds?: string | null }[]>`
       SELECT license, cir, literature, msds FROM orycms_products WHERE id = ${id}::uuid LIMIT 1
     `
     if (existing) {
-      if (existing.license && body.license !== existing.license) {
+      if (existing.license?.trim() && body.license?.trim() !== existing.license.trim()) {
         body.license = existing.license
       }
-      if (existing.cir && body.cir !== existing.cir) {
+      if (existing.cir?.trim() && body.cir?.trim() !== existing.cir.trim()) {
         body.cir = existing.cir
       }
-      if (existing.literature && body.literature !== existing.literature) {
+      if (existing.literature?.trim() && body.literature?.trim() !== existing.literature.trim()) {
         body.literature = existing.literature
       }
-      if (existing.msds && body.msds !== existing.msds) {
+      if (existing.msds?.trim() && body.msds?.trim() !== existing.msds.trim()) {
         body.msds = existing.msds
       }
     }

@@ -38,6 +38,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
           batchNumber: snapshot.batch_number,
           mrp: Number(snapshot.mrp),
           salePrice: snapshot.sale_price ? Number(snapshot.sale_price) : null,
+          usp: snapshot.usp ? Number(snapshot.usp) : (snapshot.sale_price ? Number(snapshot.sale_price) : null),
           stockQuantity: Number(snapshot.stock_quantity),
           mfgDate: snapshot.mfg_date,
           expiryDate: snapshot.expiry_date,
