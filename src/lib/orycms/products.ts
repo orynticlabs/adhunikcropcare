@@ -173,6 +173,23 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
 
   const data = toPrismaProductData({ ...payload, slug })
 
+  if (data.sku) {
+    const existingSku = id
+      ? await orycmsPrisma.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM orycms_products
+          WHERE sku = ${data.sku} AND deleted_at IS NULL AND id != ${finalProductId}::uuid
+          LIMIT 1
+        `
+      : await orycmsPrisma.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM orycms_products
+          WHERE sku = ${data.sku} AND deleted_at IS NULL
+          LIMIT 1
+        `
+    if (existingSku.length > 0) {
+      throw new Error(`SKU "${data.sku}" is already assigned to another active product.`)
+    }
+  }
+
   const [product] = id
     ? await orycmsPrisma.$queryRaw<OryCMSProductRow[]>`
         UPDATE orycms_products
@@ -634,8 +651,6 @@ function validateProductInput(
 
     for (const pack of normalized.packSizes) {
       if (pack.isVerified) {
-        if (!pack.sku) throw new Error(`SKU for pack size "${pack.size}" is required for verification.`)
-        if (!pack.batchNumber) throw new Error(`Batch Number for pack size "${pack.size}" is required for verification.`)
         if (pack.usp === null || pack.usp === undefined || Number.isNaN(Number(pack.usp)) || Number(pack.usp) <= 0) {
           throw new Error(`USP (Unit Sale Price) for pack size "${pack.size}" is required for verification.`)
         }
@@ -657,7 +672,7 @@ function validateProductInput(
   }
 
   const defaultPack = defaultPacks[0]
-  normalized.sku = defaultPack.sku || ""
+  normalized.sku = (defaultPack && defaultPack.sku ? defaultPack.sku.trim() : "") || (input.sku ? input.sku.trim() : "")
   normalized.price = defaultPack.mrp
   normalized.salePrice = defaultPack.salePrice || null
   normalized.stockQuantity = normalized.packSizes.reduce((sum, p) => sum + p.stockQuantity, 0)
@@ -705,7 +720,7 @@ function toPrismaProductData(input: OryCMSProductInput & { slug: string }) {
     salePrice: input.salePrice || null,
     shippingReturns: input.shippingReturns || null,
     shortDescription: input.shortDescription,
-    sku: input.sku,
+    sku: input.sku && input.sku.trim() ? input.sku.trim() : null,
     slug: input.slug,
     specifications: input.specifications || null,
     status: input.status,
