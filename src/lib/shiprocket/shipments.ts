@@ -140,9 +140,7 @@ export async function recordApiLog(input: ApiLogInput): Promise<void> {
       JSON.stringify(input.requestSummary ?? {}),
       JSON.stringify(input.responseSummary ?? {}),
     )
-  } catch (error) {
-    console.error("Failed to record Shiprocket API log", error)
-  }
+  } catch {}
 }
 
 export type ApiLogRow = {

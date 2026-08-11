@@ -627,8 +627,8 @@ function validateProductInput(
     }
     normalized.uin = existingUinStr
   } else {
-    if (!normalized.uin) {
-      throw new Error("UIN number is mandatory at creation or initial setup.")
+    if (input.isVerificationUpdate && !normalized.uin) {
+      throw new Error("UIN number is mandatory for product verification.")
     }
   }
 
@@ -637,7 +637,6 @@ function validateProductInput(
     ["Short Description", normalized.shortDescription],
     ["Category", normalized.category],
     ["Unit", normalized.unit],
-    ["UIN Number", normalized.uin],
   ] as const
 
   for (const [label, value] of required) {

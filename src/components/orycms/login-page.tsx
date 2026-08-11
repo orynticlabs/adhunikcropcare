@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, Eye, EyeOff, KeyRound, Lock, Mail, Shield, ShieldCheck } from "lucide-react"
+import { ArrowLeft, CheckCircle2, Eye, EyeOff, KeyRound, Lock, Mail, Shield, ShieldCheck } from "lucide-react"
 import { OryCMSSessionProvider, useOryCMSSession } from "../../../orycms/hooks"
 
 const trustSignals = [
@@ -46,6 +46,13 @@ function LoginForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Forgot password state
+  const [forgotEmail, setForgotEmail] = useState("")
+  const [isResetSubmitting, setIsResetSubmitting] = useState(false)
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null)
+  const [resetError, setResetError] = useState<string | null>(null)
+  const [devResetUrl, setDevResetUrl] = useState<string | null>(null)
+
   useEffect(() => {
     if (!loaded || !user) return
     router.replace(adminDestination(searchParams.get("from")))
@@ -76,8 +83,57 @@ function LoginForm() {
     }
   }
 
+  async function handleSendResetLink() {
+    setResetError(null)
+    setResetSuccessMessage(null)
+    setDevResetUrl(null)
+
+    const targetEmail = forgotEmail.trim() || email.trim()
+    if (!targetEmail) {
+      setResetError("Please enter your work email address.")
+      return
+    }
+
+    setIsResetSubmitting(true)
+    try {
+      const response = await fetch("/api/orycms/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail }),
+      })
+      const data = (await response.json()) as {
+        devResetUrl?: string
+        message?: string
+        success: boolean
+        error?: { message: string }
+      }
+
+      if (!response.ok || !data.success) {
+        setResetError(data.error?.message ?? "Failed to send password reset link. Please try again.")
+        setIsResetSubmitting(false)
+        return
+      }
+
+      if (data.devResetUrl) {
+        setDevResetUrl(data.devResetUrl)
+      }
+
+      setResetSuccessMessage(
+        data.message ?? "If an account exists with this email, a password reset link has been sent."
+      )
+    } catch {
+      setResetError("Network error. Please try again.")
+    } finally {
+      setIsResetSubmitting(false)
+    }
+  }
+
   function onKeyDown(event: React.KeyboardEvent) {
     if (event.key === "Enter" && email && password && !isSubmitting) void handleSignIn()
+  }
+
+  function onForgotKeyDown(event: React.KeyboardEvent) {
+    if (event.key === "Enter" && (forgotEmail || email) && !isResetSubmitting) void handleSendResetLink()
   }
 
   if (loaded && user) return null
@@ -147,8 +203,6 @@ function LoginForm() {
       </aside>
 
       <main className="flex flex-1 flex-col items-center justify-center px-6 py-12 lg:px-12">
-
-
         <div className="w-full max-w-[420px] rounded-2xl border border-border bg-surface p-6 shadow-[0_20px_60px_-20px_rgba(20,24,31,0.18)] lg:p-8">
           {step === "login" ? (
             <>
@@ -189,9 +243,12 @@ function LoginForm() {
                       type="button"
                       onClick={() => {
                         setError(null)
+                        setForgotEmail(email)
+                        setResetSuccessMessage(null)
+                        setResetError(null)
                         setStep("forgot")
                       }}
-                      className="text-[11.5px] text-muted-foreground hover:text-foreground"
+                      className="text-[11.5px] text-muted-foreground hover:text-foreground cursor-pointer select-none transition-colors"
                     >
                       Forgot password?
                     </button>
@@ -224,7 +281,7 @@ function LoginForm() {
 
                 <button
                   type="button"
-                  className="mt-1 h-10 w-full rounded-lg bg-foreground text-[13px] font-medium text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-1 h-10 w-full rounded-lg bg-foreground text-[13px] font-semibold text-background hover:!bg-[#FF5A20] hover:!text-white transition-colors shadow-xs cursor-pointer select-none disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => void handleSignIn()}
                   disabled={!email || !password || isSubmitting}
                 >
@@ -247,7 +304,7 @@ function LoginForm() {
                 <div>
                   <h2 className="text-[22px] font-semibold tracking-tight">Forgot password?</h2>
                   <p className="mt-1 text-[13px] text-muted-foreground">
-                    Ask your administrator to reset your account.
+                    Enter your work email to receive a secure password reset link.
                   </p>
                 </div>
                 <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-foreground text-background">
@@ -255,17 +312,75 @@ function LoginForm() {
                 </div>
               </div>
 
-              <div className="mt-6 space-y-4">
-                <div className="rounded-xl border border-border bg-surface-muted/60 p-4 text-[13px] leading-relaxed text-muted-foreground">
-                  Self-service password reset is not yet available. Ask your workspace administrator
-                  to reset your account from{" "}
-                  <span className="font-medium text-foreground/80">Settings → Users</span>.
-                </div>
+              <div className="mt-6 space-y-4" onKeyDown={onForgotKeyDown}>
+                {resetSuccessMessage ? (
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-[13px] text-emerald-700 dark:text-emerald-300">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                      <div className="space-y-1">
+                        <p className="font-semibold text-foreground">Check your inbox</p>
+                        <p className="leading-relaxed">{resetSuccessMessage}</p>
+                        <p className="text-[12px] text-muted-foreground mt-2">
+                          The change password link expires in <strong>15 minutes</strong> and can only be used once.
+                        </p>
+                        {devResetUrl ? (
+                          <div className="mt-3 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs">
+                            <p className="font-semibold text-amber-800 dark:text-amber-300">Development Direct Link (SMTP disabled):</p>
+                            <a
+                              href={devResetUrl}
+                              className="text-blue-600 dark:text-blue-400 font-mono text-[11.5px] break-all block mt-1 underline hover:text-blue-800"
+                            >
+                              {devResetUrl}
+                            </a>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <label className="block space-y-1.5">
+                      <span className="text-[12.5px] font-medium">Work email</span>
+                      <span className="relative block">
+                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                          type="email"
+                          value={forgotEmail}
+                          onChange={(event) => setForgotEmail(event.target.value)}
+                          className="h-10 w-full rounded-lg border border-border bg-background pl-10 pr-3 text-sm outline-none transition focus:border-chart-3 focus:ring-2 focus:ring-chart-3/15"
+                          placeholder="you@company.com"
+                          autoComplete="email"
+                          autoFocus
+                          suppressHydrationWarning
+                        />
+                      </span>
+                    </label>
+
+                    {resetError ? (
+                      <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-[12.5px] text-destructive">
+                        {resetError}
+                      </div>
+                    ) : null}
+
+                    <button
+                      type="button"
+                      className="mt-1 h-10 w-full rounded-lg bg-foreground text-[13px] font-semibold text-background hover:!bg-[#FF5A20] hover:!text-white transition-colors shadow-xs cursor-pointer select-none disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => void handleSendResetLink()}
+                      disabled={!forgotEmail.trim() || isResetSubmitting}
+                    >
+                      {isResetSubmitting ? "Sending reset link…" : "Send reset link"}
+                    </button>
+                  </>
+                )}
 
                 <button
                   type="button"
-                  className="h-10 w-full rounded-lg border border-border bg-background text-[13px] font-medium transition-colors hover:bg-accent"
-                  onClick={() => setStep("login")}
+                  className="h-10 w-full rounded-lg bg-white text-foreground border border-border hover:!bg-foreground hover:!text-white font-medium text-[13px] transition-colors shadow-xs cursor-pointer select-none"
+                  onClick={() => {
+                    setStep("login")
+                    setResetSuccessMessage(null)
+                    setResetError(null)
+                  }}
                 >
                   <ArrowLeft className="mr-2 inline h-4 w-4" />
                   Back to sign in
@@ -282,3 +397,4 @@ function LoginForm() {
 function adminDestination(from: string | null) {
   return from?.startsWith("/admin") && !from.startsWith("//") ? from : "/admin/dashboard"
 }
+

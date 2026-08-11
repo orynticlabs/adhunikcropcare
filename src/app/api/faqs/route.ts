@@ -14,8 +14,7 @@ export async function GET() {
         },
       }
     )
-  } catch (error) {
-    console.error("Error in GET /api/faqs:", error)
+  } catch {
     return NextResponse.json({ success: true, data: [] })
   }
 }

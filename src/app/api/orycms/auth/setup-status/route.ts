@@ -7,8 +7,7 @@ export async function GET() {
       success: true,
       data: { initialized: await isOryCMSSetupComplete() },
     })
-  } catch (error) {
-    console.error("OryCMS setup status error:", error)
+  } catch {
     return NextResponse.json(
       { success: false, error: { code: "SETUP_STATUS_FAILED", message: "Unable to check setup status." } },
       { status: 500 },

@@ -13,8 +13,7 @@ export async function GET() {
         },
       }
     )
-  } catch (error) {
-    console.error("Error in GET /api/reviews/top:", error)
+  } catch {
     return NextResponse.json({ reviews: [] }, { status: 500 })
   }
 }

@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       to: user.email,
       userId: user.id,
       unsubscribeUrl: "",
-    }).catch((error) => console.error("Password reset email failed", error))
+    }).catch(() => {})
     return NextResponse.json({ success: true, data: { message: GENERIC_MESSAGE } })
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : "Reset request failed.", 400, "FORGOT_FAILED")

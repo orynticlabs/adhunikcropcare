@@ -205,9 +205,7 @@ export async function createOryCMSAdminUser(input: UserInput, actor: CurrentOryC
   if (shouldSendInvite) {
     try {
       await createAndSendAdminInvitation(createdUser.id, actor)
-    } catch (inviteErr) {
-      console.error("[Invitation Error] Failed to send invitation email during user creation:", inviteErr)
-    }
+    } catch {}
   } else {
     await logAdminAudit({
       action: "admin_created_without_invitation",

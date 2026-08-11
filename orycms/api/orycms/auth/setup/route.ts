@@ -54,7 +54,6 @@ export async function POST(request: NextRequest) {
         { status: err.statusCode },
       );
     }
-    console.error("Setup error:", err);
     return NextResponse.json(
       { success: false, error: { code: "INTERNAL_ERROR", message: "Setup failed." } },
       { status: 500 },

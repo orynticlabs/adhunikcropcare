@@ -68,7 +68,6 @@ export async function GET(request: NextRequest) {
         { status: err.status }
       )
     }
-    console.error("[Audit Logs API Error]:", err)
     return NextResponse.json(
       { success: false, error: { code: "SERVER_ERROR", message: "Failed to load audit logs." } },
       { status: 500 }

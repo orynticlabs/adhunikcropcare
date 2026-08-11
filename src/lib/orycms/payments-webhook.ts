@@ -64,7 +64,5 @@ async function writeLog(event: string, eventId: string | null, signatureValid: b
       INSERT INTO razorpay_webhook_logs (event, razorpay_event_id, signature_valid, status, error, payload)
       VALUES (${event}, ${eventId}, ${signatureValid}, ${status}, ${error}, ${JSON.stringify(payload ?? {})}::jsonb)
     `
-  } catch (logError) {
-    console.error("Failed to write Razorpay webhook log", logError)
-  }
+  } catch {}
 }

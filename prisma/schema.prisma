@@ -32,8 +32,9 @@ model OryCMSUser {
   lastInvitedAt    DateTime?               @db.Timestamptz(6)
   lastLoginAt      DateTime?               @db.Timestamptz(6)
   role             OryCMSRole?             @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  sessions         OryCMSSession[]
-  invitationTokens OryCMSInvitationToken[]
+  sessions             OryCMSSession[]
+  invitationTokens     OryCMSInvitationToken[]
+  passwordResetTokens  OryCMSPasswordResetToken[]
 
   @@index([status], map: "orycms_users_status_idx")
   @@index([deletedAt], map: "orycms_users_deleted_at_idx")
@@ -53,6 +54,20 @@ model OryCMSInvitationToken {
   @@index([userId], map: "orycms_invitation_tokens_user_id_idx")
   @@index([expiresAt], map: "orycms_invitation_tokens_expires_at_idx")
   @@map("orycms_invitation_tokens")
+}
+
+model OryCMSPasswordResetToken {
+  id        String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId    String     @db.Uuid
+  tokenHash String     @unique
+  expiresAt DateTime   @db.Timestamptz(6)
+  used      Boolean    @default(false)
+  createdAt DateTime   @default(now()) @db.Timestamptz(6)
+  user      OryCMSUser @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([userId], map: "orycms_password_reset_tokens_user_id_idx")
+  @@index([expiresAt], map: "orycms_password_reset_tokens_expires_at_idx")
+  @@map("orycms_password_reset_tokens")
 }
 
 model OryCMSAdminAuditLog {

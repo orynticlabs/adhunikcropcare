@@ -29,9 +29,7 @@ export async function recordPaymentAudit(input: {
         ${JSON.stringify(input.detail ?? {})}::jsonb
       )
     `
-  } catch (error) {
-    console.error("Failed to record payment audit log", error)
-  }
+  } catch {}
 }
 
 export type PaymentAuditRow = {

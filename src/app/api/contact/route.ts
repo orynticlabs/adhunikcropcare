@@ -67,14 +67,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Send User Confirmation Email
-    void sendContactUserConfirmationEmail(contactData).catch((err) =>
-      console.error("[Email Error] Failed to send contact user confirmation:", err),
-    )
+    void sendContactUserConfirmationEmail(contactData).catch(() => {})
 
     // 2. Send Admin Notification Email to configured recipients
     void getEnabledNotificationRecipients()
       .then((recipients) => sendContactAdminNotifications(recipients, contactData))
-      .catch((err) => console.error("[Email Error] Failed to send contact admin notifications:", err))
+      .catch(() => {})
 
     await createOryCMSNotification({
       type: "customer",
@@ -83,7 +81,7 @@ export async function POST(request: NextRequest) {
       entityId: enquiry.id,
       entityType: "contact",
       targetUrl: `/admin/collections/contact?highlight=${enquiry.id}`,
-    }).catch((error) => console.error("OryCMS notification failed", error))
+    }).catch(() => {})
 
     return NextResponse.json(
       {

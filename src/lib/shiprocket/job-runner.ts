@@ -18,7 +18,6 @@ export async function runDueJobs(limit = 10): Promise<RunSummary> {
       await markJobSucceeded(job.id)
       succeeded += 1
     } catch (error) {
-      console.error(`Shiprocket job ${job.id} (${job.type}) failed`, error)
       await markJobFailed(job, error)
       failed += 1
     }
@@ -72,7 +71,7 @@ async function runJob(job: ShiprocketJobRow): Promise<void> {
       if (!job.order_id) throw new Error("fetch_documents job missing order_id")
       const kinds = (Array.isArray(job.payload.kinds) ? job.payload.kinds : ["invoice", "label"]) as DocumentKind[]
       for (const kind of kinds) {
-        await ensureDocument(job.order_id, kind).catch((error) => console.error(`Document ${kind} failed`, error))
+        await ensureDocument(job.order_id, kind).catch(() => {})
       }
       return
     }

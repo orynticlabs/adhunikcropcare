@@ -228,9 +228,7 @@ export async function createOryCMSContentEntry(
         null,
       ),
     );
-  } catch (err) {
-    console.error("[OryCMS] afterCreate hook failed:", err);
-  }
+  } catch {}
   return entry;
 }
 
@@ -280,9 +278,7 @@ export async function updateOryCMSContentEntry(
         previous as unknown as Record<string, unknown>,
       ),
     );
-  } catch (err) {
-    console.error("[OryCMS] afterUpdate hook failed:", err);
-  }
+  } catch {}
   return entry;
 }
 
@@ -317,9 +313,7 @@ export async function deleteOryCMSContentEntry(
         null,
       ),
     );
-  } catch (err) {
-    console.error("[OryCMS] afterDelete hook failed:", err);
-  }
+  } catch {}
 }
 
 export async function publishOryCMSContentEntry(
@@ -369,9 +363,7 @@ export async function publishOryCMSContentEntry(
         entry as unknown as Record<string, unknown>,
       ),
     );
-  } catch (err) {
-    console.error("[OryCMS] afterPublish hook failed:", err);
-  }
+  } catch {}
   return published;
 }
 
@@ -422,8 +414,6 @@ export async function unpublishOryCMSContentEntry(
         entry as unknown as Record<string, unknown>,
       ),
     );
-  } catch (err) {
-    console.error("[OryCMS] afterUnpublish hook failed:", err);
-  }
+  } catch {}
   return unpublished;
 }

@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
         { status: err.statusCode },
       );
     }
-    console.error("Login error:", err);
     return NextResponse.json(
       { success: false, error: { code: "INTERNAL_ERROR", message: "Login failed." } },
       { status: 500 },
