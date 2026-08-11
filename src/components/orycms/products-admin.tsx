@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import type { ReactNode } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, GripVertical, ImageIcon, Loader2, Plus, RefreshCw, RotateCcw, Save, Search, Star, Trash2, Upload, X } from "lucide-react"
+import { AlertTriangle, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, GripVertical, ImageIcon, Loader2, Lock, Plus, RefreshCw, RotateCcw, Save, Search, Star, Trash2, Upload, X } from "lucide-react"
 import { OryCMSBreadcrumbs } from "@/components/orycms/breadcrumbs"
 import { OryCMSMultiSelect, OryCMSSelect } from "@/components/orycms/custom-select"
 import { OryCMSDatePicker } from "@/components/orycms/custom-datepicker"
@@ -1048,6 +1048,28 @@ export function OryCMSProductForm({ id }: { id?: string }) {
         <div className="space-y-5">
            <Card title="Product details">
             <Field label="Product Name*" value={product.name} onChange={(name) => patch({ name })} placeholder="e.g. Adhunik Leaf Care" />
+            <div className="space-y-1.5">
+              <span className="text-[12px] font-medium">UIN (Unique Identification Number)*</span>
+              {initialProductStr && JSON.parse(initialProductStr).uin ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    value={product.uin || ""}
+                    readOnly
+                    className="h-9 w-full cursor-not-allowed rounded-lg border border-border bg-surface-muted px-3 text-[13px] font-mono font-bold text-muted-foreground outline-none"
+                  />
+                  <span className="text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-1.5 rounded-lg shrink-0 flex items-center gap-1">
+                    <Lock className="h-3 w-3" /> Locked
+                  </span>
+                </div>
+              ) : (
+                <input
+                  value={product.uin || ""}
+                  onChange={(e) => patch({ uin: e.target.value })}
+                  placeholder="e.g. ACC-PROD-1001"
+                  className="h-9 w-full rounded-lg border border-border bg-white px-3 text-[13px] font-mono font-bold text-foreground outline-none transition focus:border-border-strong"
+                />
+              )}
+            </div>
             {editing ? (
               <label className="block space-y-1.5">
                 <span className="text-[12px] font-medium">Slug*</span>
@@ -1575,6 +1597,7 @@ export function OryCMSProductForm({ id }: { id?: string }) {
 /** Client-side required-field check mirroring the server rules, for fast feedback. */
 function validateProduct(product: Product): string | null {
   if (!product.name.trim()) return "Product Name is required."
+  if (!product.uin || !product.uin.trim()) return "UIN (Unique Identification Number) is required."
   if (!product.shortDescription.trim()) return "Short Description is required."
   if (product.shortDescription.length > 85) return "Short Description must be 85 characters or fewer."
   if (!product.category.trim()) return "Category is required."

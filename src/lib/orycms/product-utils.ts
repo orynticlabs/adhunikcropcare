@@ -24,6 +24,7 @@ export type PackSizeInput = {
   isDefault?: boolean
   verifySlug?: string
   isVerified?: boolean
+  verifyMrp?: number | string | null
   usp?: number | string | null
 }
 

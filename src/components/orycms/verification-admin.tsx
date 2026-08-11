@@ -37,6 +37,7 @@ type PackSize = {
   price: number
   mrp: number
   salePrice: number
+  verifyMrp?: number | string | null
   sku?: string
   batchNumber?: string
   stockQuantity: number
@@ -601,6 +602,11 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
 
     setAttemptedSubmit(true)
 
+    if (!product.uin?.trim()) {
+      showToast("UIN (Unique Identification Number) is mandatory.", "error")
+      return
+    }
+
     const checkedPacks = product.packSizes.filter((p) => p.isVerified)
     if (checkedPacks.length === 0) {
       showToast("At least one pack size must be selected for verification.", "error")
@@ -608,23 +614,6 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
     }
 
     for (const pack of product.packSizes) {
-      if (pack.mrp <= 0) {
-        showToast(`MRP for pack size "${pack.size}" must be greater than 0.`, "error")
-        return
-      }
-      if (pack.salePrice <= 0) {
-        showToast(`Sale Price for pack size "${pack.size}" must be greater than 0.`, "error")
-        return
-      }
-      if (pack.salePrice > pack.mrp) {
-        showToast(`MRP (₹${pack.mrp.toFixed(2)}) must be greater than or equal to Sale Price (₹${pack.salePrice.toFixed(2)}) for pack size "${pack.size}".`, "error")
-        return
-      }
-      if (pack.stockQuantity <= 0) {
-        showToast(`Stock Quantity for pack size "${pack.size}" must be greater than 0.`, "error")
-        return
-      }
-
       if (pack.isVerified) {
         if (!pack.sku?.trim()) {
           showToast(`SKU Number is required for pack size "${pack.size}".`, "error")
@@ -632,6 +621,10 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
         }
         if (!pack.batchNumber?.trim()) {
           showToast(`Batch Number is required for pack size "${pack.size}".`, "error")
+          return
+        }
+        if (pack.verifyMrp === undefined || pack.verifyMrp === null || pack.verifyMrp === "" || Number(pack.verifyMrp) <= 0) {
+          showToast(`Verification MRP is required for pack size "${pack.size}".`, "error")
           return
         }
         if (pack.usp === undefined || pack.usp === null || pack.usp === "" || Number(pack.usp) <= 0) {
@@ -761,24 +754,47 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
           </div>
         </div>
 
-        {product.uin && (
-          <div className="mt-4 pt-4 border-t border-neutral-200/60 grid gap-2 sm:grid-cols-2 text-[12.5px]">
-            <div>
-              <span className="text-muted-foreground">Unique Identification Number (UIN)</span>
-              <div className="font-mono font-bold text-foreground mt-0.5 select-all">{product.uin}</div>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Active Pack Sizes</span>
-              <div className="font-semibold text-foreground mt-0.5">{product.packSizes.length} units listed</div>
-            </div>
+        <div className="mt-4 pt-4 border-t border-neutral-200/60 grid gap-4 sm:grid-cols-2 text-[12.5px]">
+          <div>
+            <span className="text-muted-foreground font-semibold">Unique Identification Number (UIN)*</span>
+            {initialProductStr && JSON.parse(initialProductStr).uin ? (
+              <div className="flex items-center gap-2 mt-1">
+                <div className="font-mono font-bold text-foreground bg-white border border-border px-3 py-1.5 rounded-lg select-all text-[13px] flex-1">
+                  {product.uin}
+                </div>
+                <span className="text-[11px] font-medium text-amber-800 bg-amber-50 border border-amber-200 px-2 py-1 rounded-md shrink-0 flex items-center gap-1">
+                  <Lock className="h-3 w-3" /> Locked
+                </span>
+              </div>
+            ) : (
+              <div className="mt-1">
+                <input
+                  type="text"
+                  value={product.uin || ""}
+                  onChange={(e) => patch({ uin: e.target.value })}
+                  placeholder="e.g. ACC-PROD-1001"
+                  className={cn(
+                    "h-10 w-full rounded-lg border border-border bg-white px-3 text-[13px] font-mono font-bold text-foreground outline-none transition duration-200 focus:border-border-strong",
+                    attemptedSubmit && !product.uin?.trim() && "border-destructive bg-red-50/20 text-destructive"
+                  )}
+                />
+                {attemptedSubmit && !product.uin?.trim() && (
+                  <span className="text-[11px] font-medium text-destructive mt-0.5 block">UIN number is mandatory and cannot be changed once set.</span>
+                )}
+              </div>
+            )}
           </div>
-        )}
+          <div>
+            <span className="text-muted-foreground font-semibold">Active Pack Sizes</span>
+            <div className="font-semibold text-foreground mt-1 text-[13px]">{product.packSizes.length} units listed</div>
+          </div>
+        </div>
       </div>
 
       {/* 1. Pack Sizes required properties */}
       <Card title="Pack Sizes Specific Setup" icon={<Package className="h-4.5 w-4.5 text-[var(--orycms-orange)]" />}>
         <p className="text-[12px] text-muted-foreground">
-          Input distinct SKUs and manufacturing batches for each pack size. These fields are legally validated to confirm product authenticity.
+          Input distinct SKUs, manufacturing batches, Verification MRP, and USP for each pack size. These fields are legally validated to confirm product authenticity.
         </p>
 
         <div className="grid gap-4">
@@ -812,11 +828,11 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
                   )}
                 </label>
                 <span className="text-[11.5px] font-semibold text-muted-foreground whitespace-nowrap">
-                  MRP: ₹{Number(pack.mrp).toFixed(2)} · Sale Price: ₹{Number(pack.salePrice).toFixed(2)}
+                  Listing MRP: ₹{Number(pack.mrp).toFixed(2)}
                 </span>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3 mt-4">
+              <div className="grid gap-4 sm:grid-cols-4 mt-4">
                 <div className="flex flex-col space-y-1">
                   <span className="text-[12px] font-semibold text-foreground">
                     SKU Number{pack.isVerified ? "*" : ""}
@@ -833,7 +849,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
                         ),
                       })
                     }}
-                    placeholder={pack.isVerified ? "e.g. ACC-PROD-1KG" : "Check checkbox above to enable verification"}
+                    placeholder={pack.isVerified ? "e.g. ACC-PROD-1KG" : "Enable checkbox to edit"}
                     className={cn(
                       "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition duration-200 focus:border-border-strong focus:bg-white",
                       !pack.isVerified && "bg-neutral-50 text-muted-foreground/75 cursor-not-allowed border-neutral-200 font-medium",
@@ -841,7 +857,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
                     )}
                   />
                   {pack.isVerified && attemptedSubmit && !pack.sku?.trim() && (
-                    <span className="text-[11px] font-medium text-destructive">SKU Number is required for verification.</span>
+                    <span className="text-[11px] font-medium text-destructive">SKU Number is required.</span>
                   )}
                 </div>
 
@@ -861,7 +877,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
                         ),
                       })
                     }}
-                    placeholder={pack.isVerified ? "e.g. BATCH-001" : "Check checkbox above to enable verification"}
+                    placeholder={pack.isVerified ? "e.g. BATCH-001" : "Enable checkbox to edit"}
                     className={cn(
                       "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition duration-200 focus:border-border-strong focus:bg-white",
                       !pack.isVerified && "bg-neutral-50 text-muted-foreground/75 cursor-not-allowed border-neutral-200 font-medium",
@@ -869,7 +885,37 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
                     )}
                   />
                   {pack.isVerified && attemptedSubmit && !pack.batchNumber?.trim() && (
-                    <span className="text-[11px] font-medium text-destructive">Batch Number is required for verification.</span>
+                    <span className="text-[11px] font-medium text-destructive">Batch Number is required.</span>
+                  )}
+                </div>
+
+                <div className="flex flex-col space-y-1">
+                  <span className="text-[12px] font-semibold text-foreground">
+                    Verification MRP (₹){pack.isVerified ? "*" : ""}
+                  </span>
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    disabled={!pack.isVerified}
+                    value={pack.verifyMrp !== undefined && pack.verifyMrp !== null ? pack.verifyMrp : pack.mrp || ""}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      patch({
+                        packSizes: product.packSizes.map((item, idx) =>
+                          idx === index ? { ...item, verifyMrp: val } : item
+                        ),
+                      })
+                    }}
+                    placeholder={pack.isVerified ? "e.g. 500.00" : "Enable checkbox to edit"}
+                    className={cn(
+                      "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition duration-200 focus:border-border-strong focus:bg-white",
+                      !pack.isVerified && "bg-neutral-50 text-muted-foreground/75 cursor-not-allowed border-neutral-200 font-medium",
+                      pack.isVerified && attemptedSubmit && (pack.verifyMrp === undefined || pack.verifyMrp === null || pack.verifyMrp === "" || Number(pack.verifyMrp) <= 0) && "border-destructive/60 bg-red-50/20 text-destructive focus:border-destructive"
+                    )}
+                  />
+                  {pack.isVerified && attemptedSubmit && (pack.verifyMrp === undefined || pack.verifyMrp === null || pack.verifyMrp === "" || Number(pack.verifyMrp) <= 0) && (
+                    <span className="text-[11px] font-medium text-destructive">Verification MRP is required.</span>
                   )}
                 </div>
 
@@ -891,7 +937,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
                         ),
                       })
                     }}
-                    placeholder={pack.isVerified ? "e.g. 199.00" : "Check checkbox above to enable verification"}
+                    placeholder={pack.isVerified ? "e.g. 199.00" : "Enable checkbox to edit"}
                     className={cn(
                       "h-10 w-full rounded-lg border border-border bg-surface px-3 text-[13px] outline-none transition duration-200 focus:border-border-strong focus:bg-white",
                       !pack.isVerified && "bg-neutral-50 text-muted-foreground/75 cursor-not-allowed border-neutral-200 font-medium",
@@ -899,7 +945,7 @@ function OryCMSVerificationForm({ id, onBack }: { id: string; onBack: () => void
                     )}
                   />
                   {pack.isVerified && attemptedSubmit && (pack.usp === undefined || pack.usp === null || pack.usp === "" || Number(pack.usp) <= 0) && (
-                    <span className="text-[11px] font-medium text-destructive">USP (Unit Sale Price) is required for verification.</span>
+                    <span className="text-[11px] font-medium text-destructive">USP is required.</span>
                   )}
                 </div>
               </div>
