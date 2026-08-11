@@ -319,9 +319,12 @@ export default async function Home() {
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3 lg:justify-end">
-                  <Link href="/bulk-support" className="inline-flex h-11 items-center gap-2 rounded-full bg-[#bdd879] px-6 text-sm font-bold text-[#17382d] transition-colors hover:bg-white hover:text-[#17382d]">
-                    Become a Dealer <ArrowRight className="h-4 w-4" />
-                  </Link>
+                  <a
+                    href="mailto:support@adhunikcropcare.com?subject=Become%20a%20Distributor%20Inquiry"
+                    className="inline-flex h-11 items-center gap-2 rounded-full bg-[#689c30] px-6 text-sm font-bold text-white transition-colors hover:bg-[#033927] hover:text-white shadow-xs cursor-pointer select-none"
+                  >
+                    Become a Distributor <ArrowRight className="h-4 w-4" />
+                  </a>
                 </div>
               </div>
             </div>
