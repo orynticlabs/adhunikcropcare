@@ -34,7 +34,6 @@ type SnapshotRow = {
   sku: string
   batch_number: string
   mrp: string
-  sale_price: string | null
   usp: string | null
   stock_quantity: number
   mfg_date: Date

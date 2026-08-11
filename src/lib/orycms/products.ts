@@ -153,15 +153,30 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
     }
   }
 
-  // Generate UIN if we are explicitly updating verification, and UIN is not yet set, provided at least one pack is verified
-  let uin = input.uin?.trim() || (typeof existingProduct?.uin === "string" ? existingProduct.uin : "")
-  const hasVerifiedPackInput = (input.packSizes || []).some((p) => Boolean(p.isVerified ?? Boolean(p.verifySlug)))
-  if (input.isVerificationUpdate && !uin && hasVerifiedPackInput) {
-    uin = await generateUniqueProductUIN()
-  }
+  // UIN is manually assigned by admin and cannot be modified once set
+  let uin = input.uin?.trim() || (typeof existingProduct?.uin === "string" ? existingProduct.uin.trim() : "")
 
   // Validate the inputs and copy default pack sizes parameters to product top-level properties
   const payload = validateProductInput({ ...input, uin }, existingProduct, existingPackSizes)
+  uin = payload.uin || uin
+
+  if (uin) {
+    const existingUin = id
+      ? await orycmsPrisma.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM orycms_products
+          WHERE uin = ${uin} AND deleted_at IS NULL AND id != ${finalProductId}::uuid
+          LIMIT 1
+        `
+      : await orycmsPrisma.$queryRaw<Array<{ id: string }>>`
+          SELECT id FROM orycms_products
+          WHERE uin = ${uin} AND deleted_at IS NULL
+          LIMIT 1
+        `
+    if (existingUin.length > 0) {
+      throw new Error(`UIN "${uin}" is already assigned to another active product.`)
+    }
+  }
+
   const slug = payload.slug || (await nextAlphanumericSlug())
 
   // Generate pack-size specific snapshots (and URLs) if details have changed
@@ -543,9 +558,13 @@ function validateProductInput(
           ? Boolean(pack.isVerified)
           : Boolean(pack.verifySlug || existingPack?.isVerified || existingPack?.verifySlug)
 
+        const verifyMrpVal = pack.verifyMrp !== undefined && pack.verifyMrp !== null && pack.verifyMrp !== ""
+          ? Number(pack.verifyMrp)
+          : (existingPack?.verifyMrp !== undefined && existingPack?.verifyMrp !== null ? Number(existingPack.verifyMrp) : (pack.mrp !== undefined ? Number(pack.mrp) : null))
+
         const uspVal = pack.usp !== undefined && pack.usp !== null && pack.usp !== ""
           ? Number(pack.usp)
-          : (existingPack?.usp !== undefined && existingPack?.usp !== null ? Number(existingPack.usp) : (pack.salePrice !== undefined ? Number(pack.salePrice) : null))
+          : (existingPack?.usp !== undefined && existingPack?.usp !== null ? Number(existingPack.usp) : null)
 
         return {
           imageId: imageIds[0] || (typeof pack.imageId === "string" ? pack.imageId.trim() : undefined),
@@ -555,6 +574,7 @@ function validateProductInput(
           price: Number(pack.salePrice ?? pack.mrp ?? existingPack?.salePrice ?? existingPack?.mrp ?? 0),
           mrp: Number(pack.mrp ?? existingPack?.mrp ?? 0),
           salePrice: Number(pack.salePrice ?? existingPack?.salePrice ?? 0),
+          verifyMrp: verifyMrpVal,
           usp: uspVal,
           sku: pack.sku ? strVal(pack.sku) : strVal(existingPack?.sku),
           batchNumber: pack.batchNumber ? strVal(pack.batchNumber) : strVal(existingPack?.batchNumber),
@@ -600,11 +620,24 @@ function validateProductInput(
     uin: input.uin !== undefined ? strVal(input.uin) : strVal(existingProduct?.uin),
   }
 
+  const existingUinStr = typeof existingProduct?.uin === "string" ? existingProduct.uin.trim() : ""
+  if (existingUinStr) {
+    if (normalized.uin && normalized.uin !== existingUinStr) {
+      throw new Error("UIN number cannot be changed once set.")
+    }
+    normalized.uin = existingUinStr
+  } else {
+    if (!normalized.uin) {
+      throw new Error("UIN number is mandatory at creation or initial setup.")
+    }
+  }
+
   const required = [
     ["Product Name", normalized.name],
     ["Short Description", normalized.shortDescription],
     ["Category", normalized.category],
     ["Unit", normalized.unit],
+    ["UIN Number", normalized.uin],
   ] as const
 
   for (const [label, value] of required) {
@@ -651,6 +684,9 @@ function validateProductInput(
 
     for (const pack of normalized.packSizes) {
       if (pack.isVerified) {
+        if (pack.verifyMrp === null || pack.verifyMrp === undefined || Number.isNaN(Number(pack.verifyMrp)) || Number(pack.verifyMrp) <= 0) {
+          throw new Error(`Verification MRP for pack size "${pack.size}" is required for verification.`)
+        }
         if (pack.usp === null || pack.usp === undefined || Number.isNaN(Number(pack.usp)) || Number(pack.usp) <= 0) {
           throw new Error(`USP (Unit Sale Price) for pack size "${pack.size}" is required for verification.`)
         }
@@ -860,7 +896,8 @@ function normalizePackSizes(value: Prisma.JsonValue): { packSizes: PackSizeInput
 
       const mrp = Number(item.mrp ?? item.price ?? 0)
       const salePrice = Number(item.salePrice ?? item.price ?? 0)
-      const usp = item.usp !== undefined && item.usp !== null && item.usp !== "" ? Number(item.usp) : (salePrice || null)
+      const verifyMrp = item.verifyMrp !== undefined && item.verifyMrp !== null && item.verifyMrp !== "" ? Number(item.verifyMrp) : mrp
+      const usp = item.usp !== undefined && item.usp !== null && item.usp !== "" ? Number(item.usp) : null
 
       const verifySlug = String(item.verifySlug ?? "")
       const isVerified = typeof item.isVerified === "boolean" ? item.isVerified : Boolean(verifySlug)
@@ -873,6 +910,7 @@ function normalizePackSizes(value: Prisma.JsonValue): { packSizes: PackSizeInput
         price: salePrice || mrp,
         mrp,
         salePrice,
+        verifyMrp,
         usp,
         sku: String(item.sku ?? ""),
         batchNumber: String(item.batchNumber ?? ""),
@@ -885,18 +923,6 @@ function normalizePackSizes(value: Prisma.JsonValue): { packSizes: PackSizeInput
     })
 
   return { enabled, packSizes }
-}
-
-export async function generateUniqueProductUIN(): Promise<string> {
-  for (let i = 0; i < 15; i++) {
-    const num = Math.floor(10000000 + Math.random() * 90000000)
-    const uin = `ACC-PROD-${num}`
-    const [match] = await orycmsPrisma.$queryRaw<{ id: string }[]>`
-      SELECT id FROM orycms_products WHERE uin = ${uin} LIMIT 1
-    `
-    if (!match) return uin
-  }
-  throw new Error("Failed to generate a unique UIN.")
 }
 
 async function processVerificationSnapshots(
@@ -971,6 +997,8 @@ async function processVerificationSnapshots(
 
     let verifySlug = pack.verifySlug?.trim()
     let isDifferent = true
+    const packVerifyMrp = pack.verifyMrp !== undefined && pack.verifyMrp !== null && pack.verifyMrp !== "" ? Number(pack.verifyMrp) : Number(pack.mrp || 0)
+    const packUsp = pack.usp !== undefined && pack.usp !== null && pack.usp !== "" ? Number(pack.usp) : null
 
     if (verifySlug && !globalFieldsChanged) {
       const [latestSnapshot] = await orycmsPrisma.$queryRaw<Record<string, unknown>[]>`
@@ -983,9 +1011,8 @@ async function processVerificationSnapshots(
           cleanStr(latestSnapshot.pack_size) === cleanStr(pack.size) &&
           cleanStr(latestSnapshot.sku) === cleanStr(pack.sku) &&
           cleanStr(latestSnapshot.batch_number) === cleanStr(pack.batchNumber) &&
-          Number(latestSnapshot.mrp || 0) === Number(pack.mrp || 0) &&
-          Number(latestSnapshot.sale_price || 0) === Number(pack.salePrice || 0) &&
-          Number(latestSnapshot.usp || latestSnapshot.sale_price || 0) === Number(pack.usp || pack.salePrice || 0) &&
+          Number(latestSnapshot.mrp || 0) === packVerifyMrp &&
+          Number(latestSnapshot.usp || 0) === Number(packUsp || 0) &&
           Number(latestSnapshot.stock_quantity || 0) === Number(pack.stockQuantity || 0)
 
         if (specMatch) {
@@ -999,7 +1026,7 @@ async function processVerificationSnapshots(
 
       await orycmsPrisma.$executeRaw`
         INSERT INTO orycms_verified_product_snapshots (
-          slug, product_id, uin, product_name, brand, pack_size, sku, batch_number, mrp, sale_price, usp, stock_quantity,
+          slug, product_id, uin, product_name, brand, pack_size, sku, batch_number, mrp, usp, stock_quantity,
           mfg_date, expiry_date, pack_timing, pack_date, supervisor_name, contractor_name,
           verify_description, verify_image, literature, msds, license, cir, epr_number, plastic_category, leaflet_info
         ) VALUES (
@@ -1011,9 +1038,8 @@ async function processVerificationSnapshots(
           ${pack.size},
           ${pack.sku},
           ${pack.batchNumber},
-          ${pack.mrp},
-          ${pack.salePrice || null},
-          ${pack.usp !== undefined && pack.usp !== null ? Number(pack.usp) : pack.salePrice || null},
+          ${packVerifyMrp},
+          ${packUsp},
           ${pack.stockQuantity},
           ${payload.mfgDate ? payload.mfgDate : null}::date,
           ${payload.expiryDate ? payload.expiryDate : null}::date,
