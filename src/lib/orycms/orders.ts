@@ -92,7 +92,7 @@ export async function confirmOryCMSOrder(id: string, actor: OryCMSAuthUser) {
     `
     return await getOrderForConfirmation(order.id, false, tx) ?? order
   })
-  if (confirmed) await sendOrderConfirmationEmail(confirmed).catch((error) => console.error("Order confirmation email failed", error))
+  if (confirmed) await sendOrderConfirmationEmail(confirmed).catch(() => {})
   await createOryCMSNotification({
     type: "order",
     title: "Order Confirmed",
@@ -100,7 +100,7 @@ export async function confirmOryCMSOrder(id: string, actor: OryCMSAuthUser) {
     entityId: confirmed.id,
     entityType: "order",
     targetUrl: `/admin/orders/${confirmed.id}?highlight=${confirmed.id}`,
-  }).catch((error) => console.error("OryCMS notification failed", error))
+  }).catch(() => {})
   return { orderStatus: "confirmed", order: await getOryCMSOrder(confirmed.id) }
 }
 
@@ -134,7 +134,7 @@ export async function packOryCMSOrder(id: string, actor: OryCMSAuthUser) {
     entityId: packed.id,
     entityType: "order",
     targetUrl: `/admin/orders/${packed.id}?highlight=${packed.id}`,
-  }).catch((error) => console.error("OryCMS notification failed", error))
+  }).catch(() => {})
   return { orderStatus: "packed", order: await getOryCMSOrder(packed.id) }
 }
 

@@ -151,7 +151,7 @@ export async function confirmAndCreateShipment(orderId: string, actor?: OryCMSAu
     entityId: order.id,
     entityType: "shipment",
     targetUrl: `/admin/orders/${order.id}?highlight=${shipment.id}`,
-  }).catch((error) => console.error("OryCMS notification failed", error))
+  }).catch(() => {})
 
   // Notify the customer that fulfillment has started (deduped downstream).
   await enqueueNotification(orderId, "shipmentCreated")
@@ -204,7 +204,6 @@ async function completeAwbAndPickup(input: {
         pickupScheduled = normalizeDateForDb(data.pickup_scheduled_date) ?? pickupScheduled
       }
     } catch (error) {
-      console.error("Shiprocket AWB assignment failed", error)
       await recordShipmentError(input.orderId, error)
       throw error
     }
@@ -327,7 +326,7 @@ export async function syncShipmentStatus(shipment: ShipmentRow, event: Shiprocke
       entityId: shipment.order_id,
       entityType: "shipment",
       targetUrl: `/admin/orders/${shipment.order_id}?highlight=${shipment.id}`,
-    }).catch((error) => console.error("OryCMS notification failed", error))
+    }).catch(() => {})
   }
 
   const previousCanonical = mapShiprocketStatus(shipment.status_code, shipment.status)
@@ -352,9 +351,9 @@ export async function cancelShipment(orderId: string): Promise<FulfillmentResult
   if (!isPreDispatch(canonical)) throw new ShiprocketError("This shipment can no longer be cancelled (already dispatched).", 409)
 
   if (shipment.awb_code) {
-    await cancelShiprocketShipment([shipment.awb_code], { orderId, shipmentId: shipment.id }).catch((error) => console.error("Shiprocket AWB cancel failed", error))
+    await cancelShiprocketShipment([shipment.awb_code], { orderId, shipmentId: shipment.id }).catch(() => {})
   } else if (shipment.shiprocket_order_id) {
-    await cancelShiprocketOrder([shipment.shiprocket_order_id], { orderId, shipmentId: shipment.id }).catch((error) => console.error("Shiprocket order cancel failed", error))
+    await cancelShiprocketOrder([shipment.shiprocket_order_id], { orderId, shipmentId: shipment.id }).catch(() => {})
   }
 
   const updated = await updateShipment(shipment.id, { status: "Cancelled", status_code: shipment.status_code })
@@ -398,7 +397,7 @@ async function enqueueNotification(orderId: string, type: ShipmentNotificationTy
     orderId,
     payload: { notificationType: type },
     dedupeKey: `notify:${orderId}:${type}`,
-  }).catch((error) => console.error("Failed to enqueue shipment notification", error))
+  }).catch(() => {})
 }
 
 // --- Pickup management ---

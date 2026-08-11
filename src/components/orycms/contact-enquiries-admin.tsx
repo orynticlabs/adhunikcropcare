@@ -80,9 +80,7 @@ export function OryCMSContactEnquiriesAdmin() {
           setSelectedEnquiry(json.data)
         }
       }
-    } catch (err) {
-      console.error("Status update error", err)
-    }
+    } catch {}
   }
 
   const counts = useMemo(() => {

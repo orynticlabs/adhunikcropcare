@@ -190,7 +190,7 @@ export async function issueRefund(input: { paymentId: string; amount?: number; r
     entityId: refund.id,
     entityType: "refund",
     targetUrl: `/admin/payments/${encodeURIComponent(input.paymentId)}?highlight=${encodeURIComponent(refund.id)}`,
-  }).catch((error) => console.error("OryCMS notification failed", error))
+  }).catch(() => {})
   if (refund.status === "processed") await notifyRefundCompleted(refund)
   return refund
 }
@@ -206,5 +206,5 @@ async function notifyRefundCompleted(refund: RazorpayRefundEntity) {
     entityId: refund.id,
     entityType: "refund",
     targetUrl: `/admin/payments/${encodeURIComponent(refund.payment_id)}?highlight=${encodeURIComponent(refund.id)}`,
-  }).catch((error) => console.error("OryCMS notification failed", error))
+  }).catch(() => {})
 }

@@ -143,7 +143,7 @@ export async function createUser(input: {
     entityId: user.id,
     entityType: "customer",
     targetUrl: `/admin/customers/${user.id}?highlight=${user.id}`,
-  }).catch((error) => console.error("OryCMS notification failed", error))
+  }).catch(() => {})
 
   return { user: toUserDTO(user) }
 }

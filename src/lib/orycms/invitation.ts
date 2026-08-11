@@ -33,9 +33,7 @@ export async function logAdminAudit(input: {
         now()
       )
     `
-  } catch (err) {
-    console.error("[AuditLog Error] Failed to record audit event:", err)
-  }
+  } catch {}
 }
 
 export function checkResendCooldown(lastInvitedAt: Date | string | null): { allowed: boolean; remainingMs: number } {

@@ -18,6 +18,8 @@ export type EmailTemplateName =
   | "shipmentDelivered"
   | "shipmentCancelled"
   | "adminInvitation"
+  | "adminPasswordReset"
+  | "adminPasswordResetSuccess"
 
 type TemplateInput = {
   actionUrl?: string
@@ -44,6 +46,7 @@ type TemplateInput = {
   paymentStatus?: string
   productName?: string
   setupUrl?: string
+  resetUrl?: string
   stockQuantity?: number
   refundStatus?: string
   ticketId?: string
@@ -276,6 +279,61 @@ export const emailTemplates: Record<EmailTemplateName, (input: TemplateInput) =>
       ${button("Set Your Password", i.setupUrl)}
       <p style="font-size:12px;color:#66756e;margin-top:20px">
         For security, the creating administrator does not set or know your password. Password setup must occur directly through this link.
+      </p>`,
+      i.unsubscribeUrl,
+    ),
+  }),
+  adminPasswordReset: (i) => ({
+    subject: `Reset Your OryCMS Admin Password - ${brand}`,
+    text: [
+      `Hello ${i.fullName ?? "Admin"},`,
+      `We received a request to reset your ${brand} OryCMS Admin Dashboard password.`,
+      `Click the link below to set a new password (link expires in 15 minutes):`,
+      i.resetUrl ?? "",
+      ``,
+      `If you did not request this password reset, please ignore this email. Your password will remain unchanged.`,
+    ].join("\n"),
+    html: layout(
+      "OryCMS Password Reset",
+      `<p>Hello <strong>${escapeHtml(i.fullName ?? "Admin")}</strong>,</p>
+      <p style="font-size:14.5px;line-height:1.6;color:#033927;background:#eff4e9;padding:14px 18px;border-radius:12px;border:1px solid #dce5d8">
+        We received a request to reset your password for the <strong>${brand}</strong> OryCMS Admin Dashboard.
+      </p>
+      <p style="margin-top:20px;font-size:13.5px;color:#495850">
+        Please click the button below to change your password. This secure link is valid for <strong>15 minutes</strong> and can only be used once.
+      </p>
+      ${button("Reset Password", i.resetUrl)}
+      <p style="font-size:12px;color:#66756e;margin-top:20px">
+        If you did not initiate this request, you can safely ignore this email. Your admin password will remain unchanged.
+      </p>`,
+      i.unsubscribeUrl,
+    ),
+  }),
+  adminPasswordResetSuccess: (i) => ({
+    subject: `Password Reset Successful - ${brand} Admin`,
+    text: [
+      `Hello ${i.fullName ?? "Admin"},`,
+      `Your password for the ${brand} OryCMS Admin Dashboard was successfully updated.`,
+      ``,
+      `All active sessions have been automatically signed out for your security.`,
+      i.resetUrl ? `Log in to OryCMS Dashboard: ${i.resetUrl}` : "",
+      ``,
+      `If you did not make this change, please contact your workspace administrator immediately.`,
+    ]
+      .filter(Boolean)
+      .join("\n"),
+    html: layout(
+      "Password Reset Successful",
+      `<p>Hello <strong>${escapeHtml(i.fullName ?? "Admin")}</strong>,</p>
+      <p style="font-size:14.5px;line-height:1.6;color:#033927;background:#eff4e9;padding:14px 18px;border-radius:12px;border:1px solid #dce5d8">
+        Your administrator password for the <strong>${brand}</strong> OryCMS Admin Dashboard was successfully changed.
+      </p>
+      <p style="margin-top:16px;font-size:13.5px;color:#495850">
+        For your security, all existing active login sessions for your account have been signed out automatically. You can now sign in using your new password.
+      </p>
+      ${button("Sign In to OryCMS Dashboard", i.resetUrl)}
+      <p style="font-size:12px;color:#c2410c;background:#fff7ed;padding:12px 14px;border-radius:8px;border:1px solid #ffedd5;margin-top:20px;font-weight:500">
+        ⚠️ <strong>Security Notice:</strong> If you did not authorize this password reset, please contact your workspace owner or administrator immediately to secure your account.
       </p>`,
       i.unsubscribeUrl,
     ),

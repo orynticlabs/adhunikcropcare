@@ -28,7 +28,7 @@ export async function notifyLowStockProduct(product: { id: string; name: string;
     entityId: product.id,
     entityType: "product",
     targetUrl: `/admin/products/${product.id}?highlight=${product.id}`,
-  }).catch((error) => console.error("OryCMS notification failed", error))
+  }).catch(() => {})
 
   const settings = await getOryCMSNotificationSettings()
   if (!settings.emailAlerts) return
@@ -41,7 +41,7 @@ export async function notifyLowStockProduct(product: { id: string; name: string;
     adminProductUrl: `${emailBaseUrl()}/admin/products/${product.id}`,
     productName: product.name,
     stockQuantity: stock,
-  }).catch((error) => console.error("Low stock admin email failed", error))
+  }).catch(() => {})
 }
 
 async function claimLowStockEmail(productId: string) {

@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, KeyRound, Lock, Mail, Shield, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, KeyRound, Lock, Mail, Shield, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,14 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Forgot password state
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [isResetSubmitting, setIsResetSubmitting] = useState(false);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [devResetUrl, setDevResetUrl] = useState<string | null>(null);
+
   const handleSignIn = async () => {
     setError(null);
     setIsSubmitting(true);
@@ -65,8 +73,57 @@ function LoginForm() {
     }
   };
 
+  const handleSendResetLink = async () => {
+    setResetError(null);
+    setResetSuccessMessage(null);
+    setDevResetUrl(null);
+
+    const targetEmail = forgotEmail.trim() || email.trim();
+    if (!targetEmail) {
+      setResetError("Please enter your work email address.");
+      return;
+    }
+
+    setIsResetSubmitting(true);
+    try {
+      const response = await fetch("/api/orycms/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const data = (await response.json()) as {
+        devResetUrl?: string;
+        message?: string;
+        success: boolean;
+        error?: { message: string };
+      };
+
+      if (!response.ok || !data.success) {
+        setResetError(data.error?.message ?? "Failed to send password reset link. Please try again.");
+        setIsResetSubmitting(false);
+        return;
+      }
+
+      if (data.devResetUrl) {
+        setDevResetUrl(data.devResetUrl);
+      }
+
+      setResetSuccessMessage(
+        data.message ?? "If an account exists with this email, a password reset link has been sent."
+      );
+    } catch {
+      setResetError("Network error. Please try again.");
+    } finally {
+      setIsResetSubmitting(false);
+    }
+  };
+
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && email && password && !isSubmitting) handleSignIn();
+  };
+
+  const onForgotKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (forgotEmail || email) && !isResetSubmitting) void handleSendResetLink();
   };
 
   return (
@@ -192,9 +249,12 @@ function LoginForm() {
                       type="button"
                       onClick={() => {
                         setError(null);
+                        setForgotEmail(email);
+                        setResetSuccessMessage(null);
+                        setResetError(null);
                         setStep("forgot");
                       }}
-                      className="text-[11.5px] text-muted-foreground hover:text-foreground"
+                      className="text-[11.5px] text-muted-foreground hover:text-foreground cursor-pointer select-none transition-colors"
                     >
                       Forgot password?
                     </button>
@@ -217,13 +277,14 @@ function LoginForm() {
                   </div>
                 )}
 
-                <Button
-                  className="mt-1 h-10 w-full"
+                <button
+                  type="button"
+                  className="mt-1 h-10 w-full rounded-lg bg-foreground text-[13px] font-semibold text-background hover:!bg-[#FF5A20] hover:!text-white transition-colors shadow-xs cursor-pointer select-none disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={handleSignIn}
                   disabled={!email || !password || isSubmitting}
                 >
                   {isSubmitting ? "Signing in…" : "Sign in"}
-                </Button>
+                </button>
               </div>
 
               <div className="mt-5">
@@ -242,7 +303,7 @@ function LoginForm() {
                 <div>
                   <h2 className="text-[22px] font-semibold tracking-tight">Forgot password?</h2>
                   <p className="mt-1 text-[13px] text-muted-foreground">
-                    Ask your administrator to reset your account.
+                    Enter your work email to receive a secure password reset link.
                   </p>
                 </div>
                 <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-foreground text-background">
@@ -250,17 +311,80 @@ function LoginForm() {
                 </div>
               </div>
 
-              <div className="mt-6 space-y-4">
-                <div className="rounded-xl border border-border bg-surface-muted/60 p-4 text-[13px] leading-relaxed text-muted-foreground">
-                  Self-service password reset is not yet available. Ask your workspace administrator
-                  to reset your account from{" "}
-                  <span className="font-medium text-foreground/80">Settings → Users</span>.
-                </div>
+              <div className="mt-6 space-y-4" onKeyDown={onForgotKey}>
+                {resetSuccessMessage ? (
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-[13px] text-emerald-700 dark:text-emerald-300">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                      <div className="space-y-1">
+                        <p className="font-semibold text-foreground">Check your inbox</p>
+                        <p className="leading-relaxed">{resetSuccessMessage}</p>
+                        <p className="text-[12px] text-muted-foreground mt-2">
+                          The change password link expires in <strong>15 minutes</strong> and can only be used once.
+                        </p>
+                        {devResetUrl ? (
+                          <div className="mt-3 p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs">
+                            <p className="font-semibold text-amber-800 dark:text-amber-300">Development Direct Link (SMTP disabled):</p>
+                            <a
+                              href={devResetUrl}
+                              className="text-blue-600 dark:text-blue-400 font-mono text-[11.5px] break-all block mt-1 underline hover:text-blue-800"
+                            >
+                              {devResetUrl}
+                            </a>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="forgotEmail">Work email</Label>
+                      <div className="relative">
+                        <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          id="forgotEmail"
+                          type="email"
+                          value={forgotEmail}
+                          onChange={(e) => setForgotEmail(e.target.value)}
+                          className="h-10 pl-10"
+                          placeholder="you@company.com"
+                          autoComplete="email"
+                          autoFocus
+                          suppressHydrationWarning
+                        />
+                      </div>
+                    </div>
 
-                <Button variant="outline" className="h-10 w-full" onClick={() => setStep("login")}>
-                  <ArrowLeft className="mr-2 h-4 w-4" />
+                    {resetError && (
+                      <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-[12.5px] text-destructive">
+                        {resetError}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      className="mt-1 h-10 w-full rounded-lg bg-foreground text-[13px] font-semibold text-background hover:!bg-[#FF5A20] hover:!text-white transition-colors shadow-xs cursor-pointer select-none disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={handleSendResetLink}
+                      disabled={!forgotEmail.trim() || isResetSubmitting}
+                    >
+                      {isResetSubmitting ? "Sending reset link…" : "Send reset link"}
+                    </button>
+                  </>
+                )}
+
+                <button
+                  type="button"
+                  className="h-10 w-full rounded-lg bg-white text-foreground border border-border hover:!bg-foreground hover:!text-white font-medium text-[13px] transition-colors shadow-xs cursor-pointer select-none"
+                  onClick={() => {
+                    setStep("login");
+                    setResetSuccessMessage(null);
+                    setResetError(null);
+                  }}
+                >
+                  <ArrowLeft className="mr-2 inline h-4 w-4" />
                   Back to sign in
-                </Button>
+                </button>
               </div>
             </>
           )}

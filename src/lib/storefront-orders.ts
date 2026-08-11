@@ -196,7 +196,7 @@ export async function createCheckoutOrder(userId: string, input: CheckoutPayload
       entityId: order.id,
       entityType: "order",
       targetUrl: `/admin/orders/${order.id}?highlight=${order.id}`,
-    }).catch((error) => console.error("OryCMS notification failed", error))
+    }).catch(() => {})
     if (payload.paymentMethod === "cash_on_delivery") await sendOrderConfirmationEmail(order)
 
     const response = {
@@ -294,8 +294,8 @@ export async function cancelOrder(userId: string, orderId: string) {
     RETURNING *
   `
   await recordTransaction(order.id, userId, "order.cancelled", order.payment_status, Number(order.total), { rawPayload: { refundStatus } })
-  await sendOrderEventEmail(updated, "orderCancelled").catch((error) => console.error("Cancellation email failed", error))
-  if (refundStatus === "pending") await sendOrderEventEmail(updated, "refundUpdate").catch((error) => console.error("Refund email failed", error))
+  await sendOrderEventEmail(updated, "orderCancelled").catch(() => {})
+  if (refundStatus === "pending") await sendOrderEventEmail(updated, "refundUpdate").catch(() => {})
   return serializeOrder(updated)
 }
 
@@ -316,8 +316,8 @@ export async function cancelOrderByAdmin(orderId: string) {
     RETURNING *
   `
   await recordTransaction(order.id, order.user_id ?? null, "order.cancelled_by_admin", order.payment_status, Number(order.total), { rawPayload: { refundStatus } })
-  await sendOrderEventEmail(updated, "orderCancelled").catch((error) => console.error("Cancellation email failed", error))
-  if (refundStatus === "pending") await sendOrderEventEmail(updated, "refundUpdate").catch((error) => console.error("Refund email failed", error))
+  await sendOrderEventEmail(updated, "orderCancelled").catch(() => {})
+  if (refundStatus === "pending") await sendOrderEventEmail(updated, "refundUpdate").catch(() => {})
   return serializeOrder(updated)
 }
 
@@ -362,7 +362,7 @@ export async function handleRazorpayWebhook(rawBody: string, signature: string |
         entityId: payment.id ?? updated.id,
         entityType: "payment",
         targetUrl: `/admin/payments?highlight=${encodeURIComponent(payment.id ?? updated.id)}`,
-      }).catch((error) => console.error("OryCMS notification failed", error))
+      }).catch(() => {})
     }
     return
   }
@@ -385,8 +385,8 @@ export async function handleRazorpayWebhook(rawBody: string, signature: string |
         entityId: refund.id ?? refund.payment_id,
         entityType: "refund",
         targetUrl: `/admin/payments/${encodeURIComponent(refund.payment_id)}?highlight=${encodeURIComponent(refund.id ?? refund.payment_id)}`,
-      }).catch((error) => console.error("OryCMS notification failed", error))
-      await sendOrderEventEmail(updated, "refundUpdate").catch((error) => console.error("Refund email failed", error))
+      }).catch(() => {})
+      await sendOrderEventEmail(updated, "refundUpdate").catch(() => {})
     }
   }
 }
@@ -609,11 +609,10 @@ export async function sendOrderConfirmationEmail(order: StorefrontOrderRow) {
   const [customerEmailResult] = await Promise.all([
     sendOrderEventEmail(order, "orderPlaced"),
     sendAdminEmail({ firstName: contact?.firstName, orderNumber: order.number, template: "orderPlaced", total: Number(order.total), unsubscribeUrl: "" }),
-  ]).catch((error) => {
-    console.error("Order SMTP email failed", error)
+  ]).catch(() => {
     return [{ skipped: true }]
   })
-  await sendConfiguredAdminOrderNotifications(order).catch((error) => console.error("Admin order notification failed", error))
+  await sendConfiguredAdminOrderNotifications(order).catch(() => {})
   
   const messageId = customerEmailResult && "messageId" in customerEmailResult ? customerEmailResult.messageId : null
   const status = customerEmailResult?.skipped ? "skipped" : messageId ? "sent" : "failed"
@@ -804,8 +803,7 @@ async function loadInvoiceLogo(): Promise<PdfImage | null> {
       .raw()
       .toBuffer({ resolveWithObject: true })
     return { name: "Logo", width: info.width, height: info.height, dataHex: data.toString("hex").toUpperCase() }
-  } catch (error) {
-    console.error("Invoice logo unavailable", error)
+  } catch {
     return null
   }
 }

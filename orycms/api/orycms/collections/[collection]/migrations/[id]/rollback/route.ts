@@ -17,18 +17,7 @@ export async function POST(request: NextRequest, { params }: RouteCtx) {
     const { id } = await params;
     const record = await rollbackOryCMSMigration(id, session.email);
     return NextResponse.json({ success: true, data: record });
-  } catch (err) {
-    if (err instanceof OryCMSAuthError)
-      return NextResponse.json(
-        { success: false, error: { code: err.code, message: err.message } },
-        { status: err.statusCode },
-      );
-    if (err instanceof OryCMSMigrationError)
-      return NextResponse.json(
-        { success: false, error: { code: err.code, message: err.message } },
-        { status: err.statusCode },
-      );
-    console.error(err);
+  } catch {
     return NextResponse.json(
       { success: false, error: { code: "INTERNAL_ERROR", message: "Rollback failed." } },
       { status: 500 },

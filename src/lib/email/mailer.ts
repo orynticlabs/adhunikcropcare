@@ -33,7 +33,7 @@ function getSmtpTransporter() {
   const port = portStr ? parseInt(portStr, 10) : 465
   const user = process.env.SMTP_USER
   const pass = process.env.SMTP_PASSWORD
-  const from = process.env.SMTP_EMAIL_FROM ?? process.env.ORDER_EMAIL_FROM ?? user
+  const from = process.env.SMTP_EMAIL_FROM
   const replyTo = process.env.SMTP_REPLY_TO
 
   if (!pass || (!host && !user)) {
@@ -92,7 +92,6 @@ export async function sendEmail(input: SendInput) {
   if (!(await canSend(input.userId, input.template))) return { skipped: true }
   const smtp = getSmtpTransporter()
   if (!smtp) {
-    console.warn(`Email ${input.template} skipped: SMTP is not configured.`)
     return { skipped: true }
   }
   const rendered = emailTemplates[input.template]({ ...input, unsubscribeUrl: unsubscribeUrl(input.userId) })
@@ -107,7 +106,6 @@ export async function sendEmail(input: SendInput) {
     })
     return { messageId: info.messageId, skipped: false }
   } catch (error) {
-    console.error(`[SMTP Error] Delivery failed for template "${input.template}" to "${input.to}":`, error)
     return { error: error instanceof Error ? error.message : String(error), skipped: true }
   }
 }
@@ -148,7 +146,6 @@ export async function sendOrderAdminNotifications(recipients: string[], data: Or
   if (unique.length === 0) return { skipped: true }
   const smtp = getSmtpTransporter()
   if (!smtp) {
-    console.warn("Order admin notification skipped: SMTP is not configured.")
     return { skipped: true }
   }
   const rendered = emailTemplates.adminOrderNotification({ ...data, unsubscribeUrl: `${emailBaseUrl()}/admin/settings` })
@@ -163,7 +160,6 @@ export async function sendOrderAdminNotifications(recipients: string[], data: Or
     })
     return { messageId: info.messageId, recipients: unique, skipped: false }
   } catch (error) {
-    console.error("[SMTP Error] Order admin notification delivery failed:", error)
     return { error: error instanceof Error ? error.message : String(error), recipients: unique, skipped: true }
   }
 }
@@ -173,7 +169,6 @@ export async function sendLowStockAdminNotifications(recipients: string[], data:
   if (unique.length === 0) return { skipped: true }
   const smtp = getSmtpTransporter()
   if (!smtp) {
-    console.warn("Low stock admin notification skipped: SMTP is not configured.")
     return { skipped: true }
   }
   const rendered = emailTemplates.adminLowStockNotification({ ...data, unsubscribeUrl: `${emailBaseUrl()}/admin/settings` })
@@ -188,7 +183,6 @@ export async function sendLowStockAdminNotifications(recipients: string[], data:
     })
     return { messageId: info.messageId, recipients: unique, skipped: false }
   } catch (error) {
-    console.error("[SMTP Error] Low stock admin notification delivery failed:", error)
     return { error: error instanceof Error ? error.message : String(error), recipients: unique, skipped: true }
   }
 }
@@ -226,7 +220,6 @@ export async function sendContactAdminNotifications(recipients: string[], data: 
   if (unique.length === 0) return { skipped: true }
   const smtp = getSmtpTransporter()
   if (!smtp) {
-    console.warn("Contact admin notification skipped: SMTP is not configured.")
     return { skipped: true }
   }
   const adminContactUrl = data.adminContactUrl ?? `${emailBaseUrl()}/admin/collections/contact`
@@ -246,7 +239,6 @@ export async function sendContactAdminNotifications(recipients: string[], data: 
     })
     return { messageId: info.messageId, recipients: unique, skipped: false }
   } catch (error) {
-    console.error("[SMTP Error] Contact admin notification delivery failed:", error)
     return { error: error instanceof Error ? error.message : String(error), recipients: unique, skipped: true }
   }
 }
@@ -265,6 +257,39 @@ export async function sendAdminInvitationEmail(data: AdminInvitationEmailData) {
     fullName: data.fullName,
     invitedBy: data.invitedBy,
     setupUrl: data.setupUrl,
+    unsubscribeUrl: `${emailBaseUrl()}/privacy-policy`,
+  })
+}
+
+export type AdminPasswordResetEmailData = {
+  fullName: string
+  resetUrl: string
+  to: string
+}
+
+export async function sendAdminPasswordResetEmail(data: AdminPasswordResetEmailData) {
+  return sendEmail({
+    template: "adminPasswordReset",
+    to: data.to,
+    fullName: data.fullName,
+    resetUrl: data.resetUrl,
+    unsubscribeUrl: `${emailBaseUrl()}/privacy-policy`,
+  })
+}
+
+export type AdminPasswordResetSuccessEmailData = {
+  email: string
+  fullName: string
+  to: string
+}
+
+export async function sendAdminPasswordResetSuccessEmail(data: AdminPasswordResetSuccessEmailData) {
+  return sendEmail({
+    template: "adminPasswordResetSuccess",
+    to: data.to,
+    fullName: data.fullName,
+    email: data.email,
+    resetUrl: `${emailBaseUrl()}/admin/login`,
     unsubscribeUrl: `${emailBaseUrl()}/privacy-policy`,
   })
 }

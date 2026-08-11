@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
   const now = new Date().toISOString()
   const messageId = Sentry.captureMessage(`Sentry test message ${now}`, "info")
   Sentry.logger.info("Sentry test log", { at: now, source: "api/sentry/test" })
-  console.info("Sentry console log test", { at: now, source: "api/sentry/test" })
   const exceptionId = Sentry.captureException(new Error(`Sentry test exception ${now}`))
   await Sentry.flush(2000)
 

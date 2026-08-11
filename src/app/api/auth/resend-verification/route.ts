@@ -18,7 +18,6 @@ export async function POST(request: NextRequest) {
       return jsonError(error.message, 429, "RATE_LIMITED")
     }
     // Do not reveal whether a storefront customer account exists or is already verified.
-    console.error("Verification resend request failed", error)
     return NextResponse.json({ success: true, data: { message: GENERIC_MESSAGE } })
   }
 }

@@ -86,8 +86,7 @@ export async function POST(request: NextRequest) {
     setOryCMSAdminSessionCookie(response, rawToken)
 
     return response
-  } catch (error) {
-    console.error("OryCMS Prisma login error:", error)
+  } catch {
     return NextResponse.json(
       { success: false, error: { code: "LOGIN_FAILED", message: "Login failed." } },
       { status: 500 },

@@ -15,7 +15,6 @@ function errResponse(err: unknown) {
       { success: false, error: { code: err.code, message: err.message } },
       { status: err.statusCode },
     );
-  console.error(err);
   return NextResponse.json(
     { success: false, error: { code: "INTERNAL_ERROR", message: "Request failed." } },
     { status: 500 },
