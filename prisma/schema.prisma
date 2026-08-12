@@ -125,6 +125,7 @@ model OryCMSProduct {
   howToUse         String?   @map("how_to_use")
   shippingReturns  String?   @map("shipping_returns")
   category         String
+  seasonalCategory String?   @map("seasonal_category")
   brand            String?
   sku              String?
   price            Decimal   @db.Decimal(12, 2)

@@ -1,4 +1,6 @@
 export const PRODUCT_STATUSES = ["draft", "published"] as const
+export const SEASONAL_CATEGORIES = ["Kharif", "Rabi", "Zaid"] as const
+export type SeasonalCategory = (typeof SEASONAL_CATEGORIES)[number]
 
 export type ProductStatus = (typeof PRODUCT_STATUSES)[number]
 
@@ -31,6 +33,7 @@ export type PackSizeInput = {
 export type OryCMSProductInput = {
   brand?: string
   category: string
+  seasonalCategory?: string | null
   featured: boolean
   fullDescription?: string
   howToUse?: string

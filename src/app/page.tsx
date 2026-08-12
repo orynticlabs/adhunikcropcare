@@ -77,8 +77,7 @@ export const revalidate = 180 // 3-minute ISR
 
 async function getHomeProducts() {
   try {
-    const publishedProducts = await listOryCMSProducts({ publishedOnly: true })
-    return publishedProducts.filter((product) => product.featured)
+    return await listOryCMSProducts({ publishedOnly: true })
   } catch {
     return [] as OryCMSProductDTO[]
   }
@@ -98,7 +97,8 @@ async function getHomeReels() {
 
 /* ─── Page ───────────────────────────────────────────────── */
 export default async function Home() {
-  const products = await getHomeProducts()
+  const publishedProducts = await getHomeProducts()
+  const featuredProducts = publishedProducts.filter((p) => p.featured)
   const reels = await getHomeReels()
 
   return (
@@ -236,7 +236,7 @@ export default async function Home() {
                 Recommendations tuned to the calendar.
               </h2>
             </div>
-            <KnowledgeTabs />
+            <KnowledgeTabs products={publishedProducts} />
           </div>
         </section>
 
@@ -332,7 +332,7 @@ export default async function Home() {
         </section>
 
         {/* ══ Marketplace ═════════════════════════════════════ */}
-        <MarketplaceProductsSection products={products} />
+        <MarketplaceProductsSection products={featuredProducts} />
 
         {/* ══ Farmer Services ═════════════════════════════════ */}
         <section

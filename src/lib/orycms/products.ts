@@ -19,6 +19,7 @@ export * from "./product-utils"
 type OryCMSProductRow = {
   brand: string | null
   category: string
+  seasonal_category: string | null
   created_at: Date
   deleted_at: Date | null
   featured: boolean
@@ -211,6 +212,7 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
         SET
           brand = ${data.brand},
           category = ${data.category},
+          seasonal_category = ${data.seasonalCategory},
           featured = ${data.featured},
           full_description = ${data.fullDescription},
           how_to_use = ${data.howToUse},
@@ -254,6 +256,7 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
           id,
           brand,
           category,
+          seasonal_category,
           featured,
           full_description,
           how_to_use,
@@ -294,6 +297,7 @@ export async function saveOryCMSProduct(input: OryCMSProductInput, id?: string) 
           ${finalProductId}::uuid,
           ${data.brand},
           ${data.category},
+          ${data.seasonalCategory},
           ${data.featured},
           ${data.fullDescription},
           ${data.howToUse},
@@ -523,6 +527,7 @@ function validateProductInput(
     ...input,
     brand: input.brand !== undefined ? strVal(input.brand) : strVal(existingProduct?.brand),
     category: input.category !== undefined ? strVal(input.category) : strVal(existingProduct?.category),
+    seasonalCategory: input.seasonalCategory !== undefined ? (strVal(input.seasonalCategory) || null) : (existingProduct?.seasonal_category ? strVal(existingProduct.seasonal_category) : null),
     featured: Boolean(input.featured !== undefined ? input.featured : (existingProduct?.featured ?? false)),
     fullDescription: input.fullDescription !== undefined ? sanitizeRichText(input.fullDescription) : strVal(existingProduct?.full_description),
     howToUse: input.howToUse !== undefined ? sanitizeRichText(input.howToUse) : strVal(existingProduct?.how_to_use),
@@ -743,6 +748,7 @@ function toPrismaProductData(input: OryCMSProductInput & { slug: string }) {
   return {
     brand: input.brand || null,
     category: input.category,
+    seasonalCategory: input.seasonalCategory || null,
     featured: Boolean(input.featured),
     fullDescription: input.fullDescription || null,
     howToUse: input.howToUse || null,
@@ -788,6 +794,7 @@ function toProductDTO(product: OryCMSProductRow): OryCMSProductDTO {
   return {
     brand: product.brand ?? "",
     category: product.category,
+    seasonalCategory: product.seasonal_category ?? null,
     createdAt: new Date(product.created_at).toISOString(),
     deletedAt: product.deleted_at ? new Date(product.deleted_at).toISOString() : null,
     featured: product.featured,

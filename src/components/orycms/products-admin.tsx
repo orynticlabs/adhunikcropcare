@@ -45,6 +45,7 @@ type ProductStatus = "draft" | "published"
 type Product = {
   brand: string
   category: string
+  seasonalCategory?: string | null
   createdAt: string
   deletedAt?: string | null
   featured: boolean
@@ -159,6 +160,7 @@ function formatPackSize(qty: string | number, unit: string): string {
 const emptyProduct: Product = {
   brand: "",
   category: "",
+  seasonalCategory: null,
   createdAt: "",
   featured: false,
   fullDescription: "",
@@ -805,10 +807,7 @@ export function OryCMSProductForm({ id }: { id?: string }) {
     if (json.success) {
       setMeta(json.data)
       setProduct((current) => {
-        const nextProd = current.category || json.data.categories.length === 0
-          ? current
-          : { ...current, category: json.data.categories[0] }
-        const ensured = ensureDefaultPackSize(nextProd)
+        const ensured = ensureDefaultPackSize(current)
         setInitialProductStr((prev) => prev ?? JSON.stringify(ensured))
         return ensured
       })
@@ -1405,7 +1404,7 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                   value={product.category}
                   onChange={(category) => patch({ category })}
                   options={meta.categories.map((c) => ({ label: c, value: c }))}
-                  placeholder="Select category"
+                  placeholder="Select Category"
                   searchable
                   className="w-full"
                 />
@@ -1414,6 +1413,22 @@ export function OryCMSProductForm({ id }: { id?: string }) {
                     Add an active category from OryCMS Categories first.
                   </span>
                 ) : null}
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <OryCMSSelect
+                  label="Seasonal Category (Optional)"
+                  value={product.seasonalCategory || ""}
+                  onChange={(seasonalCategory) => patch({ seasonalCategory: seasonalCategory || null })}
+                  options={[
+                    { label: "Kharif", value: "Kharif" },
+                    { label: "Rabi", value: "Rabi" },
+                    { label: "Zaid", value: "Zaid" },
+                  ]}
+                  placeholder="Select Seasonal Category (Optional)"
+                  className="w-full"
+                />
               </div>
             </div>
             <Field label="Tags" value={product.tags.join(", ")} onChange={(value) => patch({ tags: value.split(",") })} placeholder="e.g. organic, fertilizer, cropcare" />
