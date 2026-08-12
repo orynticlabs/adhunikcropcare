@@ -1169,7 +1169,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
             </div>
             <h2 className="mt-4 font-display text-3xl leading-tight sm:text-4xl">Products of Similar Kind</h2>
             <p className="mt-1 text-sm text-foreground/70">Formulated for similar crop care, soil health, and protection needs</p>
-            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
               {similarList.map((item, idx) => (
                 <ProductCard
                   key={`sim-${item.name}-${idx}`}
@@ -1197,7 +1197,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
             </div>
             <h2 className="mt-4 font-display text-3xl leading-tight sm:text-4xl">You May Also Like</h2>
             <p className="mt-1 text-sm text-foreground/70">Discover complementary agricultural solutions across our full organic product line</p>
-            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
               {differentList.map((item, idx) => (
                 <ProductCard
                   key={`diff-${item.name}-${idx}`}
@@ -1225,7 +1225,7 @@ export default function ProductDetailView({ product }: { product: ProductDetail 
             </div>
             <h2 className="mt-4 font-display text-3xl leading-tight sm:text-4xl">Top Rated Farmers&apos; Choice</h2>
             <p className="mt-1 text-sm text-foreground/70">Our most trusted and highly rated crop care inputs chosen by farmers across India</p>
-            <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
               {bestSellerList.map((item, idx) => (
                 <ProductCard
                   key={`best-${item.name}-${idx}`}

@@ -8,15 +8,17 @@ export function Skeleton({ className }: { className?: string }) {
 /** Card placeholder matching the storefront ProductCard shape. */
 export function ProductCardSkeleton() {
   return (
-    <div className="mx-auto h-[34rem] w-full max-w-[20rem] overflow-hidden rounded-2xl border border-border/50 bg-card">
-      <Skeleton className="aspect-square w-full rounded-none" />
-      <div className="space-y-3 p-4">
-        <Skeleton className="h-3 w-16" />
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-3 w-full" />
-        <div className="flex items-center justify-between pt-1">
-          <Skeleton className="h-5 w-20" />
-          <Skeleton className="h-8 w-8 rounded-full" />
+    <div className="flex h-full min-h-[21rem] sm:min-h-[28rem] w-full flex-col overflow-hidden rounded-2xl border border-border/50 bg-card">
+      <Skeleton className="aspect-square w-full rounded-none shrink-0" />
+      <div className="flex flex-1 flex-col justify-between p-3 sm:p-4 space-y-2 sm:space-y-3">
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-4 w-3/4" />
+          <Skeleton className="h-3 w-full" />
+        </div>
+        <div className="flex items-center justify-between pt-2 border-t border-border/40">
+          <Skeleton className="h-4 sm:h-5 w-16 sm:w-20" />
+          <Skeleton className="h-7 sm:h-8 w-16 sm:w-20 rounded-full" />
         </div>
       </div>
     </div>
@@ -26,7 +28,7 @@ export function ProductCardSkeleton() {
 /** A responsive grid of product card skeletons that mirrors the products page grid. */
 export function ProductGridSkeleton({ count = 8 }: { count?: number }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
       {Array.from({ length: count }).map((_, index) => (
         <ProductCardSkeleton key={index} />
       ))}

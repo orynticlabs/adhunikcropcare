@@ -35,6 +35,7 @@ const SORT_OPTIONS = [
 type StoreProduct = {
   badge: string
   category: string
+  seasonalCategory?: string | null
   defaultSize?: string
   images?: string[]
   img: string
@@ -49,6 +50,7 @@ type StoreProduct = {
 
 type CmsProduct = {
   category: string
+  seasonalCategory?: string | null
   featured: boolean
   images: { url: string }[]
   name: string
@@ -84,6 +86,7 @@ function cmsProductToStoreProduct(product: CmsProduct): StoreProduct {
   return {
     badge: product.featured ? "Featured" : product.category,
     category: product.category,
+    seasonalCategory: product.seasonalCategory ?? null,
     defaultSize: defaultPack?.size,
     images,
     img: images[0] || "/placeholder.svg",
@@ -101,8 +104,10 @@ function ProductsPageContent() {
   const searchParams = useSearchParams()
   const searchQuery = searchParams.get("q")?.trim() ?? ""
   const urlCategoryParam = searchParams.get("category")?.trim() || searchParams.get("cat")?.trim() || ""
+  const urlSeasonParam = searchParams.get("season")?.trim() || searchParams.get("s")?.trim() || ""
 
   const [activeCategory, setActiveCategory] = useState("All")
+  const [activeSeason,   setActiveSeason]   = useState("All")
   const [priceRange,    setPriceRange]    = useState(0)
   const [sortBy,        setSortBy]        = useState("featured")
   const [priceOpen,     setPriceOpen]     = useState(false)
@@ -151,6 +156,17 @@ function ProductsPageContent() {
     }
   }, [urlCategoryParam, categories])
 
+  // Keep active season synced with URL search query param (?season=...)
+  useEffect(() => {
+    if (urlSeasonParam) {
+      const seasons = ["Kharif", "Rabi", "Zaid"]
+      const match = seasons.find((s) => s.toLowerCase() === urlSeasonParam.toLowerCase())
+      setActiveSeason(match || urlSeasonParam)
+    } else {
+      setActiveSeason("All")
+    }
+  }, [urlSeasonParam])
+
   function handleCategorySelect(cat: string) {
     setActiveCategory(cat)
     const params = new URLSearchParams(searchParams.toString())
@@ -165,6 +181,20 @@ function ProductsPageContent() {
     router.push(newPath, { scroll: false })
   }
 
+  function handleSeasonSelect(season: string) {
+    setActiveSeason(season)
+    const params = new URLSearchParams(searchParams.toString())
+    if (season === "All") {
+      params.delete("season")
+      params.delete("s")
+    } else {
+      params.set("season", season)
+    }
+    const newQuery = params.toString()
+    const newPath = newQuery ? `/products?${newQuery}` : "/products"
+    router.push(newPath, { scroll: false })
+  }
+
   const filtered = useMemo(() => {
     let result = [...products]
     if (searchQuery) {
@@ -172,23 +202,25 @@ function ProductsPageContent() {
         matchesSearchQuery(searchQuery, [
           product.name,
           product.category,
+          product.seasonalCategory ?? "",
           product.badge,
           product.sizes?.join(" "),
         ]),
       )
     }
     if (activeCategory !== "All") result = result.filter(p => p.category.toLowerCase() === activeCategory.toLowerCase())
+    if (activeSeason !== "All")   result = result.filter(p => p.seasonalCategory?.toLowerCase() === activeSeason.toLowerCase())
     const { min, max } = PRICE_RANGES[priceRange]
     result = result.filter(p => p.priceValue >= min && p.priceValue <= max)
     if (sortBy === "price-asc")  result.sort((a, b) => a.priceValue - b.priceValue)
     if (sortBy === "price-desc") result.sort((a, b) => b.priceValue - a.priceValue)
     if (sortBy === "rating")     result.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
     return result
-  }, [activeCategory, priceRange, products, searchQuery, sortBy])
+  }, [activeCategory, activeSeason, priceRange, products, searchQuery, sortBy])
 
-  const activeFiltersCount = (activeCategory !== "All" ? 1 : 0) + (priceRange !== 0 ? 1 : 0)
+  const activeFiltersCount = (activeCategory !== "All" ? 1 : 0) + (activeSeason !== "All" ? 1 : 0) + (priceRange !== 0 ? 1 : 0)
 
-  function clearFilters() { handleCategorySelect("All"); setPriceRange(0) }
+  function clearFilters() { handleCategorySelect("All"); handleSeasonSelect("All"); setPriceRange(0) }
 
   return (
     <div className="min-h-screen bg-background">
@@ -372,6 +404,27 @@ function ProductsPageContent() {
               </div>
             </div>
 
+            {/* Seasonal Category filter row */}
+            <div className="flex items-center gap-2 pb-2.5 overflow-x-auto scrollbar-none border-t border-border/40 pt-2 text-xs">
+              <span className="font-semibold text-foreground/60 shrink-0 uppercase tracking-wider text-[10px]">Season:</span>
+              <div className="flex gap-1.5">
+                {["All", "Kharif", "Rabi", "Zaid"].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => handleSeasonSelect(s)}
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs sm:text-sm font-medium transition-all duration-200 ${
+                      activeSeason.toLowerCase() === s.toLowerCase()
+                        ? "bg-[#033927] text-white shadow-sm"
+                        : "border border-border/60 text-foreground/70 bg-background hover:border-[#689c30]/50 hover:text-[#689c30]"
+                    }`}
+                  >
+                    {s === "All" ? "All Seasons" : s}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Active filter tags */}
             {activeFiltersCount > 0 && (
               <div className="flex flex-wrap gap-2 pb-3">
@@ -379,6 +432,14 @@ function ProductsPageContent() {
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-[#689c30]/20 bg-[#689c30]/10 px-3 py-1 text-xs font-medium text-[#689c30]">
                     {activeCategory}
                     <button type="button" onClick={() => setActiveCategory("All")} aria-label="Remove category filter">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </span>
+                )}
+                {activeSeason !== "All" && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#689c30]/20 bg-[#689c30]/10 px-3 py-1 text-xs font-medium text-[#689c30]">
+                    Season: {activeSeason}
+                    <button type="button" onClick={() => setActiveSeason("All")} aria-label="Remove season filter">
                       <X className="h-3 w-3" />
                     </button>
                   </span>
@@ -444,7 +505,7 @@ function ProductsPageContent() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
               {filtered.map(p => {
                 const price = formatCurrency(p.priceValue)
                 return (
@@ -459,7 +520,7 @@ function ProductsPageContent() {
                     originalPrice={comparePrice(p.priceValue)}
                     badge={p.badge}
                     subtitle={p.shortDescription || `${p.category} solution for better crop outcomes`}
-                    imageSizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1023px) calc(50vw - 2rem), (max-width: 1279px) calc(33vw - 1.5rem), 300px"
+                    imageSizes="(max-width: 639px) calc(50vw - 1.25rem), (max-width: 1023px) calc(33vw - 1.5rem), 300px"
                   />
                 )
               })}

@@ -102,7 +102,7 @@ export function ProductCard({
 
   return (
     <article
-      className={`group relative flex h-full min-h-[28rem] w-full flex-col overflow-hidden rounded-2xl border border-[#e2e7df] bg-white shadow-sm transition-all duration-200 hover:border-[#b9cdb3] hover:shadow-md ${className}`}
+      className={`group relative flex h-full min-h-[21rem] sm:min-h-[28rem] w-full flex-col overflow-hidden rounded-2xl border border-[#e2e7df] bg-white shadow-sm transition-all duration-200 hover:border-[#b9cdb3] hover:shadow-md ${className}`}
     >
       <Link href={href} className="relative block aspect-square shrink-0 overflow-hidden bg-white" aria-label={`View ${name}`}>
         <Image
@@ -114,21 +114,21 @@ export function ProductCard({
         />
 
         {overlayLabel ? (
-          <div className="absolute left-3 top-3 z-10 rounded-full border border-[#d7e0da] bg-white/95 backdrop-blur-sm px-2.5 py-1 text-[11px] font-semibold text-[#173c31] shadow-sm">
+          <div className="absolute left-2.5 top-2.5 sm:left-3 sm:top-3 z-10 rounded-full border border-[#d7e0da] bg-white/95 backdrop-blur-sm px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-[11px] font-semibold text-[#173c31] shadow-sm">
             {overlayLabel}
           </div>
         ) : null}
 
         {showReviewBadge ? (
-          <div className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-md border border-[#d7e0da] bg-white/95 backdrop-blur-sm px-2.5 py-1 text-xs font-medium text-[#173c31] shadow-sm">
+          <div className="absolute bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 inline-flex items-center gap-1 sm:gap-1.5 rounded-md border border-[#d7e0da] bg-white/95 backdrop-blur-sm px-2 py-0.5 sm:px-2.5 sm:py-1 text-[10px] sm:text-xs font-medium text-[#173c31] shadow-sm">
             <span>{currentRating.toFixed(1)}</span>
-            <Star className="h-3.5 w-3.5 fill-[#1d6b57] text-[#1d6b57]" />
+            <Star className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-[#1d6b57] text-[#1d6b57]" />
             <span className="text-[#947f69]">| {currentReviews}</span>
           </div>
         ) : null}
 
         {gallery.length > 1 ? (
-          <div className="absolute bottom-3 right-3 flex gap-1">
+          <div className="absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3 flex gap-1">
             {gallery.slice(0, 4).map((_, index) => (
               <span
                 key={index}
@@ -139,30 +139,30 @@ export function ProductCard({
         ) : null}
       </Link>
 
-      <div className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
-        <div className="h-[3.25rem] flex items-start overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-5">
+        <div className="h-[2.6rem] sm:h-[3.25rem] flex items-start overflow-hidden">
           <Link
             href={href}
-            className="block font-display text-base sm:text-lg font-bold leading-snug tracking-[-0.01em] text-[#171717] transition-colors group-hover:text-[#689c30]"
+            className="block font-display text-sm sm:text-lg font-bold leading-tight sm:leading-snug tracking-[-0.01em] text-[#171717] transition-colors group-hover:text-[#689c30]"
           >
             <span className="line-clamp-2 break-words">{name}</span>
           </Link>
         </div>
 
-        <div className="mt-1.5 h-[2.75rem] overflow-hidden">
-          <p className="line-clamp-2 text-xs sm:text-sm leading-snug sm:leading-snug text-[#66584a]">
+        <div className="mt-1 h-[2.25rem] sm:h-[2.75rem] overflow-hidden">
+          <p className="line-clamp-2 text-[11px] sm:text-sm leading-tight sm:leading-snug text-[#66584a]">
             {supportingLine}
           </p>
         </div>
 
-        <div className="mt-auto pt-3 border-t border-border/40 flex items-center justify-between gap-2">
+        <div className="mt-auto pt-2.5 sm:pt-3 border-t border-border/40 flex items-center justify-between gap-1.5 sm:gap-2">
           <div className="min-w-0 flex-1">
-            <div className="truncate font-sans text-base sm:text-lg font-bold leading-none text-[#171717]">
+            <div className="truncate font-sans text-sm sm:text-lg font-bold leading-none text-[#171717]">
               {price}
             </div>
-            <div className="mt-1 h-4">
+            <div className="mt-0.5 sm:mt-1 h-3.5 sm:h-4">
               {originalPrice ? (
-                <span className="text-xs font-medium text-[#908272] line-through decoration-[#b8a48f] decoration-[1.5px]">
+                <span className="text-[10px] sm:text-xs font-medium text-[#908272] line-through decoration-[#b8a48f] decoration-[1.5px]">
                   {originalPrice}
                 </span>
               ) : null}
@@ -171,7 +171,7 @@ export function ProductCard({
 
           <Link
             href={href}
-            className="inline-flex h-9 shrink-0 items-center justify-center rounded-full bg-[#033927] px-3.5 text-xs font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black"
+            className="inline-flex h-8 sm:h-9 shrink-0 items-center justify-center rounded-full bg-[#033927] px-2.5 sm:px-3.5 text-[11px] sm:text-xs font-semibold text-white transition-colors hover:bg-[#689c30] hover:!text-black cursor-pointer select-none"
           >
             View Product
           </Link>

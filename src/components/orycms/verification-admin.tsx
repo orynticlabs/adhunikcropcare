@@ -20,6 +20,8 @@ import {
   Calendar,
   Layers,
   ClipboardCheck,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   AlertCircle,
   HelpCircle,
@@ -101,13 +103,16 @@ function formatBytes(bytes: number) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
 }
 
+const VERIFICATION_PAGE_SIZE = 10
+
 export function OryCMSVerificationList() {
-  const [products, setProducts] = useState<Product[] >([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<"all" | "verified" | "partially_completed" | "pending">("all")
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null)
   const [toast, setToast] = useState<Toast | null>(null)
+  const [page, setPage] = useState(1)
 
   function showToast(message: string, tone: Toast["tone"] = "success") {
     setToast({ message, tone })
@@ -153,6 +158,13 @@ export function OryCMSVerificationList() {
       return matchesStatus && matchesQuery
     })
   }, [products, query, statusFilter])
+
+  useEffect(() => {
+    setPage(1)
+  }, [query, statusFilter])
+
+  const pageCount = Math.max(1, Math.ceil(filteredProducts.length / VERIFICATION_PAGE_SIZE))
+  const pagedProducts = filteredProducts.slice((page - 1) * VERIFICATION_PAGE_SIZE, page * VERIFICATION_PAGE_SIZE)
 
   const stats = useMemo(() => {
     let verifiedCount = 0
@@ -292,7 +304,7 @@ export function OryCMSVerificationList() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {filteredProducts.map((product) => {
+                {pagedProducts.map((product) => {
                   const uin = String(product.uin || "").trim()
                   const items = Array.isArray(product.packSizes) ? product.packSizes : []
                   const verifiedCount = items.filter((p: { verifySlug?: string }) => Boolean(p.verifySlug)).length
@@ -359,6 +371,31 @@ export function OryCMSVerificationList() {
                 })}
               </tbody>
             </table>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-surface-muted px-4 py-3">
+              <div className="text-[12px] text-muted-foreground">
+                Page {page} of {pageCount}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  disabled={page === 1}
+                  className="inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-surface px-2 text-[12px] disabled:opacity-50 cursor-pointer select-none"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  Prev
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+                  disabled={page === pageCount}
+                  className="inline-flex h-8 items-center gap-1 rounded-lg border border-border bg-surface px-2 text-[12px] disabled:opacity-50 cursor-pointer select-none"
+                >
+                  Next
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
