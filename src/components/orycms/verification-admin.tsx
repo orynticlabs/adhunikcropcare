@@ -113,6 +113,7 @@ export function OryCMSVerificationList() {
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null)
   const [toast, setToast] = useState<Toast | null>(null)
   const [page, setPage] = useState(1)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
 
   function showToast(message: string, tone: Toast["tone"] = "success") {
     setToast({ message, tone })
@@ -196,12 +197,23 @@ export function OryCMSVerificationList() {
   return (
     <section className="mx-auto max-w-[1400px] space-y-6 px-6 py-6 lg:px-8">
       {/* Header */}
-      <div>
-        <OryCMSBreadcrumbs items={[{ href: "/admin", label: "Overview" }, { href: "/admin/verification", label: "Product Verification" }]} />
-        <h1 className="mt-1 text-[26px] font-semibold leading-tight tracking-tight text-foreground">Product Verification</h1>
-        <p className="mt-1 max-w-2xl text-[13.5px] leading-6 text-muted-foreground">
-          Generate secure unique identification numbers (UINs) and manage QR verifications for Adhunik products.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <OryCMSBreadcrumbs items={[{ href: "/admin", label: "Overview" }, { href: "/admin/verification", label: "Product Verification" }]} />
+          <h1 className="mt-1 text-[26px] font-semibold leading-tight tracking-tight text-foreground font-bold">Product Verification</h1>
+          <p className="mt-1 max-w-2xl text-[13.5px] leading-6 text-muted-foreground">
+            Generate secure unique identification numbers (UINs) and manage QR verifications for Adhunik products.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setExportModalOpen(true)}
+          className="inline-flex items-center gap-2 h-9.5 rounded-lg bg-foreground text-background hover:!bg-[#FF5A20] hover:!text-white font-semibold transition-colors px-4 text-[13px] shadow-xs cursor-pointer select-none self-start sm:self-auto"
+        >
+          <Download className="h-4 w-4" />
+          Export Excel Report
+        </button>
       </div>
 
       {/* Stats Summary Cards */}
@@ -400,6 +412,7 @@ export function OryCMSVerificationList() {
         )}
       </div>
 
+      <ExportVerificationModal isOpen={exportModalOpen} onClose={() => setExportModalOpen(false)} />
       <ProductToast toast={toast} />
     </section>
   )
@@ -1398,6 +1411,292 @@ function ProductToast({ toast }: { toast: Toast | null }) {
         {toast.tone === "error" && <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />}
         {toast.tone === "info" && <HelpCircle className="h-4 w-4 text-neutral-600 shrink-0" />}
         <span>{toast.message}</span>
+      </div>
+    </div>
+  )
+}
+
+const FILTER_CRITERIA_OPTIONS = [
+  { label: "All Records", value: "all" },
+  { label: "Single Date", value: "date" },
+  { label: "Between Two Dates (Date Range)", value: "range" },
+  { label: "By Month & Year", value: "month" },
+  { label: "By Year", value: "year" },
+]
+
+const MONTH_SELECT_OPTIONS = [
+  { label: "January (01)", value: "1" },
+  { label: "February (02)", value: "2" },
+  { label: "March (03)", value: "3" },
+  { label: "April (04)", value: "4" },
+  { label: "May (05)", value: "5" },
+  { label: "June (06)", value: "6" },
+  { label: "July (07)", value: "7" },
+  { label: "August (08)", value: "8" },
+  { label: "September (09)", value: "9" },
+  { label: "October (10)", value: "10" },
+  { label: "November (11)", value: "11" },
+  { label: "December (12)", value: "12" },
+]
+
+const YEAR_SELECT_OPTIONS = Array.from({ length: 11 }, (_, i) => {
+  const y = String(2020 + i)
+  return { label: y, value: y }
+})
+
+function ExportVerificationModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const [filterType, setFilterType] = useState<"all" | "date" | "range" | "month" | "year">("all")
+  const [singleDate, setSingleDate] = useState<string>(() => new Date().toISOString().slice(0, 10))
+  const [startDate, setStartDate] = useState<string>(() => new Date().toISOString().slice(0, 10))
+  const [endDate, setEndDate] = useState<string>(() => new Date().toISOString().slice(0, 10))
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => String(new Date().getMonth() + 1))
+  const [selectedYear, setSelectedYear] = useState<string>(() => String(new Date().getFullYear()))
+
+  const [count, setCount] = useState<number | null>(null)
+  const [loadingCount, setLoadingCount] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+
+  const isInvalidRange = useMemo(() => {
+    if (filterType !== "range") return false
+    if (!startDate || !endDate) return false
+    const s = new Date(startDate)
+    const e = new Date(endDate)
+    if (isNaN(s.getTime()) || isNaN(e.getTime())) return false
+    s.setHours(0, 0, 0, 0)
+    e.setHours(0, 0, 0, 0)
+    return e.getTime() <= s.getTime()
+  }, [filterType, startDate, endDate])
+
+  useEffect(() => {
+    if (!isOpen) return
+    if (isInvalidRange) {
+      setCount(null)
+      return
+    }
+
+    let cancelled = false
+    async function fetchCount() {
+      setLoadingCount(true)
+      try {
+        const params = new URLSearchParams({
+          countOnly: "true",
+          filterType,
+        })
+        if (filterType === "date") {
+          params.set("date", singleDate)
+        } else if (filterType === "range") {
+          params.set("startDate", startDate)
+          params.set("endDate", endDate)
+        } else if (filterType === "month") {
+          params.set("month", selectedMonth)
+          params.set("year", selectedYear)
+        } else if (filterType === "year") {
+          params.set("year", selectedYear)
+        }
+
+        const res = await fetch(`/api/orycms/verification/export?${params.toString()}`)
+        const json = await res.json()
+        if (!cancelled && json.success) {
+          setCount(json.count)
+        }
+      } catch {
+        if (!cancelled) setCount(null)
+      } finally {
+        if (!cancelled) setLoadingCount(false)
+      }
+    }
+
+    void fetchCount()
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, filterType, singleDate, startDate, endDate, selectedMonth, selectedYear, isInvalidRange])
+
+  if (!isOpen) return null
+
+  const handleDownload = () => {
+    if (isInvalidRange) return
+    setDownloading(true)
+    try {
+      const params = new URLSearchParams({
+        filterType,
+      })
+      if (filterType === "date") {
+        params.set("date", singleDate)
+      } else if (filterType === "range") {
+        params.set("startDate", startDate)
+        params.set("endDate", endDate)
+      } else if (filterType === "month") {
+        params.set("month", selectedMonth)
+        params.set("year", selectedYear)
+      } else if (filterType === "year") {
+        params.set("year", selectedYear)
+      }
+
+      const downloadUrl = `/api/orycms/verification/export?${params.toString()}`
+
+      const link = document.createElement("a")
+      link.href = downloadUrl
+      link.setAttribute("download", "")
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      setTimeout(() => {
+        setDownloading(false)
+        onClose()
+      }, 1000)
+    } catch {
+      setDownloading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-white p-6 shadow-xl space-y-5">
+        <div className="flex items-center justify-between border-b border-border/80 pb-4">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Export Verified Product Links</h2>
+            <p className="text-[12.5px] text-muted-foreground mt-0.5">
+              Download snapshot logs formatted as Excel (.xlsx)
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-muted-foreground hover:bg-neutral-100 hover:text-foreground transition-colors cursor-pointer select-none"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Export Criteria Selection using OryCMSSelect */}
+        <div>
+          <OryCMSSelect
+            label="Export Criteria"
+            value={filterType}
+            onChange={(val) => setFilterType(val as typeof filterType)}
+            options={FILTER_CRITERIA_OPTIONS}
+          />
+        </div>
+
+        {/* Single Date Selection */}
+        {filterType === "date" && (
+          <div>
+            <OryCMSDatePicker
+              label="Select Target Date"
+              value={singleDate}
+              onChange={(val) => setSingleDate(val)}
+            />
+          </div>
+        )}
+
+        {/* Date Range Selection (Between Two Dates) */}
+        {filterType === "range" && (
+          <div className="space-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <OryCMSDatePicker
+                label="From (Start Date)"
+                value={startDate}
+                onChange={(val) => setStartDate(val)}
+              />
+              <OryCMSDatePicker
+                label="To (End Date)"
+                value={endDate}
+                onChange={(val) => setEndDate(val)}
+              />
+            </div>
+            {isInvalidRange && (
+              <p className="text-[12px] font-semibold text-red-600 flex items-center gap-1.5 bg-red-50 p-2.5 rounded-lg border border-red-200">
+                <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+                End date must be greater than Start date.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* By Month & Year Selection */}
+        {filterType === "month" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <OryCMSSelect
+              label="Select Month"
+              value={selectedMonth}
+              onChange={(val) => setSelectedMonth(val)}
+              options={MONTH_SELECT_OPTIONS}
+            />
+            <OryCMSSelect
+              label="Select Year"
+              value={selectedYear}
+              onChange={(val) => setSelectedYear(val)}
+              options={YEAR_SELECT_OPTIONS}
+            />
+          </div>
+        )}
+
+        {/* By Year Selection */}
+        {filterType === "year" && (
+          <div>
+            <OryCMSSelect
+              label="Select Target Year"
+              value={selectedYear}
+              onChange={(val) => setSelectedYear(val)}
+              options={YEAR_SELECT_OPTIONS}
+            />
+          </div>
+        )}
+
+        {/* Record Count Preview Badge */}
+        <div className="rounded-xl border border-border bg-neutral-50/80 p-3.5 flex items-center justify-between text-[12.5px]">
+          <span className="font-medium text-muted-foreground">Matching Snapshot Records:</span>
+          {loadingCount ? (
+            <span className="flex items-center gap-1.5 font-semibold text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--orycms-orange)]" />
+              Counting...
+            </span>
+          ) : count !== null ? (
+            <span
+              className={cn(
+                "font-bold px-2.5 py-0.5 rounded-md text-[12px]",
+                count > 0 ? "bg-emerald-100 text-emerald-800 border border-emerald-200" : "bg-neutral-200 text-neutral-700"
+              )}
+            >
+              {count} link{count !== 1 ? "s" : ""} found
+            </span>
+          ) : (
+            <span className="font-semibold text-muted-foreground">-</span>
+          )}
+        </div>
+
+        {/* Footer Action Buttons */}
+        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border/80">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={downloading}
+            className="h-9.5 rounded-lg border border-border bg-white text-foreground hover:!bg-foreground hover:!text-white font-medium transition-colors px-4 text-[13px] shadow-xs cursor-pointer select-none disabled:opacity-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDownload}
+            disabled={downloading || loadingCount || count === 0 || isInvalidRange}
+            className="h-9.5 rounded-lg bg-[#FF5A20] text-white hover:!bg-foreground hover:!text-white font-semibold transition-colors px-5 text-[13px] shadow-xs cursor-pointer select-none inline-flex items-center gap-2 disabled:opacity-50"
+          >
+            {downloading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin text-white" />
+                Generating Excel...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Download Excel Sheet
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   )

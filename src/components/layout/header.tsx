@@ -88,7 +88,7 @@ export default function Header({ initialCategories }: { initialCategories?: Stor
             {/* Logo */}
             <Link href="/" className="flex items-center pl-1 sm:pl-2 shrink-0">
               <Image
-                src="https://adhunikcropcare.com/assets/img/logo/logo.png"
+                src="/logo.png"
                 alt="Adhunik Crop Care"
                 width={160}
                 height={48}
@@ -245,7 +245,7 @@ export default function Header({ initialCategories }: { initialCategories?: Stor
           <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
             <Link href="/" onClick={closeMenu}>
               <Image
-                src="https://adhunikcropcare.com/assets/img/logo/logo.png"
+                src="/logo.png"
                 alt="Adhunik Crop Care"
                 width={130}
                 height={40}
