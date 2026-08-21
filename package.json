@@ -8,9 +8,9 @@
   "scripts": {
     "check:node": "node scripts/check-node-version.mjs",
     "predev": "npm run check:node",
-    "dev": "npm run clean && next dev --webpack",
+    "dev": "npm run clean && next dev",
     "prebuild": "npm run check:node",
-    "build": "npm run clean && npm run prisma:migrate && prisma generate && next build --webpack",
+    "build": "npm run clean && npm run prisma:migrate && prisma generate && next build",
     "clean": "node -e \"require('node:fs').rmSync('.next',{recursive:true,force:true})\"",
     "prestart": "npm run check:node",
     "start": "next start",
